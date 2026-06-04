@@ -1,235 +1,192 @@
-{% extends 'base.html' %}
+{% extends '_layouts/teacher_layout.html' %}
 
 {% block title %}Dashboard Profesor - Plataforma TDAH{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('teacher.create_activity') }}"
+   class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-lg transition-colors">
+  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+  </svg>
+  Nueva actividad
+</a>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <h1 class="mb-4">
-                <i class="bi bi-house"></i> Dashboard del Profesor
-            </h1>
-            <p class="lead">Bienvenido, {{ current_user.username }}</p>
-        </div>
+
+<!-- ── Saludo ── -->
+<div class="mb-6">
+  <h2 class="text-lg font-semibold text-[#1F2937]">Hola, {{ current_user.username }} 👋</h2>
+  <p class="text-sm text-[#6B7280] mt-0.5">Aquí está el resumen de tu actividad docente.</p>
+</div>
+
+<!-- ── Métricas ── -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB]">
+    <div class="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center mb-3">
+      <svg class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+      </svg>
     </div>
-    
-    <!-- Estadísticas -->
-    <div class="row">
-        <div class="col-md-3">
-            <div class="stat-card primary">
-                <div class="icon text-primary">
-                    <i class="bi bi-people"></i>
-                </div>
-                <h3>{{ stats.total_students }}</h3>
-                <p class="text-muted">Mis Estudiantes</p>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="stat-card success">
-                <div class="icon text-success">
-                    <i class="bi bi-clipboard-check"></i>
-                </div>
-                <h3>{{ stats.total_activities }}</h3>
-                <p class="text-muted">Actividades Creadas</p>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="stat-card warning">
-                <div class="icon text-warning">
-                    <i class="bi bi-file-text"></i>
-                </div>
-                <h3>{{ stats.pending_reports }}</h3>
-                <p class="text-muted">Reportes Pendientes</p>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="stat-card info">
-                <div class="icon text-info">
-                    <i class="bi bi-activity"></i>
-                </div>
-                <h3>{{ stats.sessions_today }}</h3>
-                <p class="text-muted">Sesiones Hoy</p>
-            </div>
-        </div>
+    <p class="text-3xl font-bold text-[#1F2937]">{{ stats.total_students }}</p>
+    <p class="text-xs text-[#6B7280] mt-1 font-medium">Mis Alumnos</p>
+  </div>
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB]">
+    <div class="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center mb-3">
+      <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+      </svg>
     </div>
-    
-    <div class="row mt-4">
-        <!-- Mis estudiantes -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-people"></i> Mis Estudiantes
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if students %}
-                        <div class="list-group">
-                            {% for student in students[:5] %}
-                            <a href="{{ url_for('teacher.student_detail', student_id=student.id) }}" 
-                               class="list-group-item list-group-item-action">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">
-                                        <i class="bi bi-person-circle"></i>
-                                        {{ student.user.username }}
-                                    </h6>
-                                    <span class="badge bg-info">{{ student.tdah_type or 'N/A' }}</span>
-                                </div>
-                                <p class="mb-1 small text-muted">
-                                    Edad: {{ student.age or 'N/A' }} años
-                                </p>
-                            </a>
-                            {% endfor %}
-                        </div>
-                        
-                        {% if students|length > 5 %}
-                        <a href="{{ url_for('teacher.students') }}" class="btn btn-outline-primary btn-sm mt-3 w-100">
-                            Ver Todos ({{ students|length }})
-                        </a>
-                        {% endif %}
-                    {% else %}
-                        <div class="text-center py-4">
-                            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                            <p class="text-muted mt-2">No tienes estudiantes asignados</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <!-- Actividades recientes -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-clipboard-check"></i> Actividades Recientes
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if recent_activities %}
-                        <div class="list-group">
-                            {% for activity in recent_activities %}
-                            <div class="list-group-item">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">{{ activity.title }}</h6>
-                                    {% if activity.ar_content and activity.ar_content.enabled %}
-                                    <span class="badge bg-warning">AR</span>
-                                    {% endif %}
-                                </div>
-                                <p class="mb-1 small">
-                                    Estudiante: {{ activity.student.user.username }}
-                                </p>
-                                <small class="text-muted">
-                                    <i class="bi bi-calendar"></i> {{ activity.created_at.strftime('%d/%m/%Y') }}
-                                </small>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        <a href="{{ url_for('teacher.activities') }}" class="btn btn-outline-success btn-sm mt-3 w-100">
-                            Ver Todas
-                        </a>
-                    {% else %}
-                        <div class="text-center py-4">
-                            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                            <p class="text-muted mt-2">No has creado actividades aún</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+    <p class="text-3xl font-bold text-[#1F2937]">{{ stats.total_activities }}</p>
+    <p class="text-xs text-[#6B7280] mt-1 font-medium">Actividades</p>
+  </div>
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB]">
+    <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center mb-3">
+      <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
     </div>
-    
-    <!-- Sesiones recientes -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-activity"></i> Actividad Reciente de Estudiantes
-                    </h5>
-                </div>
-                <div class="card-body">
-                    {% if recent_sessions %}
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Estudiante</th>
-                                        <th>Actividad</th>
-                                        <th>Fecha</th>
-                                        <th>Atención</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for session in recent_sessions %}
-                                    <tr>
-                                        <td>{{ session.student.user.username }}</td>
-                                        <td>{{ session.activity.title if session.activity else 'N/A' }}</td>
-                                        <td>{{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
-                                        <td>
-                                            <div class="progress" style="width: 100px; height: 20px;">
-                                                <div class="progress-bar bg-{{ 'success' if session.attention_score >= 70 else 'warning' if session.attention_score >= 50 else 'danger' }}" 
-                                                     style="width: {{ session.attention_score or 0 }}%">
-                                                    {{ session.attention_score or 0 }}%
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <a href="{{ url_for('teacher.session_detail', session_id=session.id) }}" 
-                                               class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-eye"></i> Ver
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <div class="text-center py-4">
-                            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                            <p class="text-muted mt-2">No hay actividad reciente</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+    <p class="text-3xl font-bold text-[#1F2937]">{{ stats.pending_reports }}</p>
+    <p class="text-xs text-[#6B7280] mt-1 font-medium">Reportes pendientes</p>
+  </div>
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB]">
+    <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
+      <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+      </svg>
     </div>
-    
-    <!-- Acciones rápidas -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-lightning-fill"></i> Acciones Rápidas
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <a href="{{ url_for('teacher.create_activity') }}" class="btn btn-primary w-100 mb-2">
-                                <i class="bi bi-plus-circle"></i> Crear Actividad
-                            </a>
-                        </div>
-                        <div class="col-md-4">
-                            <a href="{{ url_for('teacher.students') }}" class="btn btn-secondary w-100 mb-2">
-                                <i class="bi bi-people"></i> Ver Estudiantes
-                            </a>
-                        </div>
-                        <div class="col-md-4">
-                            <a href="{{ url_for('teacher.reports') }}" class="btn btn-success w-100 mb-2">
-                                <i class="bi bi-file-text"></i> Mis Reportes
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <p class="text-3xl font-bold text-[#1F2937]">{{ stats.sessions_today }}</p>
+    <p class="text-xs text-[#6B7280] mt-1 font-medium">Sesiones hoy</p>
+  </div>
+</div>
+
+<!-- ── Grid de alumnos ── -->
+<div class="mb-8">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-sm font-semibold text-[#1F2937]">Mis Alumnos</h2>
+    <a href="{{ url_for('teacher.students') }}" class="text-xs text-[#4F46E5] hover:underline font-medium">Ver todos</a>
+  </div>
+
+  {% if students %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {% for student in students[:8] %}
+    <a href="{{ url_for('teacher.student_detail', student_id=student.id) }}"
+       class="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB] hover:shadow-md hover:border-[#C7D2FE] transition-all group">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#818CF8] text-white flex items-center justify-center text-base font-bold flex-shrink-0" aria-hidden="true">
+          {{ (student.full_name or student.user.username)[0].upper() }}
         </div>
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-[#1F2937] truncate group-hover:text-[#4F46E5] transition-colors">
+            {{ student.full_name or student.user.username }}
+          </p>
+          {% if student.grade %}<p class="text-xs text-[#9CA3AF] truncate">{{ student.grade }}</p>{% endif %}
+        </div>
+      </div>
+      <div class="flex items-center justify-between">
+        {% if student.tdah_type %}
+        <span class="text-xs px-2 py-0.5 rounded-full font-medium
+          {% if 'hiperactivo' in (student.tdah_type or '')|lower %}bg-red-100 text-red-700
+          {% elif 'inatento' in (student.tdah_type or '')|lower %}bg-amber-100 text-amber-700
+          {% else %}bg-indigo-100 text-indigo-700{% endif %}">
+          {{ student.tdah_type }}
+        </span>
+        {% else %}
+        <span class="text-xs bg-[#F3F4F6] text-[#9CA3AF] px-2 py-0.5 rounded-full">Sin diagnóstico</span>
+        {% endif %}
+        {% if student.age %}<span class="text-xs text-[#9CA3AF]">{{ student.age }} años</span>{% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] py-12 flex flex-col items-center text-[#9CA3AF]">
+    <svg class="w-12 h-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+    </svg>
+    <p class="text-sm font-medium mb-1">Sin alumnos asignados</p>
+    <p class="text-xs">El administrador debe asignarte alumnos.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Actividad reciente ── -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+  <!-- Actividades recientes -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB]">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
+      <h2 class="text-sm font-semibold text-[#1F2937]">Actividades Recientes</h2>
+      <a href="{{ url_for('teacher.activities') }}" class="text-xs text-[#4F46E5] hover:underline font-medium">Ver todas</a>
     </div>
+    {% if recent_activities %}
+    <ul class="divide-y divide-[#F3F4F6]">
+      {% for activity in recent_activities %}
+      <li class="flex items-center gap-3 px-6 py-3">
+        <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-[#1F2937] truncate">{{ activity.title }}</p>
+          <p class="text-xs text-[#9CA3AF]">{{ activity.student.user.username }} &bull; {{ activity.created_at.strftime('%d/%m/%Y') }}</p>
+        </div>
+        {% if activity.ar_content and activity.ar_content.enabled %}
+        <span class="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full flex-shrink-0">AR</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-10 text-[#9CA3AF]">
+      <svg class="w-8 h-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+      </svg>
+      <p class="text-sm">Sin actividades creadas aún</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sesiones recientes -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB]">
+    <div class="px-6 py-4 border-b border-[#E5E7EB]">
+      <h2 class="text-sm font-semibold text-[#1F2937]">Sesiones Recientes</h2>
+    </div>
+    {% if recent_sessions %}
+    <ul class="divide-y divide-[#F3F4F6]">
+      {% for session in recent_sessions %}
+      <li class="px-6 py-3">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-sm font-medium text-[#1F2937]">{{ session.student.user.username }}</span>
+          <span class="text-xs text-[#9CA3AF] tabular-nums">{{ session.created_at.strftime('%d/%m %H:%M') }}</span>
+        </div>
+        <p class="text-xs text-[#6B7280] mb-1.5 truncate">{{ session.activity.title if session.activity else 'Actividad libre' }}</p>
+        <div class="flex items-center gap-2">
+          <div class="flex-1 h-1.5 bg-[#F3F4F6] rounded-full overflow-hidden">
+            <div class="h-full rounded-full
+              {% if (session.attention_score or 0) >= 70 %}bg-emerald-500
+              {% elif (session.attention_score or 0) >= 50 %}bg-amber-500
+              {% else %}bg-red-500{% endif %}"
+              style="width: {{ session.attention_score|default(0)|int }}%"></div>
+          </div>
+          <span class="text-xs font-medium tabular-nums text-[#6B7280] w-8 text-right">{{ session.attention_score or 0 }}%</span>
+          <a href="{{ url_for('teacher.session_detail', session_id=session.id) }}"
+             class="text-xs text-[#4F46E5] hover:underline flex-shrink-0">Ver</a>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="flex flex-col items-center justify-center py-10 text-[#9CA3AF]">
+      <svg class="w-8 h-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+      </svg>
+      <p class="text-sm">Sin sesiones recientes</p>
+    </div>
+    {% endif %}
+  </div>
+
 </div>
 {% endblock %}
