@@ -1,169 +1,254 @@
-{% extends 'base.html' %}
+{% extends '_layouts/teacher_layout.html' %}
 
 {% block title %}Crear Reporte - {{ student.user.username }}{% endblock %}
+{% block page_title %}Crear Reporte con IA{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('teacher.student_detail', student_id=student.id) }}"
+   class="flex items-center gap-1.5 text-sm text-[#6B7280] hover:text-[#1F2937] transition-colors">
+  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+  </svg>
+  Volver al alumno
+</a>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row">
-        <div class="col-md-10 mx-auto">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>
-                    <i class="bi bi-file-text"></i> 
-                    Reporte para {{ student.full_name or student.user.username }}
-                </h2>
-                <a href="{{ url_for('teacher.student_detail', student_id=student.id) }}" 
-                   class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Volver
-                </a>
-            </div>
-            
-            <!-- Info de la sesión -->
-            <div class="alert alert-info">
-                <h6 class="mb-2"><i class="bi bi-info-circle"></i> Información de la Sesión</h6>
-                <div class="row small">
-                    <div class="col-md-3"><strong>Actividad:</strong> {{ session.activity.title if session.activity else 'Actividad libre' }}</div>
-                    <div class="col-md-3"><strong>Fecha:</strong> {{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</div>
-                    <div class="col-md-3"><strong>Atención:</strong> {{ session.attention_score or 0 }}%</div>
-                    <div class="col-md-3"><strong>Tiempo:</strong> {{ (session.completion_time // 60) if session.completion_time else 0 }} min</div>
-                </div>
-            </div>
-            
-            <!-- ============================================ -->
-            <!-- ⭐ PANEL DE IA  -->
-            <!-- ============================================ -->
-            <div class="card border-info shadow-sm mb-4">
-                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="bi bi-stars"></i> Asistente IA — Análisis del Estudiante
-                    </h5>
-                    <button type="button" class="btn btn-light btn-sm" onclick="generateAISuggestions()" id="ai-generate-btn">
-                        <i class="bi bi-magic"></i> Generar análisis con IA
-                    </button>
-                </div>
-                <div class="card-body">
-                    <div id="ai-placeholder" class="text-center py-3 text-muted">
-                        <i class="bi bi-robot" style="font-size: 3rem;"></i>
-                        <p class="mb-0">Haz clic en <strong>"Generar análisis con IA"</strong> para que GPT analice los datos de este estudiante</p>
-                        <small>Considera tipo de TDAH detectado, historial de tests, y nivel de atención</small>
-                    </div>
-                    
-                    <div id="ai-loading" style="display: none;" class="text-center py-4">
-                        <div class="spinner-border text-info" style="width: 3rem; height: 3rem;"></div>
-                        <p class="mt-3 mb-0">Analizando con IA... esto puede tardar 10-20 segundos</p>
-                    </div>
-                    
-                    <div id="ai-results" style="display: none;">
-                        <!-- Resumen ejecutivo -->
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="mb-0"><i class="bi bi-card-text text-primary"></i> Resumen Ejecutivo</h6>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="applyToField('content', document.getElementById('ai-summary').textContent)">
-                                    <i class="bi bi-arrow-down-square"></i> Aplicar a Observaciones
-                                </button>
-                            </div>
-                            <div class="bg-light p-3 rounded" id="ai-summary"></div>
-                        </div>
-                        
-                        <!-- Fortalezas -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <h6><i class="bi bi-check-circle text-success"></i> Fortalezas</h6>
-                                <ul class="list-group list-group-flush" id="ai-strengths"></ul>
-                            </div>
-                            <div class="col-md-6">
-                                <h6><i class="bi bi-exclamation-triangle text-warning"></i> Áreas de Mejora</h6>
-                                <ul class="list-group list-group-flush" id="ai-improvements"></ul>
-                            </div>
-                        </div>
-                        
-                        <!-- Recomendaciones -->
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="mb-0"><i class="bi bi-lightbulb text-warning"></i> Recomendaciones Pedagógicas</h6>
-                                <button type="button" class="btn btn-sm btn-outline-warning" onclick="applyAllRecommendations()">
-                                    <i class="bi bi-arrow-down-square"></i> Aplicar todas a Recomendaciones
-                                </button>
-                            </div>
-                            <div id="ai-recommendations"></div>
-                        </div>
-                        
-                        <!-- Alertas -->
-                        <div id="ai-alerts-section" style="display: none;" class="mb-4">
-                            <h6><i class="bi bi-exclamation-octagon text-danger"></i> Alertas</h6>
-                            <div id="ai-alerts"></div>
-                        </div>
-                        
-                        <!-- Predicción -->
-                        <div id="ai-prediction-section" style="display: none;" class="mb-3">
-                            <h6><i class="bi bi-graph-up text-info"></i> Predicción de Progreso</h6>
-                            <p class="text-muted" id="ai-prediction"></p>
-                        </div>
-                        
-                        <!-- Auto-fill global -->
-                        <hr>
-                        <div class="text-center">
-                            <button type="button" class="btn btn-success btn-lg" onclick="autoFillReport()">
-                                <i class="bi bi-magic"></i> Llenar reporte automáticamente con IA
-                            </button>
-                            <p class="text-muted small mt-2 mb-0">
-                                Esto llena Observaciones y Recomendaciones. Tú puedes editarlos antes de guardar.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Formulario del reporte -->
-            <form method="POST" action="{{ url_for('teacher.create_report', session_id=session.id) }}">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Reporte del Profesor</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label for="content" class="form-label">Observaciones del Profesor *</label>
-                            <textarea class="form-control" id="content" name="content" rows="5" required
-                                      placeholder="Describe el desempeño del estudiante..."></textarea>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="recommendations" class="form-label">Recomendaciones *</label>
-                            <textarea class="form-control" id="recommendations" name="recommendations" rows="4" required
-                                      placeholder="Sugerencias para mejorar..."></textarea>
-                        </div>
-                        
-                        <!-- ⭐ Espacio para que el tutor agregue su punto de vista -->
-                        <div class="mb-3">
-                            <label for="parent_comments" class="form-label">
-                                <i class="bi bi-chat-quote"></i> Punto de vista del Padre/Tutor (opcional)
-                            </label>
-                            <textarea class="form-control" id="parent_comments" name="parent_comments" rows="3"
-                                      placeholder="Espacio para que los padres compartan su observación..."></textarea>
-                            <small class="text-muted">Este campo lo puede llenar el padre al recibir el reporte</small>
-                        </div>
-                        
-                        <hr>
-                        
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" id="send_to_parents" name="send_to_parents" checked>
-                            <label class="form-check-label" for="send_to_parents">
-                                <i class="bi bi-send"></i> Enviar reporte a los tutores (web + WhatsApp si está habilitado)
-                            </label>
-                        </div>
-                    </div>
-                    <div class="card-footer d-flex justify-content-between">
-                        <a href="{{ url_for('teacher.student_detail', student_id=student.id) }}" 
-                           class="btn btn-secondary">
-                            <i class="bi bi-x-circle"></i> Cancelar
-                        </a>
-                        <button type="submit" class="btn btn-success btn-lg">
-                            <i class="bi bi-check-circle"></i> Crear y Enviar Reporte
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
+
+<!-- ── Header alumno + sesión ── -->
+<div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-5 mb-6">
+  <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#818CF8] text-white flex items-center justify-center text-base font-bold flex-shrink-0" aria-hidden="true">
+        {{ (student.full_name or student.user.username)[0].upper() }}
+      </div>
+      <div>
+        <p class="text-sm font-semibold text-[#1F2937]">{{ student.full_name or student.user.username }}</p>
+        {% if student.tdah_type %}<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">{{ student.tdah_type }}</span>{% endif %}
+      </div>
     </div>
+    <div class="sm:ml-auto grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+      <div class="text-center">
+        <p class="text-xs text-[#9CA3AF]">Actividad</p>
+        <p class="font-medium text-[#1F2937] text-xs mt-0.5">{{ session.activity.title if session.activity else 'Libre' }}</p>
+      </div>
+      <div class="text-center">
+        <p class="text-xs text-[#9CA3AF]">Fecha</p>
+        <p class="font-medium text-[#1F2937] text-xs mt-0.5">{{ session.created_at.strftime('%d/%m/%Y') }}</p>
+      </div>
+      <div class="text-center">
+        <p class="text-xs text-[#9CA3AF]">Atención</p>
+        <p class="font-bold text-xs mt-0.5
+          {% if (session.attention_score or 0) >= 70 %}text-emerald-600
+          {% elif (session.attention_score or 0) >= 50 %}text-amber-600
+          {% else %}text-red-600{% endif %}">
+          {{ session.attention_score or 0 }}%
+        </p>
+      </div>
+      <div class="text-center">
+        <p class="text-xs text-[#9CA3AF]">Tiempo</p>
+        <p class="font-medium text-[#1F2937] text-xs mt-0.5">{{ (session.completion_time // 60) if session.completion_time else 0 }} min</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Layout 2 columnas ── -->
+<div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+
+  <!-- Columna izquierda: formulario (más ancho) -->
+  <div class="xl:col-span-3">
+    <form method="POST" action="{{ url_for('teacher.create_report', session_id=session.id) }}" id="report-form">
+
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-6 mb-4">
+        <div class="flex items-center gap-2 mb-5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+            <svg class="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+          </div>
+          <h2 class="text-base font-semibold text-[#1F2937]">Reporte del Profesor</h2>
+        </div>
+
+        <div class="space-y-5">
+          <!-- Observaciones -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="content" class="text-sm font-medium text-[#374151]">Observaciones *</label>
+              <button type="button" onclick="applyToField('content', document.getElementById('ai-summary')?.textContent)"
+                      class="text-xs text-[#4F46E5] hover:underline hidden" id="apply-summary-btn">
+                Aplicar resumen IA
+              </button>
+            </div>
+            <textarea id="content" name="content" rows="6" required
+                      placeholder="Describe el desempeño del estudiante durante esta sesión..."
+                      class="w-full px-4 py-3 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"></textarea>
+          </div>
+
+          <!-- Recomendaciones -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="recommendations" class="text-sm font-medium text-[#374151]">Recomendaciones *</label>
+              <button type="button" onclick="applyAllRecommendations()"
+                      class="text-xs text-[#4F46E5] hover:underline hidden" id="apply-recs-btn">
+                Aplicar todas
+              </button>
+            </div>
+            <textarea id="recommendations" name="recommendations" rows="4" required
+                      placeholder="Sugerencias pedagógicas para mejorar el rendimiento..."
+                      class="w-full px-4 py-3 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"></textarea>
+          </div>
+
+          <!-- Comentarios tutor -->
+          <div>
+            <label for="parent_comments" class="block text-sm font-medium text-[#374151] mb-1.5">
+              Punto de vista del Tutor
+              <span class="text-[#9CA3AF] font-normal">(opcional)</span>
+            </label>
+            <textarea id="parent_comments" name="parent_comments" rows="3"
+                      placeholder="Espacio para que los padres compartan su observación..."
+                      class="w-full px-4 py-3 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"></textarea>
+            <p class="text-xs text-[#9CA3AF] mt-1">Este campo lo puede llenar el padre al recibir el reporte.</p>
+          </div>
+
+          <!-- Enviar a tutores -->
+          <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-[#E5E7EB] hover:bg-[#F9FAFB] transition-colors">
+            <input type="checkbox" id="send_to_parents" name="send_to_parents" checked
+                   class="w-4 h-4 rounded border-[#D1D5DB] text-[#4F46E5] focus:ring-[#4F46E5]">
+            <div>
+              <p class="text-sm font-medium text-[#1F2937]">Enviar reporte a los tutores</p>
+              <p class="text-xs text-[#6B7280]">Notificación web + WhatsApp si está habilitado</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Botones de acción -->
+      <div class="flex gap-3">
+        <a href="{{ url_for('teacher.student_detail', student_id=student.id) }}"
+           class="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-[#6B7280] bg-white border border-[#E5E7EB] rounded-xl hover:bg-[#F9FAFB] transition-colors">
+          Cancelar
+        </a>
+        <button type="submit"
+                class="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          Crear y Enviar Reporte
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Columna derecha: asistente IA (sticky) -->
+  <div class="xl:col-span-2">
+    <div class="sticky top-6">
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+
+        <!-- Header IA -->
+        <div class="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white">
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+            <span class="text-sm font-semibold">Asistente IA</span>
+          </div>
+          <button type="button" onclick="generateAISuggestions()" id="ai-generate-btn"
+                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            Generar análisis
+          </button>
+        </div>
+
+        <!-- Cuerpo IA -->
+        <div class="p-5">
+
+          <!-- Placeholder inicial -->
+          <div id="ai-placeholder" class="flex flex-col items-center text-center py-6 text-[#9CA3AF]">
+            <svg class="w-12 h-12 mb-3 text-indigo-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+            <p class="text-sm font-medium text-[#374151] mb-1">Análisis con IA</p>
+            <p class="text-xs">Haz clic en <strong>"Generar análisis"</strong> para que GPT analice tipo de TDAH, historial y nivel de atención.</p>
+          </div>
+
+          <!-- Loading -->
+          <div id="ai-loading" style="display: none;" class="flex flex-col items-center py-8">
+            <div class="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+            <p class="text-sm text-[#6B7280]">Analizando con IA...</p>
+            <p class="text-xs text-[#9CA3AF] mt-1">10-20 segundos</p>
+          </div>
+
+          <!-- Resultados -->
+          <div id="ai-results" style="display: none;" class="space-y-4">
+
+            <!-- Resumen ejecutivo -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Resumen Ejecutivo</h3>
+                <button type="button"
+                        onclick="applyToField('content', document.getElementById('ai-summary').textContent); document.getElementById('apply-summary-btn').classList.remove('hidden')"
+                        class="text-xs text-[#4F46E5] hover:underline font-medium">
+                  Aplicar
+                </button>
+              </div>
+              <div id="ai-summary" class="text-xs text-[#374151] bg-[#F9FAFB] rounded-lg p-3 leading-relaxed"></div>
+            </div>
+
+            <!-- Fortalezas y áreas de mejora -->
+            <div class="grid grid-cols-1 gap-3">
+              <div>
+                <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Fortalezas</h3>
+                <ul id="ai-strengths" class="space-y-1 text-xs text-[#374151]"></ul>
+              </div>
+              <div>
+                <h3 class="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">Áreas de Mejora</h3>
+                <ul id="ai-improvements" class="space-y-1 text-xs text-[#374151]"></ul>
+              </div>
+            </div>
+
+            <!-- Recomendaciones -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Recomendaciones</h3>
+                <button type="button" onclick="applyAllRecommendations()"
+                        class="text-xs text-[#4F46E5] hover:underline font-medium">
+                  Aplicar todas
+                </button>
+              </div>
+              <div id="ai-recommendations" class="space-y-2"></div>
+            </div>
+
+            <!-- Alertas -->
+            <div id="ai-alerts-section" style="display: none;">
+              <h3 class="text-xs font-semibold text-red-700 uppercase tracking-wider mb-2">Alertas</h3>
+              <div id="ai-alerts" class="space-y-1"></div>
+            </div>
+
+            <!-- Predicción -->
+            <div id="ai-prediction-section" style="display: none;">
+              <h3 class="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-2">Predicción de Progreso</h3>
+              <p id="ai-prediction" class="text-xs text-[#374151] bg-blue-50 rounded-lg p-3"></p>
+            </div>
+
+            <!-- Auto-fill global -->
+            <button type="button" onclick="autoFillReport()"
+                    class="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-[#4F46E5] hover:bg-[#4338CA] text-white text-sm font-semibold rounded-xl transition-colors">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              Llenar reporte automáticamente
+            </button>
+            <p class="text-xs text-center text-[#9CA3AF] mt-1">Puedes editar antes de enviar.</p>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 
@@ -172,164 +257,125 @@
 let aiData = null;
 
 async function generateAISuggestions() {
-    const btn = document.getElementById('ai-generate-btn');
-    const placeholder = document.getElementById('ai-placeholder');
-    const loading = document.getElementById('ai-loading');
-    const results = document.getElementById('ai-results');
-    
-    btn.disabled = true;
-    placeholder.style.display = 'none';
-    results.style.display = 'none';
-    loading.style.display = 'block';
-    
-    try {
-        const response = await fetch('{{ url_for("teacher.ai_suggestions") }}', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({session_id: {{ session.id }}})
-        });
-        
-        const data = await response.json();
-        
-        if (!data.success) {
-            throw new Error(data.error || 'Error desconocido');
-        }
-        
-        aiData = data.suggestions;
-        renderAIResults(aiData);
-        
-        loading.style.display = 'none';
-        results.style.display = 'block';
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Volver a generar';
-        
-    } catch (error) {
-        console.error('Error:', error);
-        loading.style.display = 'none';
-        placeholder.style.display = 'block';
-        placeholder.innerHTML = `<div class="alert alert-danger"><i class="bi bi-x-circle"></i> Error al generar: ${error.message}</div>`;
-        btn.disabled = false;
-    }
+  const btn = document.getElementById('ai-generate-btn');
+  const placeholder = document.getElementById('ai-placeholder');
+  const loading = document.getElementById('ai-loading');
+  const results = document.getElementById('ai-results');
+
+  btn.disabled = true;
+  placeholder.style.display = 'none';
+  results.style.display = 'none';
+  loading.style.display = 'flex';
+
+  try {
+    const response = await fetch('{{ url_for("teacher.ai_suggestions") }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({session_id: {{ session.id }}})
+    });
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error || 'Error desconocido');
+    aiData = data.suggestions;
+    renderAIResults(aiData);
+    loading.style.display = 'none';
+    results.style.display = 'block';
+    btn.disabled = false;
+    btn.querySelector('span') && (btn.innerHTML = btn.innerHTML.replace('Generar análisis', 'Regenerar'));
+  } catch (error) {
+    loading.style.display = 'none';
+    placeholder.style.display = 'flex';
+    placeholder.innerHTML = `<div class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-3 w-full text-left">Error: ${error.message}</div>`;
+    btn.disabled = false;
+  }
 }
 
 function renderAIResults(data) {
-    // Resumen
-    document.getElementById('ai-summary').textContent = data.resumen_ejecutivo || 'Sin resumen';
-    
-    // Fortalezas
-    const strengthsEl = document.getElementById('ai-strengths');
-    strengthsEl.innerHTML = '';
-    (data.fortalezas || []).forEach(f => {
-        strengthsEl.innerHTML += `<li class="list-group-item"><i class="bi bi-check2 text-success"></i> ${f}</li>`;
-    });
-    
-    // Áreas de mejora
-    const improvementsEl = document.getElementById('ai-improvements');
-    improvementsEl.innerHTML = '';
-    (data.areas_mejora || []).forEach(a => {
-        improvementsEl.innerHTML += `<li class="list-group-item"><i class="bi bi-arrow-up text-warning"></i> ${a}</li>`;
-    });
-    
-    // Recomendaciones
-    const recsEl = document.getElementById('ai-recommendations');
-    recsEl.innerHTML = '';
-    (data.recomendaciones || []).forEach((rec, idx) => {
-        const priority_colors = {alta: 'danger', media: 'warning', baja: 'secondary'};
-        const color = priority_colors[rec.prioridad?.toLowerCase()] || 'secondary';
-        recsEl.innerHTML += `
-            <div class="card mb-2">
-                <div class="card-body py-2">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-grow-1">
-                            <strong>${rec.titulo}</strong>
-                            <span class="badge bg-${color} ms-2">${rec.prioridad || 'media'}</span>
-                            <p class="mb-1 mt-1 small">${rec.descripcion}</p>
-                            ${rec.evidencia ? `<small class="text-muted"><i class="bi bi-book"></i> ${rec.evidencia}</small>` : ''}
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary ms-2" 
-                                onclick="appendToField('recommendations', '${rec.titulo}: ${rec.descripcion.replace(/'/g, "\\'")}')">
-                            <i class="bi bi-plus-circle"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    // Alertas
-    if (data.alertas && data.alertas.length > 0) {
-        document.getElementById('ai-alerts-section').style.display = 'block';
-        const alertsEl = document.getElementById('ai-alerts');
-        alertsEl.innerHTML = '';
-        data.alertas.forEach(a => {
-            alertsEl.innerHTML += `<div class="alert alert-warning py-2 mb-2"><i class="bi bi-exclamation-triangle"></i> ${a}</div>`;
-        });
-    }
-    
-    // Predicción
-    if (data.prediccion_progreso) {
-        document.getElementById('ai-prediction-section').style.display = 'block';
-        document.getElementById('ai-prediction').textContent = data.prediccion_progreso;
-    }
+  document.getElementById('ai-summary').textContent = data.resumen_ejecutivo || 'Sin resumen';
+
+  const strengthsEl = document.getElementById('ai-strengths');
+  strengthsEl.innerHTML = '';
+  (data.fortalezas || []).forEach(f => {
+    strengthsEl.innerHTML += `<li class="flex items-start gap-1.5"><span class="text-emerald-500 mt-0.5">✓</span>${f}</li>`;
+  });
+
+  const improvementsEl = document.getElementById('ai-improvements');
+  improvementsEl.innerHTML = '';
+  (data.areas_mejora || []).forEach(a => {
+    improvementsEl.innerHTML += `<li class="flex items-start gap-1.5"><span class="text-amber-500 mt-0.5">→</span>${a}</li>`;
+  });
+
+  const recsEl = document.getElementById('ai-recommendations');
+  recsEl.innerHTML = '';
+  (data.recomendaciones || []).forEach(rec => {
+    const pColors = {alta: 'red', media: 'amber', baja: 'slate'};
+    const c = pColors[rec.prioridad?.toLowerCase()] || 'slate';
+    recsEl.innerHTML += `
+      <div class="flex items-start gap-2 p-2.5 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB]">
+        <div class="flex-1 min-w-0">
+          <p class="text-xs font-semibold text-[#1F2937]">${rec.titulo} <span class="font-normal text-${c}-600 text-[10px]">${rec.prioridad || ''}</span></p>
+          <p class="text-xs text-[#6B7280] mt-0.5">${rec.descripcion}</p>
+        </div>
+        <button type="button"
+                onclick="appendToField('recommendations', '${rec.titulo}: ${rec.descripcion.replace(/'/g,"\\'")}')"
+                class="flex-shrink-0 text-[#4F46E5] hover:text-[#4338CA] transition-colors"
+                title="Agregar a recomendaciones">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </button>
+      </div>`;
+  });
+
+  if (data.alertas?.length) {
+    document.getElementById('ai-alerts-section').style.display = 'block';
+    document.getElementById('ai-alerts').innerHTML = data.alertas.map(a =>
+      `<div class="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2.5">⚠ ${a}</div>`
+    ).join('');
+  }
+
+  if (data.prediccion_progreso) {
+    document.getElementById('ai-prediction-section').style.display = 'block';
+    document.getElementById('ai-prediction').textContent = data.prediccion_progreso;
+  }
 }
 
 function applyToField(fieldId, text) {
-    const field = document.getElementById(fieldId);
-    field.value = text;
-    field.focus();
-    field.scrollIntoView({behavior: 'smooth', block: 'center'});
-    showToast('Aplicado ✓');
+  if (!text) return;
+  document.getElementById(fieldId).value = text;
+  showToast('Aplicado al campo ✓');
+  document.getElementById(fieldId).scrollIntoView({behavior: 'smooth', block: 'center'});
 }
 
 function appendToField(fieldId, text) {
-    const field = document.getElementById(fieldId);
-    field.value = field.value ? field.value + '\n• ' + text : '• ' + text;
-    showToast('Agregado ✓');
+  const field = document.getElementById(fieldId);
+  field.value = field.value ? field.value + '\n• ' + text : '• ' + text;
+  showToast('Agregado ✓');
 }
 
 function applyAllRecommendations() {
-    if (!aiData || !aiData.recomendaciones) return;
-    
-    const text = aiData.recomendaciones
-        .map(r => `• ${r.titulo}: ${r.descripcion}`)
-        .join('\n');
-    
-    document.getElementById('recommendations').value = text;
-    showToast('Recomendaciones aplicadas ✓');
+  if (!aiData?.recomendaciones) return;
+  const text = aiData.recomendaciones.map(r => `• ${r.titulo}: ${r.descripcion}`).join('\n');
+  document.getElementById('recommendations').value = text;
+  showToast('Recomendaciones aplicadas ✓');
 }
 
 function autoFillReport() {
-    if (!aiData) return;
-    
-    // Llenar Observaciones con resumen + fortalezas + áreas
-    let content = aiData.resumen_ejecutivo || '';
-    if (aiData.fortalezas?.length) {
-        content += '\n\nFortalezas observadas:\n' + aiData.fortalezas.map(f => '• ' + f).join('\n');
-    }
-    if (aiData.areas_mejora?.length) {
-        content += '\n\nÁreas de mejora:\n' + aiData.areas_mejora.map(a => '• ' + a).join('\n');
-    }
-    document.getElementById('content').value = content;
-    
-    // Llenar Recomendaciones
-    if (aiData.recomendaciones?.length) {
-        const recs = aiData.recomendaciones
-            .map(r => `• ${r.titulo}: ${r.descripcion}`)
-            .join('\n');
-        document.getElementById('recommendations').value = recs;
-    }
-    
-    showToast('Reporte auto-completado ✓ Revisa y edita antes de enviar');
-    document.getElementById('content').scrollIntoView({behavior: 'smooth', block: 'center'});
+  if (!aiData) return;
+  let content = aiData.resumen_ejecutivo || '';
+  if (aiData.fortalezas?.length) content += '\n\nFortalezas:\n' + aiData.fortalezas.map(f => '• ' + f).join('\n');
+  if (aiData.areas_mejora?.length) content += '\n\nÁreas de mejora:\n' + aiData.areas_mejora.map(a => '• ' + a).join('\n');
+  document.getElementById('content').value = content;
+  if (aiData.recomendaciones?.length) {
+    document.getElementById('recommendations').value = aiData.recomendaciones.map(r => `• ${r.titulo}: ${r.descripcion}`).join('\n');
+  }
+  showToast('Reporte completado automáticamente ✓ Revisa antes de enviar');
+  document.getElementById('content').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 
 function showToast(msg) {
-    const toast = document.createElement('div');
-    toast.className = 'position-fixed top-0 end-0 m-3 alert alert-success shadow';
-    toast.style.zIndex = 9999;
-    toast.innerHTML = msg;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2000);
+  const toast = document.createElement('div');
+  toast.className = 'fixed top-4 right-4 z-50 px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-xl shadow-lg transition-all';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2000);
 }
 </script>
 {% endblock %}
