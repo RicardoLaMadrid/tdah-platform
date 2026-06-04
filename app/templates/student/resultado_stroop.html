@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% block title %}Resultados Test de Stroop{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-lg">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        Resultados del Test de Stroop
+                    </h3>
+                </div>
+                
+                <div class="card-body p-4">
+                    <!-- Resultado principal -->
+                    <div class="alert alert-info border-start border-4 border-info mb-4">
+                        <h4 class="alert-heading">Tipo de Patrón Detectado</h4>
+                        <h2 class="mb-0">
+                            <span class="badge bg-primary fs-3">
+                                {% if tipo_tdah == 'inatento' %}
+                                    INATENTO
+                                {% elif tipo_tdah == 'hiperactivo' %}
+                                    HIPERACTIVO
+                                {% elif tipo_tdah == 'combinado' %}
+                                    COMBINADO
+                                {% elif tipo_tdah == 'typical' %}
+                                    TÍPICO (Sin TDAH)
+                                {% else %}
+                                    {{ tipo_tdah|upper }}
+                                {% endif %}
+                            </span>
+                        </h2>
+                        <p class="mb-0 mt-2">
+                            Nivel de confianza: 
+                            <strong class="{% if confianza >= 70 %}text-success{% elif confianza >= 40 %}text-warning{% else %}text-danger{% endif %}">
+                                {{ confianza }}%
+                            </strong>
+                        </p>
+                    </div>
+
+                    <!-- Métricas principales -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Precisión</h6>
+                                    <h3 class="{% if metricas.precision >= 80 %}text-success{% elif metricas.precision >= 60 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ metricas.precision|round(1) }}%
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Tiempo Promedio</h6>
+                                    <h3 class="text-primary">
+                                        {{ (metricas.tiempo_promedio/1000)|round(2) }}s
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Efecto Stroop</h6>
+                                    <h3 class="{% if metricas.efecto_stroop <= 300 %}text-success{% elif metricas.efecto_stroop <= 500 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ metricas.efecto_stroop|round(0) }}ms
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Errores</h6>
+                                    <h3 class="{% if metricas.incorrectos <= 5 %}text-success{% elif metricas.incorrectos <= 10 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ metricas.incorrectos }}
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Métricas Detalladas -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-graph-up me-2"></i>
+                                Análisis Detallado
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="fw-bold">Errores en Incongruentes</label>
+                                    <div class="progress" style="height: 30px;">
+                                        <div class="progress-bar bg-danger" 
+                                             style="width: {{ (metricas.errores_incongruentes / metricas.total_intentos * 100)|round(0) }}%">
+                                            {{ metricas.errores_incongruentes }}
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Errores cuando palabra y color NO coinciden</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="fw-bold">Errores en Congruentes</label>
+                                    <div class="progress" style="height: 30px;">
+                                        <div class="progress-bar bg-warning" 
+                                             style="width: {{ (metricas.errores_congruentes / metricas.total_intentos * 100)|round(0) }}%">
+                                            {{ metricas.errores_congruentes }}
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Errores cuando palabra y color coinciden</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="fw-bold">Tiempo en Congruentes</label>
+                                    <div class="alert alert-success mb-0">
+                                        {{ (metricas.tiempo_congruente/1000)|round(2) }} segundos
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="fw-bold">Tiempo en Incongruentes</label>
+                                    <div class="alert alert-warning mb-0">
+                                        {{ (metricas.tiempo_incongruente/1000)|round(2) }} segundos
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scores Detallados -->
+                    {% if scores_detallados %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-pie-chart me-2"></i>
+                                Análisis por Tipo de TDAH
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                {% for tipo, datos in scores_detallados.items() %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card {% if tipo == tipo_tdah %}border-primary{% endif %}">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <h6 class="mb-0">
+                                                    {% if tipo == 'typical' %}
+                                                        Típico
+                                                    {% elif tipo == 'inatento' %}
+                                                        Inatento
+                                                    {% elif tipo == 'hiperactivo' %}
+                                                        Hiperactivo
+                                                    {% elif tipo == 'combinado' %}
+                                                        Combinado
+                                                    {% endif %}
+                                                </h6>
+                                                <span class="badge bg-primary">{{ datos.probabilidad }}%</span>
+                                            </div>
+                                            <div class="progress" style="height: 10px;">
+                                                <div class="progress-bar {% if tipo == tipo_tdah %}bg-success{% else %}bg-secondary{% endif %}" 
+                                                     style="width: {{ datos.probabilidad }}%"></div>
+                                            </div>
+                                            <small class="text-muted">{{ datos.severidad }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Interpretación -->
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-lightbulb-fill me-2"></i>
+                                ¿Qué significa el Test de Stroop?
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p>El Test de Stroop mide tu <strong>control inhibitorio</strong>, es decir, tu capacidad para suprimir respuestas automáticas e irrelevantes.</p>
+                            
+                            <h6 class="mt-3">Tus resultados indican:</h6>
+                            <ul>
+                                <li><strong>Precisión:</strong> {{ metricas.precision|round(1) }}% - 
+                                    {% if metricas.precision >= 85 %}
+                                        Excelente control de impulsos
+                                    {% elif metricas.precision >= 70 %}
+                                        Buen control con algunas distracciones
+                                    {% else %}
+                                        Dificultad para ignorar información irrelevante
+                                    {% endif %}
+                                </li>
+                                <li><strong>Efecto Stroop:</strong> {{ metricas.efecto_stroop|round(0) }}ms - 
+                                    {% if metricas.efecto_stroop <= 300 %}
+                                        Normal, procesas información eficientemente
+                                    {% elif metricas.efecto_stroop <= 500 %}
+                                        Moderado, hay interferencia perceptible
+                                    {% else %}
+                                        Alto, la información conflictiva te afecta significativamente
+                                    {% endif %}
+                                </li>
+                            </ul>
+                            
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Nota:</strong> Este test complementa los otros tests. Para un diagnóstico profesional, consulta con un especialista.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('student.index') }}" class="btn btn-primary btn-lg px-5">
+                            <i class="bi bi-house-door me-2"></i>
+                            Volver al Dashboard
+                        </a>
+                        <a href="{{ url_for('stroop.index') }}" class="btn btn-outline-secondary btn-lg px-5 ms-2">
+                            <i class="bi bi-arrow-repeat me-2"></i>
+                            Repetir Test
+                        </a>
+                        <a href="{{ url_for('student.progress') }}" class="btn btn-outline-info btn-lg px-5 ms-2">
+                            <i class="bi bi-graph-up me-2"></i>
+                            Ver Progreso
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

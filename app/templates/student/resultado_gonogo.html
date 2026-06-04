@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% block title %}Resultados Test Go/No-Go{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-lg">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        Resultados del Test Go/No-Go
+                    </h3>
+                </div>
+                
+                <div class="card-body p-4">
+                    <!-- Resultado principal -->
+                    <div class="alert alert-info border-start border-4 border-info mb-4">
+                        <h4 class="alert-heading">Tipo de Patrón Detectado</h4>
+                        <h2 class="mb-0">
+                            <span class="badge bg-primary fs-3">
+                                {% if tipo_tdah == 'inatento' %}
+                                    INATENTO
+                                {% elif tipo_tdah == 'hiperactivo' %}
+                                    HIPERACTIVO
+                                {% elif tipo_tdah == 'combinado' %}
+                                    COMBINADO
+                                {% elif tipo_tdah == 'typical' %}
+                                    TÍPICO (Sin TDAH)
+                                {% else %}
+                                    {{ tipo_tdah|upper }}
+                                {% endif %}
+                            </span>
+                        </h2>
+                        <p class="mb-0 mt-2">
+                            Nivel de confianza: 
+                            <strong class="{% if confianza >= 70 %}text-success{% elif confianza >= 40 %}text-warning{% else %}text-danger{% endif %}">
+                                {{ confianza }}%
+                            </strong>
+                        </p>
+                    </div>
+
+                    <!-- Métricas principales -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">GO (Aciertos)</h6>
+                                    <h3 class="{% if metricas.precision_go >= 85 %}text-success{% elif metricas.precision_go >= 70 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ metricas.precision_go|round(1) }}%
+                                    </h3>
+                                    <small>{{ metricas.aciertos_go }}/{{ metricas.total_go }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">NO-GO (Control)</h6>
+                                    <h3 class="{% if metricas.precision_nogo >= 85 %}text-success{% elif metricas.precision_nogo >= 70 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ metricas.precision_nogo|round(1) }}%
+                                    </h3>
+                                    <small>{{ metricas.aciertos_nogo }}/{{ metricas.total_nogo }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Falsos Positivos</h6>
+                                    <h3 class="{% if metricas.falsos_positivos <= 3 %}text-success{% elif metricas.falsos_positivos <= 8 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ metricas.falsos_positivos }}
+                                    </h3>
+                                    <small>Impulsividad</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Tiempo Promedio</h6>
+                                    <h3 class="text-primary">
+                                        {{ metricas.tiempo_reaccion_promedio|round(0) }}ms
+                                    </h3>
+                                    <small>Velocidad</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfica de rendimiento -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-bar-chart me-2"></i>
+                                Comparación de Rendimiento
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="fw-bold">Precisión en GO (debe responder)</label>
+                                    <div class="progress" style="height: 40px;">
+                                        <div class="progress-bar bg-success" 
+                                             style="width: {{ metricas.precision_go }}%">
+                                            {{ metricas.precision_go|round(1) }}%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Capacidad de respuesta rápida</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="fw-bold">Precisión en NO-GO (no debe responder)</label>
+                                    <div class="progress" style="height: 40px;">
+                                        <div class="progress-bar bg-info" 
+                                             style="width: {{ metricas.precision_nogo }}%">
+                                            {{ metricas.precision_nogo|round(1) }}%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Control de impulsos</small>
+                                </div>
+                            </div>
+                            
+                            {% if metricas.anticipaciones > 0 %}
+                            <div class="alert alert-warning mt-3">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                <strong>Anticipaciones detectadas:</strong> {{ metricas.anticipaciones }}
+                                <br><small>Respuestas muy rápidas (&lt;200ms) que pueden indicar impulsividad</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Scores Detallados -->
+                    {% if scores_detallados %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-pie-chart me-2"></i>
+                                Análisis por Tipo de TDAH
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                {% for tipo, datos in scores_detallados.items() %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card {% if tipo == tipo_tdah %}border-primary{% endif %}">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <h6 class="mb-0">
+                                                    {% if tipo == 'typical' %}
+                                                        Típico
+                                                    {% elif tipo == 'inatento' %}
+                                                        Inatento
+                                                    {% elif tipo == 'hiperactivo' %}
+                                                        Hiperactivo
+                                                    {% elif tipo == 'combinado' %}
+                                                        Combinado
+                                                    {% endif %}
+                                                </h6>
+                                                <span class="badge bg-primary">{{ datos.probabilidad }}%</span>
+                                            </div>
+                                            <div class="progress" style="height: 10px;">
+                                                <div class="progress-bar {% if tipo == tipo_tdah %}bg-success{% else %}bg-secondary{% endif %}" 
+                                                     style="width: {{ datos.probabilidad }}%"></div>
+                                            </div>
+                                            <small class="text-muted">{{ datos.severidad }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Interpretación -->
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-lightbulb-fill me-2"></i>
+                                ¿Qué significa el Test Go/No-Go?
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p>El Test Go/No-Go mide tu <strong>control inhibitorio</strong> y capacidad de <strong>respuesta selectiva</strong>.</p>
+                            
+                            <h6 class="mt-3">Tus resultados indican:</h6>
+                            <ul>
+                                <li><strong>GO ({{ metricas.precision_go|round(1) }}%):</strong> 
+                                    {% if metricas.precision_go >= 85 %}
+                                        Excelente capacidad de respuesta cuando se requiere
+                                    {% elif metricas.precision_go >= 70 %}
+                                        Buena respuesta con algunas omisiones
+                                    {% else %}
+                                        Dificultad para mantener atención y responder
+                                    {% endif %}
+                                </li>
+                                <li><strong>NO-GO ({{ metricas.precision_nogo|round(1) }}%):</strong> 
+                                    {% if metricas.precision_nogo >= 85 %}
+                                        Excelente control de impulsos
+                                    {% elif metricas.precision_nogo >= 70 %}
+                                        Buen control con algunos errores impulsivos
+                                    {% else %}
+                                        Alta impulsividad, dificultad para inhibir respuestas
+                                    {% endif %}
+                                </li>
+                                <li><strong>Falsos Positivos:</strong> {{ metricas.falsos_positivos }} - 
+                                    {% if metricas.falsos_positivos <= 3 %}
+                                        Normal
+                                    {% elif metricas.falsos_positivos <= 8 %}
+                                        Moderado (cierta impulsividad)
+                                    {% else %}
+                                        Alto (alta impulsividad)
+                                    {% endif %}
+                                </li>
+                            </ul>
+                            
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Nota:</strong> Este test es especialmente útil para detectar impulsividad (tipo hiperactivo). Para un diagnóstico completo, se requieren múltiples tests y evaluación profesional.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('student.index') }}" class="btn btn-primary btn-lg px-5">
+                            <i class="bi bi-house-door me-2"></i>
+                            Volver al Dashboard
+                        </a>
+                        <a href="{{ url_for('gonogo.index') }}" class="btn btn-outline-secondary btn-lg px-5 ms-2">
+                            <i class="bi bi-arrow-repeat me-2"></i>
+                            Repetir Test
+                        </a>
+                        <a href="{{ url_for('student.progress') }}" class="btn btn-outline-info btn-lg px-5 ms-2">
+                            <i class="bi bi-graph-up me-2"></i>
+                            Ver Progreso
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,348 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ student.user.username }} - Detalle{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>
+                <i class="bi bi-person-badge"></i> {{ student.user.username }}
+            </h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('teacher.students') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+    
+    <!-- Información del estudiante -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+    <div class="card mb-3">
+        <div class="card-body text-center">
+            <div class="user-avatar mx-auto mb-3" style="width: 100px; height: 100px; font-size: 3rem;">
+                {{ (student.full_name or student.user.username)[0].upper() }}
+            </div>
+            <h4>{{ student.full_name or student.user.username }}</h4>
+            <p class="text-muted small">@{{ student.user.username }}</p>
+            <p class="text-muted">{{ student.user.email }}</p>
+            
+            <hr>
+            
+            <div class="text-start">
+                <p><strong>Edad:</strong> {{ student.age or 'N/A' }} años</p>
+                {% if student.grade %}
+                <p><strong>Grado:</strong> {{ student.grade }}{% if student.section %} - {{ student.section }}{% endif %}</p>
+                {% endif %}
+                {% if student.national_id %}
+                <p><strong>CI:</strong> {{ student.national_id }}</p>
+                {% endif %}
+                <p><strong>Tipo TDAH:</strong> 
+                    <span class="badge bg-info">{{ student.tdah_type or 'No especificado' }}</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ⭐ NUEVA: Información Médica -->
+    {% if student.allergies or student.medical_conditions or student.medications %}
+    <div class="card mb-3 border-warning">
+        <div class="card-header bg-warning text-dark">
+            <h6 class="mb-0"><i class="bi bi-heart-pulse-fill"></i> Información Médica</h6>
+        </div>
+        <div class="card-body small">
+            {% if student.allergies %}
+            <p><strong>⚠️ Alergias:</strong><br>{{ student.allergies }}</p>
+            {% endif %}
+            {% if student.medical_conditions %}
+            <p><strong>Condiciones:</strong><br>{{ student.medical_conditions }}</p>
+            {% endif %}
+            {% if student.medications %}
+            <p class="mb-0"><strong>Medicación:</strong><br>{{ student.medications }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- ⭐ NUEVA: Tutores y contactos -->
+    {% set parents_info = student.get_parents() %}
+    {% if parents_info %}
+    <div class="card mb-3 border-success">
+        <div class="card-header bg-success text-white">
+            <h6 class="mb-0"><i class="bi bi-people-fill"></i> Tutores</h6>
+        </div>
+        <div class="card-body small">
+            {% for p in parents_info %}
+            <div class="mb-3 {% if not loop.last %}pb-3 border-bottom{% endif %}">
+                <strong>{{ p.name }}</strong> 
+                <span class="badge bg-secondary">{{ p.relationship }}</span><br>
+                <small class="text-muted">{{ p.email }}</small><br>
+                {% if p.phone %}
+                <div class="mt-2 d-flex gap-1 flex-wrap">
+                    <a href="tel:{{ p.phone }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-telephone-fill"></i> Llamar
+                    </a>
+                    <a href="https://wa.me/{{ p.phone|replace('+','')|replace(' ','') }}" 
+                       target="_blank" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-whatsapp"></i> WhatsApp
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- ⭐ NUEVA: Contacto de emergencia -->
+    {% if student.emergency_contact_name or student.emergency_contact_phone %}
+    <div class="card mb-3 border-danger">
+        <div class="card-header bg-danger text-white">
+            <h6 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Contacto de Emergencia</h6>
+        </div>
+        <div class="card-body small">
+            <strong>{{ student.emergency_contact_name or 'No especificado' }}</strong><br>
+            {% if student.emergency_contact_phone %}
+            <a href="tel:{{ student.emergency_contact_phone }}" class="btn btn-sm btn-danger mt-2">
+                <i class="bi bi-telephone-fill"></i> {{ student.emergency_contact_phone }}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if student.address %}
+    <div class="card mb-3">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-geo-alt-fill"></i> Dirección</h6>
+        </div>
+        <div class="card-body small">
+            {{ student.address }}
+        </div>
+    </div>
+    {% endif %}
+</div>
+        
+        <div class="col-md-8">
+            <!-- Estadísticas -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="stat-card primary">
+                        <h3>{{ stats.total_sessions }}</h3>
+                        <p class="text-muted">Sesiones Completadas</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card success">
+                        <h3>{{ stats.avg_attention }}%</h3>
+                        <p class="text-muted">Atención Promedio</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card warning">
+                        <h3>{{ stats.avg_completion_time }}</h3>
+                        <p class="text-muted">Tiempo Promedio (min)</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Progreso -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up"></i> Progreso de Atención
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="attentionChart" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tabs de información -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#sessions-tab">
+                <i class="bi bi-activity"></i> Sesiones ({{ sessions|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#activities-tab">
+                <i class="bi bi-clipboard-check"></i> Actividades ({{ activities|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#reports-tab">
+                <i class="bi bi-file-text"></i> Reportes ({{ reports|length }})
+            </button>
+        </li>
+    </ul>
+    
+    <div class="tab-content">
+        <!-- Sesiones -->
+        <div class="tab-pane fade show active" id="sessions-tab">
+            <div class="card">
+                <div class="card-body">
+                    {% if sessions %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Actividad</th>
+                                        <th>Atención</th>
+                                        <th>Tiempo</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for session in sessions %}
+                                    <tr>
+                                        <td>{{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                                        <td>{{ session.activity.title if session.activity else 'Actividad libre' }}</td>
+                                        <td>
+                                            <div class="progress" style="width: 100px; height: 20px;">
+                                                <div class="progress-bar bg-{{ 'success' if session.attention_score >= 70 else 'warning' if session.attention_score >= 50 else 'danger' }}" 
+                                                     style="width: {{ session.attention_score or 0 }}%">
+                                                    {{ session.attention_score or 0 }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>{{ (session.completion_time // 60) if session.completion_time else 0 }} min</td>
+                                        <td>
+                                            <a href="{{ url_for('teacher.session_detail', session_id=session.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i> Ver
+                                            </a>
+                                            <a href="{{ url_for('teacher.create_report', session_id=session.id) }}" 
+                                               class="btn btn-sm btn-outline-success">
+                                                <i class="bi bi-file-text"></i> Reporte
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                            <p class="text-muted mt-3">No hay sesiones registradas</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actividades -->
+        <div class="tab-pane fade" id="activities-tab">
+            <div class="card">
+                <div class="card-body">
+                    {% if activities %}
+                        <div class="row">
+                            {% for activity in activities %}
+                            <div class="col-md-4 mb-3">
+                                <div class="activity-card card h-100">
+                                    {% if activity.ar_content and activity.ar_content.enabled %}
+                                    <span class="ar-badge"><i class="bi bi-badge-ar"></i> AR</span>
+                                    {% endif %}
+                                    
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ activity.title }}</h5>
+                                        <p class="card-text small text-muted">{{ activity.description }}</p>
+                                        <span class="badge bg-info">{{ activity.activity_type }}</span>
+                                        <span class="badge bg-secondary">Nivel {{ activity.difficulty_level }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                            <p class="text-muted mt-3">No hay actividades asignadas</p>
+                            <a href="{{ url_for('teacher.create_activity') }}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle"></i> Crear Actividad
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reportes -->
+        <div class="tab-pane fade" id="reports-tab">
+            <div class="card">
+                <div class="card-body">
+                    {% if reports %}
+                        {% for report in reports %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6>{{ report.created_at.strftime('%d/%m/%Y') }}</h6>
+                                        <p class="mb-2">{{ report.content }}</p>
+                                        <p class="text-muted small"><strong>Recomendaciones:</strong> {{ report.recommendations }}</p>
+                                    </div>
+                                    <span class="badge bg-{{ 'success' if report.sent_to_parents else 'warning' }}">
+                                        {{ 'Enviado' if report.sent_to_parents else 'Pendiente' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                            <p class="text-muted mt-3">No hay reportes creados</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('attentionChart');
+    
+    const dates = {{ sessions|map(attribute='created_at')|map('string')|list|tojson }};
+    const scores = {{ sessions|map(attribute='attention_score')|list|tojson }};
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dates.map(d => new Date(d).toLocaleDateString('es-ES', {day: '2-digit', month: '2-digit'})),
+            datasets: [{
+                label: 'Puntuación de Atención',
+                data: scores,
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

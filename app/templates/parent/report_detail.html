@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}Detalle del Reporte{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('parent.index') }}">Inicio</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('parent.view_child', student_id=student.id) }}">{{ student.user.username }}</a></li>
+            <li class="breadcrumb-item active">Reporte</li>
+        </ol>
+    </nav>
+    
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                <i class="bi bi-file-earmark-text me-2"></i>
+                Reporte de Evaluación
+            </h4>
+        </div>
+        <div class="card-body">
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <p><strong>Estudiante:</strong> {{ student.user.username }}</p>
+                    <p><strong>Fecha:</strong> {{ report.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                    <p><strong>Tipo de Test:</strong> 
+                        {% if report.report_type == 'vision_test' %}
+                            <span class="badge bg-info">Test de Visión</span>
+                        {% elif report.report_type == 'audio_test' %}
+                            <span class="badge bg-success">Test de Audio</span>
+                        {% elif report.report_type == 'stroop_test' %}
+                            <span class="badge bg-warning">Test de Stroop</span>
+                        {% elif report.report_type == 'gonogo_test' %}
+                            <span class="badge bg-danger">Test Go/No-Go</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <h5>Clasificación</h5>
+                    <h3><span class="badge bg-secondary">{{ content.get('tipo_tdah', 'N/A')|upper }}</span></h3>
+                    <p>Confianza: <strong>{{ content.get('confianza', 0) }}%</strong></p>
+                </div>
+            </div>
+            
+            {% if report.recommendations %}
+            <div class="alert alert-info">
+                <h5 class="alert-heading"><i class="bi bi-lightbulb me-2"></i>Recomendaciones</h5>
+                <p class="mb-0">{{ report.recommendations }}</p>
+            </div>
+            {% endif %}
+            
+            {% if content.get('metricas') %}
+            <h5 class="mt-4">Métricas Detalladas</h5>
+            <div class="row">
+                {% for key, value in content.metricas.items() %}
+                <div class="col-md-6 mb-2">
+                    <strong>{{ key|replace('_', ' ')|title }}:</strong> {{ value }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-footer text-end">
+            <a href="{{ url_for('parent.view_child', student_id=student.id) }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Volver
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

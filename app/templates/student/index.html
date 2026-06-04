@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - Estudiante{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1>
+                <i class="bi bi-house-heart"></i> Bienvenido/a, {{ current_user.username }}
+            </h1>
+            <p class="lead">Panel de estudiante</p>
+        </div>
+    </div>
+    
+    <!-- Estadísticas principales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Tests Completados</h6>
+                            <h2 class="mb-0">{{ stats.total_tests }}</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-clipboard-check-fill" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-success text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Actividades AR</h6>
+                            <h2 class="mb-0">{{ stats.total_ar }}</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-badge-ar-fill" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-warning text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Tipo TDAH</h6>
+                            <h5 class="mb-0">{{ student.get_tipo_tdah_display() }}</h5>
+                        </div>
+                        <div>
+                            <i class="bi bi-graph-up-arrow" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-info text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Confianza</h6>
+                            <h2 class="mb-0">{{ student.tdah_confidence|round(0)|int }}%</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-speedometer2" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tests Cognitivos -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h3 class="mb-3">
+                <i class="bi bi-brain me-2"></i>
+                Tests Cognitivos
+            </h3>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 shadow-sm hover-card">
+                <div class="card-body text-center">
+                    <div class="mb-3" style="font-size: 4rem; color: #007bff;">
+                        <i class="bi bi-eye-fill"></i>
+                    </div>
+                    <h5 class="card-title">Test de Visión</h5>
+                    <p class="card-text small">Evalúa tu atención visual</p>
+                    <span class="badge bg-primary mb-2">{{ stats.vision_tests }} completados</span>
+                    <div class="d-grid">
+                        <a href="{{ url_for('vision.index') }}" class="btn btn-primary">
+                            <i class="bi bi-play-fill"></i> Iniciar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 shadow-sm hover-card">
+                <div class="card-body text-center">
+                    <div class="mb-3" style="font-size: 4rem; color: #28a745;">
+                        <i class="bi bi-volume-up-fill"></i>
+                    </div>
+                    <h5 class="card-title">Test de Audio</h5>
+                    <p class="card-text small">Evalúa tu atención auditiva</p>
+                    <span class="badge bg-success mb-2">{{ stats.audio_tests }} completados</span>
+                    <div class="d-grid">
+                        <a href="{{ url_for('audio.index') }}" class="btn btn-success">
+                            <i class="bi bi-play-fill"></i> Iniciar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 shadow-sm hover-card">
+                <div class="card-body text-center">
+                    <div class="mb-3" style="font-size: 4rem; color: #dc3545;">
+                        <i class="bi bi-palette-fill"></i>
+                    </div>
+                    <h5 class="card-title">Test de Stroop</h5>
+                    <p class="card-text small">Control inhibitorio</p>
+                    <span class="badge bg-danger mb-2">{{ stats.stroop_tests }} completados</span>
+                    <div class="d-grid">
+                        <a href="{{ url_for('stroop.index') }}" class="btn btn-danger">
+                            <i class="bi bi-play-fill"></i> Iniciar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="card h-100 shadow-sm hover-card">
+                <div class="card-body text-center">
+                    <div class="mb-3" style="font-size: 4rem; color: #ffc107;">
+                        <i class="bi bi-hand-index-thumb-fill"></i>
+                    </div>
+                    <h5 class="card-title">Test Go/No-Go</h5>
+                    <p class="card-text small">Impulsividad</p>
+                    <span class="badge bg-warning mb-2">{{ stats.gonogo_tests }} completados</span>
+                    <div class="d-grid">
+                        <a href="{{ url_for('gonogo.index') }}" class="btn btn-warning">
+                            <i class="bi bi-play-fill"></i> Iniciar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ACTIVIDADES DE REALIDAD AUMENTADA -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-lg border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h3 class="mb-3">
+                                <i class="bi bi-badge-ar-fill me-2"></i>
+                                Actividades de Realidad Aumentada
+                            </h3>
+                            <p class="lead mb-0">
+                                Ejercicios interactivos en 3D para mejorar tu atención, memoria y autorregulación.
+                            </p>
+                            <div class="mt-3">
+                                <span class="badge bg-light text-dark me-2">
+                                    <i class="bi bi-bullseye"></i> Caza de Objetos
+                                </span>
+                                <span class="badge bg-light text-dark me-2">
+                                    <i class="bi bi-lightning-fill"></i> Secuencia de Luces
+                                </span>
+                                <span class="badge bg-light text-dark">
+                                    <i class="bi bi-heart-pulse-fill"></i> Respiración Guiada
+                                </span>
+                            </div>
+                            <div class="mt-3">
+                                <small class="text-white-50">
+                                    {{ stats.total_ar }} actividades completadas
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <a href="{{ url_for('ar.index') }}" class="btn btn-light btn-lg px-5 py-3 shadow-lg">
+                                <i class="bi bi-play-circle-fill me-2"></i>
+                                Ir a Actividades AR
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Accesos rápidos -->
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-graph-up text-primary"></i>
+                        Mi Progreso
+                    </h5>
+                    <p class="card-text">Visualiza tu evolución y mejoras</p>
+                    <a href="{{ url_for('student.progress') }}" class="btn btn-outline-primary">
+                        Ver Progreso
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-person-circle text-success"></i>
+                        Mi Perfil
+                    </h5>
+                    <p class="card-text">Revisa tu información personal</p>
+                    <a href="{{ url_for('auth.profile') }}" class="btn btn-outline-success">
+                        Ver Perfil
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-chat-dots text-info"></i>
+                        Recomendaciones
+                    </h5>
+                    <p class="card-text">Consejos personalizados para ti</p>
+                    <a href="{{ url_for('student.feedback') }}" class="btn btn-outline-info">
+                        Ver Consejos
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+    cursor: pointer;
+}
+.hover-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+{% block title %}Detalles de {{ student.user.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('parent.index') }}">Inicio</a></li>
+            <li class="breadcrumb-item active">{{ student.user.username }}</li>
+        </ol>
+    </nav>
+    
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-lg border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white p-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h2 class="mb-2">
+                                <i class="bi bi-person-circle me-2"></i>
+                                {{ student.user.username }}
+                            </h2>
+                            <p class="mb-1"><strong>Relación:</strong> {{ relationship }}</p>
+                            {% if student.grade %}
+                            <p class="mb-1"><strong>Grado:</strong> {{ student.grade }} 
+                                {% if student.section %}- Sección {{ student.section }}{% endif %}
+                            </p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 text-end">
+                            {% if student.tdah_type %}
+                            <div class="bg-white bg-opacity-25 p-3 rounded">
+                                <h6 class="text-white-50 mb-1">Tipo de TDAH</h6>
+                                <h4 class="mb-1">{{ student.get_tipo_tdah_display() }}</h4>
+                                <small>Confianza: {{ student.tdah_confidence|round(1) }}%</small>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning mb-0">
+                                <i class="bi bi-exclamation-circle me-1"></i>
+                                Aún no evaluado
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center shadow">
+                <div class="card-body">
+                    <i class="bi bi-clipboard-data text-primary" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ child_stats.total_reports }}</h3>
+                    <p class="text-muted mb-0">Reportes Totales</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow">
+                <div class="card-body">
+                    <i class="bi bi-eye-fill text-info" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ child_stats.vision_tests }}</h3>
+                    <p class="text-muted mb-0">Tests de Visión</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow">
+                <div class="card-body">
+                    <i class="bi bi-headphones text-success" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ child_stats.audio_tests }}</h3>
+                    <p class="text-muted mb-0">Tests de Audio</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center shadow">
+                <div class="card-body">
+                    <i class="bi bi-controller text-warning" style="font-size: 2rem;"></i>
+                    <h3 class="mt-2">{{ child_stats.total_sessions }}</h3>
+                    <p class="text-muted mb-0">Sesiones</p>
+                </div>
+            </div>
+    </div>
+    </div>
+    
+    <div class="row">
+        <!-- Reportes recientes -->
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-earmark-text me-2"></i>
+                        Reportes y Evaluaciones
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if reports %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Tipo de Test</th>
+                                        <th>Clasificación</th>
+                                        <th>Confianza</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for report in reports %}
+                                    <tr>
+                                        <td>{{ report.date.strftime('%d/%m/%Y %H:%M') }}</td>
+                                        <td>
+                                            {% if report.type == 'vision_test' %}
+                                                <i class="bi bi-eye-fill text-info"></i> Visión
+                                            {% elif report.type == 'audio_test' %}
+                                                <i class="bi bi-headphones text-success"></i> Audio
+                                            {% elif report.type == 'stroop_test' %}
+                                                <i class="bi bi-palette-fill text-warning"></i> Stroop
+                                            {% elif report.type == 'gonogo_test' %}
+                                                <i class="bi bi-bullseye text-danger"></i> Go/No-Go
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ report.tipo_tdah|upper }}</span>
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 20px; width: 100px;">
+                                                <div class="progress-bar {% if report.confianza >= 70 %}bg-success{% elif report.confianza >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                     style="width: {{ report.confianza }}%">
+                                                    {{ report.confianza }}%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('parent.view_report', report_id=report.id) }}" 
+                                               class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-eye"></i> Ver
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                            <p class="text-muted mt-2">No hay reportes disponibles</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sesiones recientes -->
+        <div class="col-md-4">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-clock-history me-2"></i>
+                        Actividad Reciente
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_sessions %}
+                        {% for session in recent_sessions %}
+                        <div class="mb-3 pb-3 border-bottom">
+                            <small class="text-muted">{{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                            <p class="mb-1"><strong>{{ session.activity.title if session.activity else 'Actividad' }}</strong></p>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar {% if session.attention_score >= 70 %}bg-success{% elif session.attention_score >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                     style="width: {{ session.attention_score|default(0) }}%"></div>
+                            </div>
+                            <small class="text-muted">Atención: {{ session.attention_score|default(0) }}%</small>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center">Sin actividad reciente</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Botón de progreso -->
+            <div class="d-grid mt-3">
+                <a href="{{ url_for('parent.child_progress', student_id=student.id) }}" 
+                   class="btn btn-lg btn-primary">
+                    <i class="bi bi-graph-up me-2"></i>
+                    Ver Progreso Completo
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

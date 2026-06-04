@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+{% block title %}Caza de Objetos AR{% endblock %}
+
+{% block extra_css %}
+<style>
+    body { margin: 0; overflow: hidden; }
+    #ar-scene { width: 100vw; height: 100vh; }
+    #ui-overlay {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        z-index: 1000;
+        pointer-events: none;
+    }
+    .ui-card {
+        background: rgba(255,255,255,0.95);
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        pointer-events: auto;
+    }
+    #score-display {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #28a745;
+    }
+    #timer {
+        font-size: 1.5rem;
+        color: #dc3545;
+    }
+    .object-btn {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: none;
+        font-size: 2rem;
+        cursor: pointer;
+        margin: 5px;
+    }
+    #instructions {
+        background: rgba(0,123,255,0.9);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        text-align: center;
+        max-width: 500px;
+        margin: 50px auto;
+    }
+    #results-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        z-index: 2000;
+    }
+    #results-content {
+        background: white;
+        padding: 40px;
+        border-radius: 20px;
+        max-width: 600px;
+        margin: 100px auto;
+        text-align: center;
+    }
+</style>
+<!-- A-Frame -->
+<script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Instrucciones iniciales -->
+<div id="instructions" style="display:block;">
+    <h2>🎯 Caza de Objetos AR</h2>
+    <p class="lead">Encuentra y toca solo las esferas VERDES</p>
+    <ul class="text-start">
+        <li>Aparecerán 10 esferas de colores</li>
+        <li>Solo toca las <strong>VERDES</strong></li>
+        <li>Evita las rojas, azules y amarillas</li>
+        <li>Tienes 60 segundos</li>
+    </ul>
+    <button class="btn btn-success btn-lg mt-3" onclick="startGame()">
+        🚀 Comenzar
+    </button>
+</div>
+
+<!-- UI Overlay -->
+<div id="ui-overlay" style="display:none;">
+    <div class="ui-card">
+        <div class="row">
+            <div class="col-4">
+                <div>Puntos</div>
+                <div id="score-display">0</div>
+            </div>
+            <div class="col-4">
+                <div>Errores</div>
+                <div id="errors-display" style="color:#dc3545;">0</div>
+            </div>
+            <div class="col-4">
+                <div>Tiempo</div>
+                <div id="timer">60s</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Escena AR -->
+<a-scene id="ar-scene" style="display:none;" embedded vr-mode-ui="enabled: false">
+    <!-- Cámara -->
+    <a-entity camera look-controls wasd-controls position="0 1.6 0">
+        <a-cursor color="#4CC3D9" fuse="true" fuse-timeout="500"></a-cursor>
+    </a-entity>
+    
+    <!-- Luz -->
+    <a-light type="ambient" color="#BBB"></a-light>
+    <a-light type="directional" color="#FFF" intensity="0.6" position="-1 1 0"></a-light>
+    
+    <!-- Contenedor de objetos -->
+    <a-entity id="objects-container"></a-entity>
+    
+    <!-- Cielo -->
+    <a-sky color="#87CEEB"></a-sky>
+</a-scene>
+
+<!-- Modal de Resultados -->
+<div id="results-modal">
+    <div id="results-content">
+        <h2>🎉 ¡Actividad Completada!</h2>
+        <div id="final-score" class="display-1 text-success my-4">0</div>
+        <div class="row text-center mb-4">
+            <div class="col-4">
+                <h4 id="final-correct">0</h4>
+                <small>Correctas</small>
+            </div>
+            <div class="col-4">
+                <h4 id="final-errors" class="text-danger">0</h4>
+                <small>Errores</small>
+            </div>
+            <div class="col-4">
+                <h4 id="final-time">0s</h4>
+                <small>Tiempo</small>
+            </div>
+        </div>
+        <div id="result-message" class="alert"></div>
+        <button class="btn btn-primary btn-lg me-2" onclick="playAgain()">
+            🔄 Jugar de Nuevo
+        </button>
+        <a href="{{ url_for('ar.index') }}" class="btn btn-secondary btn-lg">
+            🏠 Volver al Menú
+        </a>
+    </div>
+</div>
+
+<script>
+const STUDENT_ID = {{ student.id }};
+let gameData = {
+    score: 0,
+    errors: 0,
+    correctClicks: 0,
+    startTime: null,
+    endTime: null,
+    objects: [],
+    clicks: []
+};
+
+function startGame() {
+    document.getElementById('instructions').style.display = 'none';
+    document.getElementById('ar-scene').style.display = 'block';
+    document.getElementById('ui-overlay').style.display = 'block';
+    
+    gameData.startTime = Date.now();
+    generateObjects();
+    startTimer();
+}
+
+function generateObjects() {
+    const container = document.getElementById('objects-container');
+    const colors = ['#00FF00', '#FF0000', '#0000FF', '#FFFF00']; // Verde, Rojo, Azul, Amarillo
+    const correctColor = '#00FF00';
+    
+    // 3 verdes (correctas), 7 de otros colores
+    const objectColors = [
+        correctColor, correctColor, correctColor,
+        '#FF0000', '#FF0000', '#0000FF', '#0000FF', '#FFFF00', '#FFFF00', '#FFA500'
+    ];
+    
+    // Mezclar array
+    objectColors.sort(() => Math.random() - 0.5);
+    
+    objectColors.forEach((color, index) => {
+        const sphere = document.createElement('a-sphere');
+        
+        // Posición aleatoria alrededor del usuario
+        const angle = (index / objectColors.length) * Math.PI * 2;
+        const radius = 3 + Math.random() * 2;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        const y = 1 + Math.random() * 1.5;
+        
+        sphere.setAttribute('position', `${x} ${y} ${z}`);
+        sphere.setAttribute('radius', '0.3');
+        sphere.setAttribute('color', color);
+        sphere.setAttribute('class', 'clickable-object');
+        sphere.setAttribute('data-correct', color === correctColor);
+        
+        // Animación de flotación
+        sphere.setAttribute('animation', {
+            property: 'position',
+            to: `${x} ${y + 0.2} ${z}`,
+            dur: 2000,
+            dir: 'alternate',
+            loop: true,
+            easing: 'easeInOutSine'
+        });
+        
+        // Click event
+        sphere.addEventListener('click', () => handleObjectClick(sphere, color === correctColor));
+        
+        container.appendChild(sphere);
+        gameData.objects.push({ color, correct: color === correctColor });
+    });
+}
+
+function handleObjectClick(sphere, isCorrect) {
+    const clickTime = Date.now() - gameData.startTime;
+    
+    gameData.clicks.push({
+        time: clickTime,
+        correct: isCorrect
+    });
+    
+    if (isCorrect) {
+        gameData.score += 10;
+        gameData.correctClicks++;
+        
+        // Animación de acierto
+        sphere.setAttribute('color', '#FFD700');
+        sphere.setAttribute('scale', '1.5 1.5 1.5');
+        
+        // Sonido (opcional)
+        playSound('success');
+        
+        setTimeout(() => sphere.parentNode.removeChild(sphere), 300);
+        
+        // Verificar si completó todas las correctas
+        if (gameData.correctClicks >= 3) {
+            endGame();
+        }
+    } else {
+        gameData.errors++;
+        gameData.score = Math.max(0, gameData.score - 5);
+        
+        // Animación de error
+        sphere.setAttribute('color', '#FF0000');
+        
+        // Sonido (opcional)
+        playSound('error');
+    }
+    
+    updateUI();
+}
+
+function startTimer() {
+    const timerDisplay = document.getElementById('timer');
+    let timeLeft = 60;
+    
+    const timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `${timeLeft}s`;
+        
+        if (timeLeft <= 0 || gameData.correctClicks >= 3) {
+            clearInterval(timerInterval);
+            if (gameData.correctClicks < 3) {
+                endGame();
+            }
+        }
+    }, 1000);
+}
+
+function updateUI() {
+    document.getElementById('score-display').textContent = gameData.score;
+    document.getElementById('errors-display').textContent = gameData.errors;
+}
+
+function endGame() {
+    gameData.endTime = Date.now();
+    const duration = Math.round((gameData.endTime - gameData.startTime) / 1000);
+    
+    // Ocultar escena
+    document.getElementById('ar-scene').style.display = 'none';
+    document.getElementById('ui-overlay').style.display = 'none';
+    
+    // Mostrar resultados
+    document.getElementById('final-score').textContent = gameData.score;
+    document.getElementById('final-correct').textContent = gameData.correctClicks;
+    document.getElementById('final-errors').textContent = gameData.errors;
+    document.getElementById('final-time').textContent = `${duration}s`;
+    
+    // Mensaje según resultado
+    const resultMsg = document.getElementById('result-message');
+    if (gameData.correctClicks === 3 && gameData.errors === 0) {
+        resultMsg.className = 'alert alert-success';
+        resultMsg.textContent = '🏆 ¡Perfecto! Sin errores';
+    } else if (gameData.correctClicks === 3) {
+        resultMsg.className = 'alert alert-info';
+        resultMsg.textContent = '✅ ¡Bien hecho! Completaste el desafío';
+    } else {
+        resultMsg.className = 'alert alert-warning';
+        resultMsg.textContent = '⏰ Se acabó el tiempo';
+    }
+    
+    document.getElementById('results-modal').style.display = 'block';
+    
+    // Guardar en base de datos
+    saveResults(duration);
+}
+
+function saveResults(duration) {
+    const results = {
+        activity_type: 'ar_caza',
+        results: {
+            score: gameData.score,
+            errors: gameData.errors,
+            correct: gameData.correctClicks,
+            time: duration,
+            clicks: gameData.clicks,
+            total_objects: gameData.objects.length
+        }
+    };
+    
+    fetch('{{ url_for("ar.save_result") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(results)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Resultado guardado:', data);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function playAgain() {
+    location.reload();
+}
+
+function playSound(type) {
+    // Implementar sonidos si se desea
+    console.log('Sound:', type);
+}
+</script>
+{% endblock %}  

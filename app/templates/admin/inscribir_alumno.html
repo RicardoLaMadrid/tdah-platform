@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+{% block title %}Inscribir Alumno - Admin{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1><i class="bi bi-person-plus-fill text-primary"></i> Inscribir Nuevo Alumno</h1>
+            <p class="text-muted mb-0">Captura todos los datos del alumno y sus tutores en un solo paso.</p>
+        </div>
+        <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Volver
+        </a>
+    </div>
+    
+    <form method="POST" action="{{ url_for('admin.inscribir_alumno') }}" id="inscripcion-form">
+        
+        <!-- SECCIÓN 1: Datos del Alumno -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-mortarboard-fill me-2"></i>1. Datos del Alumno</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Nombre completo *</label>
+                        <input type="text" class="form-control" name="student_full_name" required
+                               placeholder="Ej: Juan Pérez García" id="student_full_name">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Cédula de Identidad</label>
+                        <input type="text" class="form-control" name="student_national_id"
+                               placeholder="12345678">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Edad *</label>
+                        <input type="number" class="form-control" name="student_age" required
+                               min="5" max="18" value="10">
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Grado *</label>
+                        <input type="text" class="form-control" name="student_grade" required
+                               placeholder="Ej: 5to Primaria">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sección</label>
+                        <input type="text" class="form-control" name="student_section"
+                               placeholder="A">
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                <h6 class="text-muted">🔐 Credenciales de acceso</h6>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Username *</label>
+                        <input type="text" class="form-control" name="student_username" required
+                               id="student_username">
+                        <small class="text-muted">Se autocompleta del nombre</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-control" name="student_email" required
+                               placeholder="alumno@colegio.com">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Contraseña inicial *</label>
+                        <input type="text" class="form-control" name="student_password" required
+                               value="estudiante123">
+                        <small class="text-muted">El alumno la podrá cambiar después</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECCIÓN 2: Información Médica -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-heart-pulse-fill me-2"></i>2. Información Médica</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Alergias conocidas</label>
+                        <textarea class="form-control" name="student_allergies" rows="2"
+                                  placeholder="Ej: Penicilina, frutos secos, polen..."></textarea>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Condiciones médicas</label>
+                        <textarea class="form-control" name="student_medical_conditions" rows="2"
+                                  placeholder="Ej: Asma, diabetes, epilepsia..."></textarea>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Medicamentos actuales</label>
+                        <textarea class="form-control" name="student_medications" rows="2"
+                                  placeholder="Ej: Metilfenidato 10mg cada 8h..."></textarea>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-3 mb-0 small">
+                    <i class="bi bi-info-circle"></i> Esta información se mantiene confidencial y solo es visible para administradores y el profesor asignado.
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECCIÓN 3: Dirección y Contacto de Emergencia -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-geo-alt-fill me-2"></i>3. Dirección y Contacto de Emergencia</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Dirección del alumno</label>
+                        <textarea class="form-control" name="student_address" rows="2"
+                                  placeholder="Calle, número, zona, ciudad..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Contacto de emergencia (nombre)</label>
+                        <input type="text" class="form-control" name="emergency_contact_name"
+                               placeholder="Persona a contactar en urgencias">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Contacto de emergencia (teléfono)</label>
+                        <input type="text" class="form-control" name="emergency_contact_phone"
+                               placeholder="+591 XXXXXXXX">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECCIÓN 4: Tutor Principal -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>4. Tutor Principal <span class="badge bg-light text-dark">Obligatorio</span></h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre completo *</label>
+                        <input type="text" class="form-control" name="parent1_full_name" required
+                               placeholder="Ej: María García López">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Relación *</label>
+                        <select class="form-select" name="parent1_relationship" required>
+                            <option value="madre">Madre</option>
+                            <option value="padre">Padre</option>
+                            <option value="tutor">Tutor legal</option>
+                            <option value="abuelo/abuela">Abuelo/a</option>
+                            <option value="tío/tía">Tío/a</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Cédula de Identidad</label>
+                        <input type="text" class="form-control" name="parent1_national_id">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-control" name="parent1_email" required
+                               placeholder="padre@ejemplo.com">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Teléfono / WhatsApp *</label>
+                        <input type="text" class="form-control" name="parent1_phone" required
+                               placeholder="+591 XXXXXXXX">
+                        <small class="text-muted">Incluye código de país</small>
+                    </div>
+                    
+                    <div class="col-md-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" 
+                                   name="parent1_whatsapp_enabled" checked id="p1_wa">
+                            <label for="p1_wa" class="form-check-label">
+                                <i class="bi bi-whatsapp text-success"></i> Recibir notificaciones por WhatsApp
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="parent1_create_account" checked id="p1_acc"
+                                   onchange="togglePasswordField('parent1')">
+                            <label for="p1_acc" class="form-check-label">
+                                <i class="bi bi-laptop"></i> Crear cuenta web (puede ver progreso de su hijo)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6" id="parent1_password_section">
+                        <label class="form-label">Contraseña inicial</label>
+                        <input type="text" class="form-control" name="parent1_password" value="padre123">
+                        <small class="text-muted">El padre la cambia después de su primer login</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECCIÓN 5: Tutor Secundario (opcional) -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>5. Tutor Secundario <span class="badge bg-light text-dark">Opcional</span></h5>
+                <button type="button" class="btn btn-sm btn-light" onclick="toggleParent2()" id="toggle-p2-btn">
+                    <i class="bi bi-plus-circle"></i> Agregar
+                </button>
+            </div>
+            <div class="card-body" id="parent2_section" style="display: none;">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre completo</label>
+                        <input type="text" class="form-control" name="parent2_full_name">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Relación</label>
+                        <select class="form-select" name="parent2_relationship">
+                            <option value="padre">Padre</option>
+                            <option value="madre">Madre</option>
+                            <option value="tutor">Tutor legal</option>
+                            <option value="abuelo/abuela">Abuelo/a</option>
+                            <option value="tío/tía">Tío/a</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Cédula</label>
+                        <input type="text" class="form-control" name="parent2_national_id">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="parent2_email">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Teléfono / WhatsApp</label>
+                        <input type="text" class="form-control" name="parent2_phone">
+                    </div>
+                    
+                    <div class="col-md-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" 
+                                   name="parent2_whatsapp_enabled" id="p2_wa">
+                            <label for="p2_wa" class="form-check-label">
+                                <i class="bi bi-whatsapp text-success"></i> Recibir notificaciones por WhatsApp
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="parent2_create_account" id="p2_acc"
+                                   onchange="togglePasswordField('parent2')">
+                            <label for="p2_acc" class="form-check-label">
+                                <i class="bi bi-laptop"></i> Crear cuenta web
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6" id="parent2_password_section" style="display:none;">
+                        <label class="form-label">Contraseña inicial</label>
+                        <input type="text" class="form-control" name="parent2_password" value="padre123">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Botones de acción -->
+        <div class="d-flex justify-content-between mb-5">
+            <a href="{{ url_for('admin.users') }}" class="btn btn-secondary btn-lg">
+                <i class="bi bi-x-circle"></i> Cancelar
+            </a>
+            <button type="submit" class="btn btn-primary btn-lg px-5">
+                <i class="bi bi-check-circle-fill"></i> Inscribir Alumno
+            </button>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+// Auto-suggest username del nombre completo
+document.getElementById('student_full_name').addEventListener('blur', function() {
+    const usernameField = document.getElementById('student_username');
+    if (!usernameField.value) {
+        const parts = this.value.toLowerCase().trim()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar acentos
+            .replace(/[^a-z\s]/g, '') // solo letras
+            .split(/\s+/);
+        if (parts.length >= 2) {
+            usernameField.value = parts[0] + '.' + parts[1];
+        } else if (parts.length === 1) {
+            usernameField.value = parts[0];
+        }
+    }
+});
+
+function togglePasswordField(prefix) {
+    const checkbox = document.querySelector(`[name="${prefix}_create_account"]`);
+    const section = document.getElementById(`${prefix}_password_section`);
+    section.style.display = checkbox.checked ? 'block' : 'none';
+}
+
+function toggleParent2() {
+    const section = document.getElementById('parent2_section');
+    const btn = document.getElementById('toggle-p2-btn');
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        btn.innerHTML = '<i class="bi bi-x-circle"></i> Quitar';
+        btn.classList.remove('btn-light');
+        btn.classList.add('btn-danger');
+    } else {
+        section.style.display = 'none';
+        btn.innerHTML = '<i class="bi bi-plus-circle"></i> Agregar';
+        btn.classList.add('btn-light');
+        btn.classList.remove('btn-danger');
+        // Limpiar valores
+        section.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]')
+            .forEach(el => el.value = '');
+    }
+}
+
+// Confirmar antes de enviar
+document.getElementById('inscripcion-form').addEventListener('submit', function(e) {
+    const studentName = document.querySelector('[name="student_full_name"]').value;
+    if (!confirm(`¿Confirmas la inscripción de "${studentName}"?\n\nSe crearán las cuentas del alumno y sus tutores.`)) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

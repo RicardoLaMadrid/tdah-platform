@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% block title %}Respiración Guiada AR{% endblock %}
+
+{% block extra_css %}
+<style>
+    body { margin: 0; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    #breathing-container {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+    }
+    #breathing-circle {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255,255,255,0.9), rgba(255,255,255,0.3));
+        box-shadow: 0 0 50px rgba(255,255,255,0.5);
+        transition: all 4s ease-in-out;
+    }
+    #breathing-circle.inhale {
+        transform: scale(2);
+        background: radial-gradient(circle, rgba(100,200,255,0.9), rgba(100,200,255,0.3));
+    }
+    #breathing-circle.exhale {
+        transform: scale(1);
+        background: radial-gradient(circle, rgba(255,255,255,0.9), rgba(255,255,255,0.3));
+    }
+    #instruction-text {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-top: 50px;
+        text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+    }
+    #stats-panel {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(0,0,0,0.7);
+        padding: 20px;
+        border-radius: 15px;
+        min-width: 200px;
+    }
+    .cycle-indicator {
+        display: inline-block;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.3);
+        margin: 3px;
+    }
+    .cycle-indicator.completed {
+        background: #4CAF50;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="breathing-container">
+    <!-- Stats Panel -->
+    <div id="stats-panel">
+        <h5>Ejercicio de Respiración</h5>
+        <div class="mb-2">
+            <small>Ciclo</small>
+            <h3 id="cycle-count">0 / 5</h3>
+        </div>
+        <div id="cycle-indicators"></div>
+        <div class="mt-3">
+            <small>Tiempo total</small>
+            <div id="time-display">0s</div>
+        </div>
+    </div>
+    
+    <!-- Breathing Circle -->
+    <div id="breathing-circle"></div>
+    
+    <!-- Instruction Text -->
+    <div id="instruction-text">Prepárate...</div>
+    
+    <!-- Start Button -->
+    <button id="start-btn" class="btn btn-light btn-lg mt-5" onclick="startBreathing()">
+        🧘 Comenzar Ejercicio
+    </button>
+</div>
+
+<!-- Results Modal -->
+<div id="results-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000;">
+    <div style="background:white; color:black; padding:40px; border-radius:20px; max-width:600px; margin:100px auto; text-align:center;">
+        <h2>🧘 Ejercicio Completado</h2>
+        <div class="display-1 text-success my-4">✓</div>
+        <p class="lead">Has completado 5 ciclos de respiración</p>
+        <div class="row text-center my-4">
+            <div class="col-6">
+                <h3 id="final-cycles">5</h3>
+                <small>Ciclos Completados</small>
+            </div>
+            <div class="col-6">
+                <h3 id="final-duration">0</h3>
+                <small>Duración Total</small>
+            </div>
+        </div>
+        <div class="alert alert-info">
+            <strong>💪 Beneficios:</strong> La respiración controlada reduce la ansiedad y mejora la concentración.
+        </div>
+        <button class="btn btn-primary btn-lg me-2" onclick="location.reload()">
+            🔄 Repetir
+        </button>
+        <a href="{{ url_for('ar.index') }}" class="btn btn-secondary btn-lg">
+            🏠 Menú Principal
+        </a>
+    </div>
+</div>
+
+<script>
+const STUDENT_ID = {{ student.id }};
+const TOTAL_CYCLES = 5;
+const INHALE_DURATION = 4000;  // 4 segundos
+const HOLD_DURATION = 2000;     // 2 segundos
+const EXHALE_DURATION = 4000;   // 4 segundos
+
+let breathingState = {
+    currentCycle: 0,
+    isActive: false,
+    startTime: null,
+    cycleData: []
+};
+
+function startBreathing() {
+    document.getElementById('start-btn').style.display = 'none';
+    breathingState.startTime = Date.now();
+    breathingState.isActive = true;
+    
+    // Crear indicadores
+    createCycleIndicators();
+    startTimer();
+    
+    setTimeout(() => {
+        nextCycle();
+    }, 1000);
+}
+
+function createCycleIndicators() {
+    const container = document.getElementById('cycle-indicators');
+    for (let i = 0; i < TOTAL_CYCLES; i++) {
+        const indicator = document.createElement('div');
+        indicator.className = 'cycle-indicator';
+        indicator.id = `indicator-${i}`;
+        container.appendChild(indicator);
+    }
+}
+
+function nextCycle() {
+    if (breathingState.currentCycle >= TOTAL_CYCLES) {
+        endBreathing();
+        return;
+    }
+    
+    breathingState.currentCycle++;
+    updateCycleDisplay();
+    
+    const cycleStart = Date.now();
+    
+    // Fase 1: Inhalar
+    setInstruction('Inhala profundamente...', 'inhale');
+    
+    setTimeout(() => {
+        // Fase 2: Sostener
+        setInstruction('Sostén...', 'hold');
+        
+        setTimeout(() => {
+            // Fase 3: Exhalar
+            setInstruction('Exhala lentamente...', 'exhale');
+            
+            setTimeout(() => {
+                // Ciclo completado
+                const cycleEnd = Date.now();
+                breathingState.cycleData.push({
+                    cycle: breathingState.currentCycle,
+                    duration: cycleEnd - cycleStart
+                });
+                
+                // Marcar indicador como completado
+                document.getElementById(`indicator-${breathingState.currentCycle - 1}`).classList.add('completed');
+                
+                // Siguiente ciclo
+                setTimeout(() => {
+                    nextCycle();
+                }, 1000);
+                
+            }, EXHALE_DURATION);
+        }, HOLD_DURATION);
+    }, INHALE_DURATION);
+}
+
+function setInstruction(text, phase) {
+    const instructionEl = document.getElementById('instruction-text');
+    const circleEl = document.getElementById('breathing-circle');
+    
+    instructionEl.textContent = text;
+    
+    // Remover clases anteriores
+    circleEl.classList.remove('inhale', 'exhale', 'hold');
+    
+    // Agregar nueva clase
+    if (phase === 'inhale') {
+        circleEl.classList.add('inhale');
+    } else if (phase === 'exhale') {
+        circleEl.classList.add('exhale');
+    }
+}
+
+function updateCycleDisplay() {
+    document.getElementById('cycle-count').textContent = `${breathingState.currentCycle} / ${TOTAL_CYCLES}`;
+}
+
+function startTimer() {
+    setInterval(() => {
+        if (breathingState.isActive) {
+            const elapsed = Math.round((Date.now() - breathingState.startTime) / 1000);
+            document.getElementById('time-display').textContent = `${elapsed}s`;
+        }
+    }, 1000);
+}
+
+function endBreathing() {
+    breathingState.isActive = false;
+    const totalDuration = Math.round((Date.now() - breathingState.startTime) / 1000);
+    
+    document.getElementById('final-cycles').textContent = TOTAL_CYCLES;
+    document.getElementById('final-duration').textContent = `${totalDuration}s`;
+    document.getElementById('results-modal').style.display = 'block';
+    
+    // Guardar resultados
+    saveBreathingResults(totalDuration);
+}
+
+function saveBreathingResults(duration) {
+    const avgCycleTime = breathingState.cycleData.reduce((sum, c) => sum + c.duration, 0) / TOTAL_CYCLES;
+    
+    const results = {
+        activity_type: 'ar_respiracion',
+        results: {
+            score: 100, // Completó el ejercicio
+            cycles_completed: TOTAL_CYCLES,
+            total_duration: duration,
+            avg_cycle_time: Math.round(avgCycleTime),
+            consistency: calculateConsistency()
+        }
+    };
+    
+    fetch('{{ url_for("ar.save_result") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(results)
+    })
+    .then(response => response.json())
+    .then(data => console.log('Guardado:', data))
+    .catch(error => console.error('Error:', error));
+}
+
+function calculateConsistency() {
+    const times = breathingState.cycleData.map(c => c.duration);
+    const avg = times.reduce((sum, t) => sum + t, 0) / times.length;
+    const variance = times.reduce((sum, t) => sum + Math.pow(t - avg, 2), 0) / times.length;
+    const stdDev = Math.sqrt(variance);
+    
+    // Score basado en consistencia (menor desviación = mejor)
+    return Math.max(0, 100 - (stdDev / avg) * 100);
+}
+</script>
+{% endblock %}

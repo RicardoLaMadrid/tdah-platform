@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Estudiantes - Profesor{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4"><i class="bi bi-people"></i> Mis Estudiantes</h1>
+    
+    {% if student_data %}
+        <div class="row">
+            {% for data in student_data %}
+            <div class="col-md-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <div class="user-avatar mx-auto mb-2" style="width: 80px; height: 80px; font-size: 2.5rem;">
+                                {{ data.student.user.username[0].upper() }}
+                            </div>
+                            <h5 class="card-title">{{ data.student.user.username }}</h5>
+                            <span class="badge bg-info">{{ data.student.tdah_type or 'No especificado' }}</span>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted">Edad:</small>
+                            <p class="mb-1"><strong>{{ data.student.age or 'N/A' }} años</strong></p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted">Sesiones Completadas:</small>
+                            <p class="mb-1"><strong>{{ data.sessions_count }}</strong></p>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <small class="text-muted">Atención Promedio:</small>
+                            <div class="progress mt-1" style="height: 25px;">
+                                <div class="progress-bar bg-{{ 'success' if data.avg_attention >= 70 else 'warning' if data.avg_attention >= 50 else 'danger' }}" 
+                                     style="width: {{ data.avg_attention }}%">
+                                    {{ data.avg_attention }}%
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if data.last_session %}
+                        <div class="mb-3">
+                            <small class="text-muted">Última Sesión:</small>
+                            <p class="mb-1 small">{{ data.last_session.created_at.strftime('%d/%m/%Y') }}</p>
+                        </div>
+                        {% endif %}
+                        
+                        <hr>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('teacher.student_detail', student_id=data.student.id) }}" 
+                               class="btn btn-primary">
+                                <i class="bi bi-eye"></i> Ver Detalle
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                <h4 class="mt-3 text-muted">No tienes estudiantes asignados</h4>
+                <p class="text-muted">Contacta al administrador para que te asigne estudiantes</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+{% block title %}Test Go/No-Go - Control Inhibitorio{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h3 class="mb-0">
+                        <i class="bi bi-bullseye me-2"></i>
+                        Test Go/No-Go - Control de Impulsos
+                    </h3>
+                </div>
+                
+                <div class="card-body p-4">
+                    <!-- Instrucciones -->
+                    <div id="instructions">
+                        <div class="alert alert-info border-start border-4 border-info">
+                            <h5 class="alert-heading">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                ¿Cómo funciona este test?
+                            </h5>
+                            <ol class="mb-0">
+                                <li>Aparecerán letras en la pantalla: <strong>X</strong> o <strong>O</strong></li>
+                                <li>Cuando veas <span class="badge bg-success fs-5">X</span> → Presiona ESPACIO lo más rápido posible</li>
+                                <li>Cuando veas <span class="badge bg-danger fs-5">O</span> → NO hagas NADA</li>
+                                <li>Las letras aparecen rápido (1 segundo cada una)</li>
+                                <li>Serán {{ config.total_trials }} letras en total</li>
+                                <li><strong>Importante:</strong> Debes controlar tus impulsos</li>
+                            </ol>
+                            <div class="mt-3 p-3 bg-warning bg-opacity-10 rounded">
+                                <strong>💡 Consejo:</strong> Mantén tus dedos listos sobre la tecla ESPACIO, pero solo presiona cuando veas X.
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <button id="startBtn" class="btn btn-lg btn-primary px-5" onclick="startTest()">
+                                <i class="bi bi-play-circle me-2"></i>
+                                Comenzar Test
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Área del test -->
+                    <div id="testArea" style="display: none;">
+                        <!-- Contador -->
+                        <div class="d-flex justify-content-between mb-3">
+                            <div>
+                                <h5>Estímulo <span id="currentTrial">1</span> de {{ config.total_trials }}</h5>
+                            </div>
+                            <div>
+                                <h5>Aciertos: <span id="scoreDisplay" class="text-success">0</span></h5>
+                            </div>
+                        </div>
+
+                        <!-- Barra de progreso -->
+                        <div class="progress mb-4" style="height: 20px;">
+                            <div id="progressBar" class="progress-bar bg-success" style="width: 0%"></div>
+                        </div>
+
+                        <!-- Recordatorio -->
+                        <div class="alert alert-light border text-center mb-4">
+                            <strong>Presiona ESPACIO solo cuando veas</strong>
+                            <span class="badge bg-success fs-4 ms-2">X</span>
+                        </div>
+
+                        <!-- Área de estímulo -->
+                        <div id="stimulusArea" class="text-center p-5 rounded" style="background: #f8f9fa; min-height: 300px; display: flex; align-items: center; justify-content: center;">
+                            <div id="stimulus" style="font-size: 8rem; font-weight: bold; color: #333;">
+                                <!-- Aquí aparecerá X u O -->
+                            </div>
+                        </div>
+
+                        <!-- Feedback -->
+                        <div id="feedback" class="mt-3 text-center" style="min-height: 40px; font-size: 1.5rem;">
+                            <!-- Feedback inmediato -->
+                        </div>
+                    </div>
+
+                    <!-- Pantalla de carga -->
+                    <div id="loadingArea" style="display: none;" class="text-center">
+                        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+                        <p class="mt-3">Analizando tus respuestas...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const CONFIG = {{ config|tojson }};
+let sessionId = null;
+let sequence = [];
+let currentTrial = 0;
+let stimulusStartTime = null;
+let responseRecorded = false;
+let score = 0;
+let waitingForNext = false;
+
+async function startTest() {
+    try {
+        const response = await fetch('/gonogo/start_test', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+        
+        const data = await response.json();
+        if (!data.success) {
+            alert('Error al iniciar test');
+            return;
+        }
+        
+        sessionId = data.session_id;
+        sequence = data.sequence;
+        currentTrial = 0;
+        score = 0;
+        
+        document.getElementById('instructions').style.display = 'none';
+        document.getElementById('testArea').style.display = 'block';
+        
+        // Escuchar tecla ESPACIO
+        document.addEventListener('keydown', handleKeyPress);
+        
+        // Comenzar después de 2 segundos
+        setTimeout(() => {
+            showNextStimulus();
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al iniciar test');
+    }
+}
+
+function showNextStimulus() {
+    if (currentTrial >= sequence.length) {
+        finishTest();
+        return;
+    }
+    
+    waitingForNext = false;
+    responseRecorded = false;
+    
+    const tipo = sequence[currentTrial];
+    
+    // Actualizar UI
+    document.getElementById('currentTrial').textContent = currentTrial + 1;
+    document.getElementById('progressBar').style.width = ((currentTrial / sequence.length) * 100) + '%';
+    
+    // Limpiar feedback
+    document.getElementById('feedback').innerHTML = '';
+    
+    // Mostrar estímulo
+    const stimulusElement = document.getElementById('stimulus');
+    const letra = tipo === 'go' ? 'X' : 'O';
+    const color = tipo === 'go' ? '#28a745' : '#dc3545';
+    
+    stimulusElement.textContent = letra;
+    stimulusElement.style.color = color;
+    stimulusElement.style.display = 'block';
+    
+    stimulusStartTime = Date.now();
+    
+    // Ocultar después de 1 segundo
+    setTimeout(() => {
+        stimulusElement.style.display = 'none';
+        
+        // Si no respondió en GO, es error de omisión
+        if (!responseRecorded && tipo === 'go') {
+            handleResponse(false, null, tipo);
+        }
+        // Si no respondió en NOGO, es correcto
+        else if (!responseRecorded && tipo === 'nogo') {
+            handleResponse(false, null, tipo);
+        }
+        
+        waitingForNext = true;
+        
+        // Siguiente estímulo después de intervalo
+        setTimeout(() => {
+            currentTrial++;
+            showNextStimulus();
+        }, CONFIG.inter_stimulus_interval);
+        
+    }, CONFIG.stimulus_duration);
+}
+
+function handleKeyPress(event) {
+    if (event.code !== 'Space' || responseRecorded || waitingForNext) {
+        return;
+    }
+    
+    event.preventDefault();
+    
+    const tipo = sequence[currentTrial];
+    const tiempoReaccion = Date.now() - stimulusStartTime;
+    
+    responseRecorded = true;
+    handleResponse(true, tiempoReaccion, tipo);
+}
+
+async function handleResponse(respondio, tiempoReaccion, tipo) {
+    let correcto = false;
+    let feedback = '';
+    
+    if (tipo === 'go') {
+        // Debe responder
+        if (respondio) {
+            correcto = true;
+            score++;
+            feedback = '<span class="text-success">✓ Correcto</span>';
+        } else {
+            feedback = '<span class="text-danger">✗ No respondiste</span>';
+        }
+    } else {
+        // NO debe responder
+        if (!respondio) {
+            correcto = true;
+            score++;
+            feedback = '<span class="text-success">✓ Bien! No respondiste</span>';
+        } else {
+            feedback = '<span class="text-danger">✗ Error! No debías responder</span>';
+        }
+    }
+    
+    document.getElementById('feedback').innerHTML = feedback;
+    document.getElementById('scoreDisplay').textContent = score;
+    
+    // Guardar trial
+    try {
+        await fetch('/gonogo/submit_trial', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                session_id: sessionId,
+                tipo: tipo,
+                respondio: respondio,
+                tiempo_reaccion: tiempoReaccion
+            })
+        });
+    } catch (error) {
+        console.error('Error guardando trial:', error);
+    }
+}
+
+async function finishTest() {
+    document.removeEventListener('keydown', handleKeyPress);
+    document.getElementById('testArea').style.display = 'none';
+    document.getElementById('loadingArea').style.display = 'block';
+    
+    try {
+        const response = await fetch('/gonogo/finish_test', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({session_id: sessionId})
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            window.location.href = data.redirect_url;
+        } else {
+            alert('Error: ' + data.message);
+            location.reload();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al finalizar test');
+        location.reload();
+    }
+}
+</script>
+
+<style>
+#stimulusArea {
+    border: 3px solid #dee2e6;
+}
+#stimulus {
+    animation: appear 0.2s ease-in;
+}
+@keyframes appear {
+    from {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+</style>
+{% endblock %}

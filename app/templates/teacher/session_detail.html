@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalle de Sesión - {{ student.user.username }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="bi bi-activity"></i> Detalle de Sesión</h1>
+            <p class="text-muted">{{ student.user.username }} - {{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('teacher.student_detail', student_id=student.id) }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+            <a href="{{ url_for('teacher.create_report', session_id=session.id) }}" class="btn btn-success">
+                <i class="bi bi-file-text"></i> Crear Reporte
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Información general -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Información General</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Actividad:</strong><br>
+                        {{ session.activity.title if session.activity else 'Actividad libre' }}
+                    </p>
+                    <p><strong>Fecha:</strong><br>
+                        {{ session.created_at.strftime('%d/%m/%Y %H:%M') }}
+                    </p>
+                    <p><strong>Duración:</strong><br>
+                        {{ (session.completion_time // 60) if session.completion_time else 0 }} minutos
+                        {{ (session.completion_time % 60) if session.completion_time else 0 }} segundos
+                    </p>
+                    <hr>
+                    <div class="mb-3">
+                        <strong>Puntuación de Atención</strong>
+                        <div class="score-display text-center mt-2">
+                            {{ session.attention_score|default(0) }}%
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 30px;">
+                        <div class="progress-bar 
+                            {% if session.attention_score >= 70 %} bg-success
+                            {% elif session.attention_score >= 50 %} bg-warning
+                            {% else %} bg-danger
+                            {% endif %}"
+                            style="width: {{ session.attention_score|default(0)|int }}%">
+                            {{ session.attention_score|default(0) }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Análisis de video y audio (ahora SÍ dentro del row) -->
+        <div class="col-md-8 mb-4">
+            {% if session.video_path or session.heatmap_path %}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-camera-video"></i> Análisis de Video
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% if session.heatmap_path %}
+                        <div class="col-md-6">
+                            <h6>Mapa de Calor de Atención</h6>
+                            <img src="{{ url_for('static', filename=session.heatmap_path.replace('app/static/', '')) }}" 
+                                 class="img-fluid rounded" alt="Heatmap">
+                            <p class="small text-muted mt-2">
+                                Las áreas rojas indican mayor concentración de la mirada
+                            </p>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-6">
+                            {% if session.analysis_result %}
+                            <h6>Métricas de Detección</h6>
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Frames Totales</span>
+                                    <strong>{{ session.analysis_result.total_frames|default(0) }}</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Rostro Detectado</span>
+                                    <strong>{{ session.analysis_result.frames_with_face|default(0) }}</strong>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>Tasa de Detección</span>
+                                    <strong>{{ (session.analysis_result.face_detection_rate * 100)|round(1) if session.analysis_result.face_detection_rate else 0 }}%</strong>
+                                </li>
+                            </ul>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if session.transcription or session.audio_path %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-mic"></i> Análisis de Audio
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if session.transcription %}
+                    <h6>Transcripción</h6>
+                    <div class="bg-light p-3 rounded">
+                        <p class="mb-0">{{ session.transcription }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Datos técnicos (fuera del row anterior, en su propia fila) -->
+    {% if session.analysis_result %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-code-square"></i> Datos Técnicos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <details>
+                        <summary class="btn btn-sm btn-outline-secondary mb-2">Ver datos completos (JSON)</summary>
+                        <pre class="bg-light p-3 rounded mt-2"><code>{{ session.analysis_result|tojson(indent=2) }}</code></pre>
+                    </details>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

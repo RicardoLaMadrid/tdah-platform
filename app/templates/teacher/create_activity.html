@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+
+{% block title %}Crear Actividad - Profesor{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-plus-circle"></i> Crear Nueva Actividad
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('teacher.create_activity') }}">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="student_id" class="form-label">Estudiante *</label>
+                                <select class="form-select" id="student_id" name="student_id" required>
+                                    <option value="">Selecciona un estudiante...</option>
+                                    {% for student in students %}
+                                    <option value="{{ student.id }}">
+                                        {{ student.user.username }} ({{ student.tdah_type or 'N/A' }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="title" class="form-label">Título *</label>
+                                <input type="text" class="form-control" id="title" name="title" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="activity_type" class="form-label">Tipo de Actividad *</label>
+                                <select class="form-select" id="activity_type" name="activity_type" required>
+                                    <option value="">Selecciona...</option>
+                                    <option value="atencion">Atención</option>
+                                    <option value="memoria">Memoria</option>
+                                    <option value="organizacion">Organización</option>
+                                    <option value="control_impulsos">Control de Impulsos</option>
+                                    <option value="mixta">Mixta</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="difficulty_level" class="form-label">Nivel de Dificultad *</label>
+                                <select class="form-select" id="difficulty_level" name="difficulty_level" required>
+                                    <option value="1">1 - Muy Fácil</option>
+                                    <option value="2">2 - Fácil</option>
+                                    <option value="3" selected>3 - Medio</option>
+                                    <option value="4">4 - Difícil</option>
+                                    <option value="5">5 - Muy Difícil</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label class="form-label d-block">Realidad Aumentada</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="ar_enabled" name="ar_enabled" 
+                                           onchange="toggleARFields()">
+                                    <label class="form-check-label" for="ar_enabled">
+                                        Habilitar AR
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="instructions" class="form-label">Instrucciones *</label>
+                            <textarea class="form-control" id="instructions" name="instructions" rows="5" required 
+                                      placeholder="1. Primer paso...&#10;2. Segundo paso...&#10;3. Tercer paso..."></textarea>
+                        </div>
+                        
+                        <!-- Campos de AR -->
+                        <div id="ar-fields" style="display: none;">
+                            <hr>
+                            <h5 class="mb-3">Configuración de Realidad Aumentada</h5>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="ar_type" class="form-label">Tipo de AR</label>
+                                    <select class="form-select" id="ar_type" name="ar_type">
+                                        <option value="markerless">Sin Marcador</option>
+                                        <option value="marker">Con Marcador</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <label for="ar_description" class="form-label">Descripción AR</label>
+                                    <input type="text" class="form-control" id="ar_description" name="ar_description"
+                                           placeholder="Ej: Objetos 3D flotantes">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="ar_interaction" class="form-label">Tipo de Interacción</label>
+                                <input type="text" class="form-control" id="ar_interaction" name="ar_interaction"
+                                       placeholder="Ej: Tocar para destruir objetos">
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Generar con IA -->
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6><i class="bi bi-magic"></i> Generación Automática con IA</h6>
+                                <p class="small text-muted">
+                                    Puedes generar una actividad automáticamente basada en el perfil del estudiante
+                                </p>
+                                <button type="button" class="btn btn-info btn-sm" onclick="generateWithAI()">
+                                    <i class="bi bi-stars"></i> Generar con IA
+                                </button>
+                                <div id="ai-status" class="mt-2" style="display: none;">
+                                    <div class="spinner-border spinner-border-sm text-info" role="status">
+                                        <span class="visually-hidden">Generando...</span>
+                                    </div>
+                                    <span class="ms-2 text-muted">Generando actividad...</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                            <a href="{{ url_for('teacher.activities') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Crear Actividad
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para actividad generada -->
+<div class="modal fade" id="aiActivityModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-stars"></i> Actividad Generada con IA
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="aiActivityContent">
+                <!-- Se llenará con JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="useAIActivity()">
+                    Usar esta Actividad
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleARFields() {
+    const arEnabled = document.getElementById('ar_enabled').checked;
+    const arFields = document.getElementById('ar-fields');
+    arFields.style.display = arEnabled ? 'block' : 'none';
+}
+
+async function generateWithAI() {
+    const studentId = document.getElementById('student_id').value;
+    
+    if (!studentId) {
+        alert('Por favor selecciona un estudiante primero');
+        return;
+    }
+    
+    const statusDiv = document.getElementById('ai-status');
+    statusDiv.style.display = 'block';
+    
+    try {
+        const response = await fetch('{{ url_for("teacher.generate_activity") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                student_id: studentId,
+                difficulty_level: document.getElementById('difficulty_level').value
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAIActivity(data.activity);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al generar actividad con IA');
+    } finally {
+        statusDiv.style.display = 'none';
+    }
+}
+
+let generatedActivity = null;
+
+function showAIActivity(activity) {
+    generatedActivity = activity;
+    
+    const content = `
+        <h5>${activity.title}</h5>
+        <p><strong>Descripción:</strong> ${activity.description}</p>
+        <p><strong>Tipo:</strong> <span class="badge bg-info">${activity.activity_type}</span></p>
+        <p><strong>Nivel:</strong> ${activity.difficulty_level}</p>
+        <p><strong>Instrucciones:</strong></p>
+        <pre style="white-space: pre-line;">${activity.instructions}</pre>
+        ${activity.ar_content && activity.ar_content.enabled ? '<span class="badge bg-warning">Incluye AR</span>' : ''}
+    `;
+    
+    document.getElementById('aiActivityContent').innerHTML = content;
+    
+    const modal = new bootstrap.Modal(document.getElementById('aiActivityModal'));
+    modal.show();
+}
+
+function useAIActivity() {
+    if (!generatedActivity) return;
+    
+    document.getElementById('title').value = generatedActivity.title;
+    document.getElementById('description').value = generatedActivity.description;
+    document.getElementById('activity_type').value = generatedActivity.activity_type;
+    document.getElementById('difficulty_level').value = generatedActivity.difficulty_level;
+    document.getElementById('instructions').value = generatedActivity.instructions;
+    
+    if (generatedActivity.ar_content && generatedActivity.ar_content.enabled) {
+        document.getElementById('ar_enabled').checked = true;
+        toggleARFields();
+        document.getElementById('ar_type').value = generatedActivity.ar_content.type || 'markerless';
+        document.getElementById('ar_description').value = generatedActivity.ar_content.description || '';
+        document.getElementById('ar_interaction').value = generatedActivity.ar_content.interaction || '';
+    }
+    
+    bootstrap.Modal.getInstance(document.getElementById('aiActivityModal')).hide();
+    
+    showNotification('Actividad cargada. Revisa y ajusta según necesites.', 'success');
+}
+</script>
+{% endblock %}

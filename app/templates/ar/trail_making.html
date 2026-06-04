@@ -1,0 +1,334 @@
+{% extends 'base.html' %}
+{% block title %}Trail Making AR{% endblock %}
+
+{% block extra_css %}
+<style>
+    body { margin: 0; overflow: hidden; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); }
+    #game-container {
+        width: 100vw; height: 100vh;
+        position: relative;
+        overflow: hidden;
+    }
+    .number-orb {
+        position: absolute;
+        width: 80px; height: 80px;
+        border-radius: 50%;
+        background: radial-gradient(circle, #ffd700, #ff8c00);
+        color: white;
+        font-size: 2.5rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 0 20px rgba(255,215,0,0.6);
+        transition: transform 0.2s, opacity 0.3s;
+        user-select: none;
+        animation: float 3s ease-in-out infinite;
+    }
+    .number-orb:hover { transform: scale(1.1); }
+    .number-orb.completed {
+        background: radial-gradient(circle, #00ff00, #00aa00);
+        transform: scale(1.3);
+        opacity: 0;
+        pointer-events: none;
+    }
+    .number-orb.error {
+        background: radial-gradient(circle, #ff0000, #aa0000);
+        animation: shake 0.3s;
+    }
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-15px); }
+    }
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-10px); }
+        75% { transform: translateX(10px); }
+    }
+    #status-bar {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 15px 30px;
+        border-radius: 50px;
+        display: flex;
+        gap: 30px;
+        z-index: 100;
+    }
+    #status-bar > div { text-align: center; }
+    #status-bar small { display: block; opacity: 0.7; }
+    #status-bar strong { font-size: 1.5rem; }
+    #next-number {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255,215,0,0.95);
+        color: #333;
+        padding: 10px 30px;
+        border-radius: 50px;
+        font-weight: bold;
+        font-size: 1.2rem;
+        z-index: 100;
+    }
+    #instructions-overlay, #results-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.85);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-card {
+        background: white;
+        color: #333;
+        padding: 40px;
+        border-radius: 20px;
+        max-width: 600px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="game-container">
+    <!-- Status bar -->
+    <div id="status-bar" style="display: none;">
+        <div><small>Tiempo</small><strong id="time-display">0:00</strong></div>
+        <div><small>Aciertos</small><strong id="correct-display" class="text-success">0</strong></div>
+        <div><small>Errores</small><strong id="errors-display" class="text-danger">0</strong></div>
+    </div>
+    
+    <!-- Next number indicator -->
+    <div id="next-number" style="display: none;">
+        Busca el número: <span id="next-num-value">1</span>
+    </div>
+    
+    <!-- Instructions -->
+    <div id="instructions-overlay">
+        <div class="modal-card">
+            <h2>🎯 Trail Making AR</h2>
+            <p class="lead">Test de Conexión de Números</p>
+            <hr>
+            <p>Aparecerán números del <strong>1 al 10</strong> en pantalla.</p>
+            <p>Tu tarea: <strong>tócalos en orden</strong> (1, 2, 3...)</p>
+            <ul class="text-start">
+                <li>✅ Acierto: el número desaparece</li>
+                <li>❌ Error: cuenta como fallo pero sigues jugando</li>
+                <li>⏱️ Tiempo límite: 60 segundos</li>
+            </ul>
+            <p class="text-muted small mt-3">
+                <em>Este test mide tu atención visual, velocidad de procesamiento y función ejecutiva.</em>
+            </p>
+            <button class="btn btn-primary btn-lg" onclick="startGame()">
+                🚀 Comenzar
+            </button>
+        </div>
+    </div>
+    
+    <!-- Results -->
+    <div id="results-overlay" style="display: none;">
+        <div class="modal-card">
+            <h2>🎉 ¡Test completado!</h2>
+            <div class="row text-center my-4">
+                <div class="col-4">
+                    <h3 id="final-time">0s</h3>
+                    <small>Tiempo Total</small>
+                </div>
+                <div class="col-4">
+                    <h3 class="text-success" id="final-correct">0</h3>
+                    <small>Aciertos</small>
+                </div>
+                <div class="col-4">
+                    <h3 class="text-danger" id="final-errors">0</h3>
+                    <small>Errores</small>
+                </div>
+            </div>
+            <div class="alert" id="result-message"></div>
+            <button class="btn btn-primary me-2" onclick="location.reload()">🔄 Repetir</button>
+            <a href="{{ url_for('ar.index') }}" class="btn btn-secondary">🏠 Volver al menú</a>
+        </div>
+    </div>
+</div>
+
+<script>
+const TOTAL_NUMBERS = 10;
+const TIME_LIMIT = 60; // seconds
+const STUDENT_ID = {{ student.id }};
+
+let gameState = {
+    nextExpected: 1,
+    correct: 0,
+    errors: 0,
+    startTime: null,
+    timerInterval: null,
+    clickTimes: [], // tiempo entre clicks
+    lastClickTime: null,
+    finished: false
+};
+
+function startGame() {
+    document.getElementById('instructions-overlay').style.display = 'none';
+    document.getElementById('status-bar').style.display = 'flex';
+    document.getElementById('next-number').style.display = 'block';
+    
+    generateNumbers();
+    
+    gameState.startTime = Date.now();
+    gameState.lastClickTime = Date.now();
+    gameState.timerInterval = setInterval(updateTimer, 100);
+}
+
+function generateNumbers() {
+    const container = document.getElementById('game-container');
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const margin = 100; // margen de los bordes
+    
+    // Generar posiciones aleatorias sin overlap
+    const positions = [];
+    for (let i = 1; i <= TOTAL_NUMBERS; i++) {
+        let attempts = 0;
+        let pos;
+        do {
+            pos = {
+                x: margin + Math.random() * (w - 2 * margin),
+                y: margin + Math.random() * (h - 2 * margin - 100)
+            };
+            attempts++;
+        } while (attempts < 50 && positions.some(p => 
+            Math.hypot(p.x - pos.x, p.y - pos.y) < 120
+        ));
+        positions.push(pos);
+        
+        const orb = document.createElement('div');
+        orb.className = 'number-orb';
+        orb.id = `num-${i}`;
+        orb.textContent = i;
+        orb.style.left = `${pos.x - 40}px`;
+        orb.style.top = `${pos.y - 40}px`;
+        orb.style.animationDelay = `${Math.random() * 2}s`;
+        orb.onclick = () => handleClick(i, orb);
+        container.appendChild(orb);
+    }
+}
+
+function handleClick(num, orbElement) {
+    if (gameState.finished) return;
+    
+    const now = Date.now();
+    const timeFromLast = now - gameState.lastClickTime;
+    gameState.lastClickTime = now;
+    gameState.clickTimes.push(timeFromLast);
+    
+    if (num === gameState.nextExpected) {
+        // Acierto
+        gameState.correct++;
+        gameState.nextExpected++;
+        orbElement.classList.add('completed');
+        
+        if (gameState.nextExpected > TOTAL_NUMBERS) {
+            endGame();
+        } else {
+            document.getElementById('next-num-value').textContent = gameState.nextExpected;
+        }
+    } else {
+        // Error
+        gameState.errors++;
+        orbElement.classList.add('error');
+        setTimeout(() => orbElement.classList.remove('error'), 300);
+    }
+    
+    updateDisplay();
+}
+
+function updateTimer() {
+    const elapsed = (Date.now() - gameState.startTime) / 1000;
+    const mins = Math.floor(elapsed / 60);
+    const secs = Math.floor(elapsed % 60);
+    document.getElementById('time-display').textContent = 
+        `${mins}:${secs.toString().padStart(2, '0')}`;
+    
+    if (elapsed >= TIME_LIMIT) {
+        endGame();
+    }
+}
+
+function updateDisplay() {
+    document.getElementById('correct-display').textContent = gameState.correct;
+    document.getElementById('errors-display').textContent = gameState.errors;
+}
+
+function endGame() {
+    if (gameState.finished) return;
+    gameState.finished = true;
+    clearInterval(gameState.timerInterval);
+    
+    const totalTime = Math.round((Date.now() - gameState.startTime) / 1000);
+    const completed = gameState.correct === TOTAL_NUMBERS;
+    
+    // Score: bonus por completar rápido, penalty por errores
+    let score = 0;
+    if (completed) {
+        score = Math.max(0, 100 - (totalTime - 20) * 2 - gameState.errors * 10);
+    } else {
+        score = Math.round((gameState.correct / TOTAL_NUMBERS) * 50);
+    }
+    
+    document.getElementById('final-time').textContent = `${totalTime}s`;
+    document.getElementById('final-correct').textContent = gameState.correct;
+    document.getElementById('final-errors').textContent = gameState.errors;
+    
+    const msg = document.getElementById('result-message');
+    if (completed && gameState.errors === 0) {
+        msg.className = 'alert alert-success';
+        msg.innerHTML = `🏆 ¡Perfecto! Completaste todo sin errores en ${totalTime}s`;
+    } else if (completed) {
+        msg.className = 'alert alert-info';
+        msg.innerHTML = `✅ ¡Bien hecho! Completaste todo en ${totalTime}s con ${gameState.errors} error(es)`;
+    } else {
+        msg.className = 'alert alert-warning';
+        msg.innerHTML = `⏰ Tiempo agotado. Llegaste hasta ${gameState.correct}/${TOTAL_NUMBERS}`;
+    }
+    
+    document.getElementById('results-overlay').style.display = 'flex';
+    document.getElementById('status-bar').style.display = 'none';
+    document.getElementById('next-number').style.display = 'none';
+    
+    saveResults(totalTime, score);
+}
+
+function saveResults(totalTime, score) {
+    const avgClickTime = gameState.clickTimes.length 
+        ? gameState.clickTimes.reduce((a,b) => a+b, 0) / gameState.clickTimes.length / 1000
+        : 0;
+    
+    const results = {
+        activity_type: 'ar_trail_making',
+        results: {
+            score: score,
+            correct: gameState.correct,
+            errors: gameState.errors,
+            total_time: totalTime,
+            completed: gameState.correct === TOTAL_NUMBERS,
+            avg_click_time: Math.round(avgClickTime * 100) / 100,
+            click_times: gameState.clickTimes
+        }
+    };
+    
+    fetch('{{ url_for("ar.save_result") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(results)
+    })
+    .then(r => r.json())
+    .then(data => console.log('Guardado:', data))
+    .catch(err => console.error('Error:', err));
+}
+</script>
+{% endblock %}

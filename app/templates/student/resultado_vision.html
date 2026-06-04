@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% block title %}Resultados del Test Visual{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-lg">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        Resultados del Test de Atención Visual
+                    </h3>
+                </div>
+                
+                <div class="card-body p-4">
+                    <!-- Resultado principal -->
+                    <div class="alert alert-info border-start border-4 border-info mb-4">
+                        <h4 class="alert-heading">Tipo de Patrón Detectado</h4>
+                        <h2 class="mb-0">
+                            <span class="badge bg-primary fs-3">
+                                {% if analysis.tipo_tdah == 'inatento' %}
+                                    INATENTO
+                                {% elif analysis.tipo_tdah == 'hiperactivo' %}
+                                    HIPERACTIVO
+                                {% elif analysis.tipo_tdah == 'combinado' %}
+                                    COMBINADO
+                                {% elif analysis.tipo_tdah == 'typical' %}
+                                    TÍPICO (Sin TDAH)
+                                {% else %}
+                                    {{ analysis.tipo_tdah|upper }}
+                                {% endif %}
+                            </span>
+                        </h2>
+                        <p class="mb-0 mt-2">
+                            Nivel de confianza: 
+                            <strong class="{% if analysis.confianza >= 70 %}text-success{% elif analysis.confianza >= 40 %}text-warning{% else %}text-danger{% endif %}">
+                                {{ analysis.confianza }}%
+                            </strong>
+                        </p>
+                    </div>
+
+                    <!-- Métricas -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Frames Procesados</h6>
+                                    <h3 class="text-primary">{{ analysis.metricas.frames_procesados }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Duración</h6>
+                                    <h3 class="text-primary">{{ analysis.duracion }}s</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Precisión</h6>
+                                    <h3 class="{% if analysis.metricas.precision_seguimiento >= 70 %}text-success{% elif analysis.metricas.precision_seguimiento >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ analysis.metricas.precision_seguimiento|default(0)|round(1) }}%
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card text-center bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">Reacción</h6>
+                                    <h3 class="{% if analysis.metricas.reaccion_promedio <= 0.5 %}text-success{% elif analysis.metricas.reaccion_promedio <= 1 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ analysis.metricas.reaccion_promedio|default(0)|round(2) }}s
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mapa de calor -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-eye-fill me-2"></i>
+                                Mapa de Atención Visual
+                            </h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <img src="{{ heatmap_url }}" alt="Mapa de calor" class="img-fluid rounded shadow" style="max-width: 100%; height: auto;">
+                            <p class="text-muted mt-2 small">
+                                Las zonas más brillantes indican dónde concentraste más tu mirada durante el test
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Métricas Detalladas -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="bi bi-graph-up me-2"></i>
+                                Métricas de Rendimiento
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="fw-bold">Atención Central</label>
+                                    <div class="progress" style="height: 30px;">
+                                        <div class="progress-bar bg-success" 
+                                             style="width: {{ analysis.metricas.atencion_central|default(0) }}%">
+                                            {{ analysis.metricas.atencion_central|default(0)|round(1) }}%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Qué tan bien seguiste los puntos centrales</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="fw-bold">Precisión de Seguimiento</label>
+                                    <div class="progress" style="height: 30px;">
+                                        <div class="progress-bar bg-info" 
+                                             style="width: {{ analysis.metricas.precision_seguimiento|default(0) }}%">
+                                            {{ analysis.metricas.precision_seguimiento|default(0)|round(1) }}%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Porcentaje de veces que miraste al punto correcto</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="fw-bold">Dispersión Promedio</label>
+                                    <div class="progress" style="height: 30px;">
+                                        <div class="progress-bar bg-warning" 
+                                             style="width: {{ [analysis.metricas.dispersion_promedio|default(0), 100]|min }}%">
+                                            {{ analysis.metricas.dispersion_promedio|default(0)|round(1) }}
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Movimiento de la mirada entre frames</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="fw-bold">Aciertos</label>
+                                    <div class="progress" style="height: 30px;">
+                                        <div class="progress-bar bg-primary" 
+                                             style="width: {{ (analysis.metricas.aciertos_totales|default(0) / analysis.metricas.observaciones_totales|default(1) * 100)|round(0) }}%">
+                                            {{ analysis.metricas.aciertos_totales|default(0) }} / {{ analysis.metricas.observaciones_totales|default(0) }}
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Observaciones correctas del total</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scores Detallados por Tipo -->
+                    {% if analysis.scores_detallados %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-pie-chart me-2"></i>
+                                Análisis Detallado por Tipo
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-3">
+                                Probabilidad de cada clasificación basada en tus patrones de atención:
+                            </p>
+                            <div class="row">
+                                {% for tipo, datos in analysis.scores_detallados.items() %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card {% if tipo == analysis.tipo_tdah %}border-primary{% endif %}">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <h6 class="mb-0">
+                                                    {% if tipo == 'typical' %}
+                                                        Típico (Sin TDAH)
+                                                    {% elif tipo == 'inatento' %}
+                                                        Inatento
+                                                    {% elif tipo == 'hiperactivo' %}
+                                                        Hiperactivo
+                                                    {% elif tipo == 'combinado' %}
+                                                        Combinado
+                                                    {% endif %}
+                                                </h6>
+                                                <span class="badge bg-primary">
+                                                    {{ datos.probabilidad|default(0)|round(1) }}%
+                                                </span>
+                                            </div>
+                                            <div class="progress" style="height: 10px;">
+                                                <div class="progress-bar {% if tipo == analysis.tipo_tdah %}bg-success{% else %}bg-secondary{% endif %}" 
+                                                     style="width: {{ datos.probabilidad|default(0) }}%"></div>
+                                            </div>
+                                            <small class="text-muted">Severidad: {{ datos.severidad|default('N/A') }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Interpretación -->
+                    <div class="card mb-4 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-lightbulb-fill me-2"></i>
+                                Interpretación de Resultados
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p style="white-space: pre-line;">{{ analysis.interpretacion|default('No hay interpretación disponible.') }}</p>
+                            
+                            <div class="alert alert-warning mt-3 mb-0">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Nota Importante:</strong> Este test es una herramienta de apoyo educativo. Para un diagnóstico profesional, consulta con un especialista en salud mental o neuropsicología.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('student.index') }}" class="btn btn-primary btn-lg px-5">
+                            <i class="bi bi-house-door me-2"></i>
+                            Volver al Dashboard
+                        </a>
+                        <a href="{{ url_for('vision.index') }}" class="btn btn-outline-secondary btn-lg px-5 ms-2">
+                            <i class="bi bi-arrow-repeat me-2"></i>
+                            Realizar Nuevo Test
+                        </a>
+                        <a href="{{ url_for('student.progress') }}" class="btn btn-outline-info btn-lg px-5 ms-2">
+                            <i class="bi bi-graph-up me-2"></i>
+                            Ver Mi Progreso
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

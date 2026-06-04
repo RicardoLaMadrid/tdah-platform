@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ activity.title }} - Detalle{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        {{ activity.title }}
+                        {% if activity.ar_content and activity.ar_content.enabled %}
+                        <span class="badge bg-warning float-end">
+                            <i class="bi bi-badge-ar"></i> AR
+                        </span>
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <h5>Descripción</h5>
+                    <p>{{ activity.description }}</p>
+                    
+                    <hr>
+                    
+                    <h5>Instrucciones</h5>
+                    <pre style="white-space: pre-line; background: #f8f9fa; padding: 15px; border-radius: 10px;">{{ activity.instructions }}</pre>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Información</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-tag"></i> <strong>Tipo:</strong> {{ activity.activity_type }}</li>
+                                <li><i class="bi bi-speedometer"></i> <strong>Nivel:</strong> {{ activity.difficulty_level }}</li>
+                                <li><i class="bi bi-calendar"></i> <strong>Creada:</strong> {{ activity.created_at.strftime('%d/%m/%Y') }}</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            {% if previous_sessions %}
+                            <h6>Tus Intentos Anteriores</h6>
+                            <div class="list-group">
+                                {% for session in previous_sessions[:3] %}
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between">
+                                        <small>{{ session.created_at.strftime('%d/%m/%Y') }}</small>
+                                        <span class="badge bg-{{ 'success' if session.attention_score >= 70 else 'warning' if session.attention_score >= 50 else 'danger' }}">
+                                            {{ session.attention_score or 0 }}%
+                                        </span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="text-muted">Aún no has intentado esta actividad</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                        <a href="{{ url_for('student.activities') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Volver
+                        </a>
+                        <a href="{{ url_for('student.start_activity', activity_id=activity.id) }}" 
+                           class="btn btn-success btn-lg">
+                            <i class="bi bi-play-circle"></i> Comenzar Actividad
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

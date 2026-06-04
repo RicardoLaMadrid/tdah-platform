@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ activity.title }} - En Progreso{% endblock %}
+
+{% block content %}
+<div class="container-fluid" style="height: 90vh;">
+    <!-- Preview de cámara (pequeño) -->
+    <video id="camera-preview" autoplay playsinline muted></video>
+    
+    <!-- Panel de controles -->
+    <div class="controls-panel">
+        <button id="startCameraBtn" class="btn btn-primary me-2">
+            <i class="bi bi-camera-video"></i> Iniciar Cámara
+        </button>
+        <button id="startRecordBtn" class="btn btn-danger me-2" disabled>
+            <i class="bi bi-record-circle"></i> Grabar
+        </button>
+        <button id="stopRecordBtn" class="btn btn-warning me-2" disabled>
+            <i class="bi bi-stop-circle"></i> Detener
+        </button>
+        <button id="finishBtn" class="btn btn-success" disabled>
+            <i class="bi bi-check-circle"></i> Finalizar
+        </button>
+        
+        <span class="ms-3 timer-display" id="timer-display">00:00</span>
+    </div>
+    
+    <!-- Contenedor de la actividad -->
+    <div id="activity-container" class="mt-4">
+        <div class="text-center">
+            <h2>{{ activity.title }}</h2>
+            <p class="lead">{{ activity.description }}</p>
+            
+            <div class="card bg-light mt-4">
+                <div class="card-body">
+                    <h5>Instrucciones:</h5>
+                    <pre style="white-space: pre-line; text-align: left;">{{ activity.instructions }}</pre>
+                </div>
+            </div>
+            
+            {% if activity.ar_content and activity.ar_content.enabled %}
+            <div class="mt-4">
+                <h4><i class="bi bi-badge-ar text-warning"></i> Experiencia de Realidad Aumentada</h4>
+                <p>Esta actividad incluye elementos de AR</p>
+                <a href="{{ url_for('static', filename='ar/viewer.html') }}" 
+                   target="_blank" 
+                   class="btn btn-ar btn-lg">
+                    <i class="bi bi-box"></i> Abrir Visor AR
+                </a>
+            </div>
+            {% else %}
+            <div class="mt-4">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    Sigue las instrucciones y completa la actividad. La cámara grabará tu progreso.
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="activity-id" value="{{ activity.id }}">
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let mediaRecorder = null;
+let activityTimer = null;
+let recordedBlob = null;
+
+const startCameraBtn = document.getElementById('startCameraBtn');
+const startRecordBtn = document.getElementById('startRecordBtn');
+const stopRecordBtn = document.getElementById('stopRecordBtn');
+const finishBtn = document.getElementById('finishBtn');
+const cameraPreview = document.getElementById('camera-preview');
+const activityId = document.getElementById('activity-id').value;
+
+// Iniciar cámara
+startCameraBtn.addEventListener('click', async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: true, 
+            audio: true 
+        });
+        
+        cameraPreview.srcObject = stream;
+        mediaRecorder = new MediaRecorder(stream);
+        
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+                recordedBlob = e.data;
+            }
+        };
+        
+        startCameraBtn.disabled = true;
+        startRecordBtn.disabled = false;
+        
+        showNotification('Cámara iniciada', 'success');
+    } catch (error) {
+        console.error('Error al acceder a la cámara:', error);
+        showNotification('No se pudo acceder a la cámara', 'danger');
+    }
+});
+
+// Iniciar grabación
+startRecordBtn.addEventListener('click', () => {
+    if (!mediaRecorder) return;
+    
+    mediaRecorder.start();
+    
+    // Iniciar temporizador
+    activityTimer = new ActivityTimer();
+    activityTimer.start();
+    
+    startRecordBtn.disabled = true;
+    stopRecordBtn.disabled = false;
+    
+    showNotification('Grabación iniciada', 'info');
+});
+
+// Detener grabación
+stopRecordBtn.addEventListener('click', () => {
+    if (!mediaRecorder) return;
+    
+    mediaRecorder.stop();
+    const elapsedTime = activityTimer.stop();
+    
+    stopRecordBtn.disabled = true;
+    finishBtn.disabled = false;
+    
+    showNotification('Grabación detenida', 'success');
+});
+
+// Finalizar actividad
+finishBtn.addEventListener('click', async () => {
+    if (!recordedBlob) {
+        alert('No hay grabación para enviar');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('activity_id', activityId);
+    formData.append('video', recordedBlob, 'recording.webm');
+    formData.append('completion_time', activityTimer.elapsed);
+    
+    try {
+        const response = await fetch('{{ url_for("student.record_session") }}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('¡Actividad completada!', 'success');
+            
+            setTimeout(() => {
+                window.location.href = '{{ url_for("student.index") }}';
+            }, 2000);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al guardar la sesión');
+    }
+});
+
+// Limpiar al salir
+window.addEventListener('beforeunload', () => {
+    if (cameraPreview.srcObject) {
+        cameraPreview.srcObject.getTracks().forEach(track => track.stop());
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    #camera-preview {
+        width: 200px;
+        height: 150px;
+        border-radius: 10px;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        object-fit: cover;
+    }
+    
+    .controls-panel {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        padding: 15px 30px;
+        border-radius: 50px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+    }
+    
+    .timer-display {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+</style>
+{% endblock %}

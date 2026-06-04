@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block title %}Resultados del Test de Audio{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card shadow-lg">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        Resultados del Test de Lectura
+                    </h3>
+                </div>
+                
+                <div class="card-body p-4">
+                    <!-- Resultado principal -->
+                    <div class="alert alert-info border-start border-4 border-info mb-4">
+                        <h4 class="alert-heading">Tipo de TDAH Detectado</h4>
+                        <h2 class="mb-0">
+                            <span class="badge bg-primary fs-3">{{ tipo_tdah|upper }}</span>
+                        </h2>
+                        <p class="mb-0 mt-2">Nivel de confianza: <strong>{{ confianza }}%</strong></p>
+                    </div>
+
+                    <!-- Métricas -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="text-muted">Precisión</h5>
+                                    <h2 class="{% if metricas.precision >= 75 %}text-success{% elif metricas.precision >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ metricas.precision|round(1) }}%
+                                    </h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="text-muted">Fluidez</h5>
+                                    <h2 class="{% if metricas.fluidez >= 70 %}text-success{% elif metricas.fluidez >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ metricas.fluidez|round(1) }}%
+                                    </h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h5 class="text-muted">Velocidad</h5>
+                                    <h2>{{ metricas.velocidad_lectura|round(0)|int }} ppm</h2>
+                                    <small class="text-muted">palabras por minuto</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transcripción -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Tu Lectura Transcrita</h5>
+                        </div>
+                        <div class="card-body" style="background: #f8f9fa;">
+                            <p class="mb-0" style="line-height: 1.8;">{{ transcripcion }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Detalles adicionales -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Detalles del Análisis</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <strong>Duración de la grabación:</strong>
+                                    <span class="float-end">{{ metricas.duracion_grabacion|round(1) }} segundos</span>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <strong>Palabras correctas:</strong>
+                                    <span class="float-end">{{ metricas.palabras_correctas }} / {{ metricas.palabras_totales }}</span>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <strong>Repeticiones detectadas:</strong>
+                                    <span class="float-end">{{ metricas.repeticiones }}</span>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <strong>Pausas anormales:</strong>
+                                    <span class="float-end">{{ metricas.pausas_detectadas }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recomendaciones -->
+                    <div class="alert alert-light border-start border-4 border-primary">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-lightbulb-fill me-2"></i>
+                            Recomendaciones
+                        </h5>
+                        <ul class="mb-0">
+                            {% if metricas.precision < 60 %}
+                            <li>Intenta concentrarte más en el texto antes de comenzar a leer</li>
+                            {% endif %}
+                            {% if metricas.velocidad_lectura > 200 %}
+                            <li>Intenta leer más despacio para mejorar la comprensión</li>
+                            {% elif metricas.velocidad_lectura < 80 %}
+                            <li>Practica la lectura regularmente para mejorar tu velocidad</li>
+                            {% endif %}
+                            {% if metricas.repeticiones > 3 %}
+                            <li>Toma pequeñas pausas antes de hablar para organizar tus ideas</li>
+                            {% endif %}
+                            <li>Continúa practicando con las actividades personalizadas de la plataforma</li>
+                        </ul>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('student.index') }}" class="btn btn-primary btn-lg px-5">
+                            <i class="bi bi-house-door me-2"></i>
+                            Volver al Dashboard
+                        </a>
+                        <a href="{{ url_for('audio.index') }}" class="btn btn-outline-secondary btn-lg px-5 ms-2">
+                            <i class="bi bi-arrow-repeat me-2"></i>
+                            Realizar Nuevo Test
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - Padre/Madre{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="bi bi-house-heart"></i> Bienvenido/a, {{ current_user.username }}
+            </h1>
+            <p class="lead">Panel de seguimiento de tus hijos</p>
+        </div>
+    </div>
+    
+    <!-- Estadísticas generales -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Hijos Registrados</h6>
+                            <h2 class="mb-0">{{ stats.total_children }}</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-people-fill" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-success text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Tests Realizados</h6>
+                            <h2 class="mb-0">{{ stats.total_tests }}</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-clipboard-check-fill" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-warning text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Notificaciones</h6>
+                            <h2 class="mb-0">{{ stats.unread_notifications }}</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-bell-fill" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card bg-danger text-white shadow">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-white-50 mb-1">Alertas</h6>
+                            <h2 class="mb-0">{{ stats.alerts }}</h2>
+                        </div>
+                        <div>
+                            <i class="bi bi-exclamation-triangle-fill" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Lista de hijos -->
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person-hearts me-2"></i>
+                        Mis Hijos
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if children %}
+                        <div class="row">
+                            {% for child_data in children %}
+                            {% set student = child_data.student %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 border-primary">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <div>
+                                                <h5 class="card-title mb-1">
+                                                    <i class="bi bi-person-circle me-2"></i>
+                                                    {{ student.user.username }}
+                                                </h5>
+                                                <small class="text-muted">{{ child_data.relationship }}</small>
+                                            </div>
+                                            {% if student.tdah_type %}
+                                            <span class="badge bg-{{ student.get_confianza_color() }}">
+                                                {{ student.get_tipo_tdah_display() }}
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            {% if student.grade %}
+                                            <p class="mb-1 small">
+                                                <i class="bi bi-book me-1"></i>
+                                                <strong>Grado:</strong> {{ student.grade }}
+                                                {% if student.section %}
+                                                - Sección {{ student.section }}
+                                                {% endif %}
+                                            </p>
+                                            {% endif %}
+                                            
+                                            {% if student.tdah_confidence %}
+                                            <p class="mb-1 small">
+                                                <i class="bi bi-graph-up me-1"></i>
+                                                <strong>Confianza:</strong> {{ student.tdah_confidence|round(1) }}%
+                                            </p>
+                                            {% endif %}
+                                            
+                                            {% if student.last_evaluation_date %}
+                                            <p class="mb-1 small">
+                                                <i class="bi bi-calendar-check me-1"></i>
+                                                <strong>Última evaluación:</strong> {{ student.last_evaluation_date.strftime('%d/%m/%Y') }}
+                                            </p>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        {% if student.necesita_reevaluacion() %}
+                                        <div class="alert alert-warning py-2 mb-3">
+                                            <i class="bi bi-exclamation-circle me-1"></i>
+                                            <small>Necesita nueva evaluación</small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <div class="d-grid gap-2">
+                                            <a href="{{ url_for('parent.view_child', student_id=student.id) }}" 
+                                               class="btn btn-primary btn-sm">
+                                                <i class="bi bi-eye me-1"></i>
+                                                Ver Detalles
+                                            </a>
+                                            <a href="{{ url_for('parent.child_progress', student_id=student.id) }}" 
+                                               class="btn btn-outline-success btn-sm">
+                                                <i class="bi bi-graph-up me-1"></i>
+                                                Ver Progreso
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                            <p class="text-muted mt-3">No tienes hijos vinculados</p>
+                            <p class="small">Contacta al administrador para vincular tu cuenta</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notificaciones recientes -->
+        <div class="col-md-4">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="bi bi-bell me-2"></i>
+                            Notificaciones Recientes
+                        </h6>
+                        {% if stats.unread_notifications > 0 %}
+                        <span class="badge bg-danger">{{ stats.unread_notifications }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_notifications %}
+                        <div class="list-group list-group-flush">
+                            {% for notif in recent_notifications %}
+                            <a href="{{ url_for('parent.view_child', student_id=notif.related_student_id) if notif.related_student_id else '#' }}" 
+                               class="list-group-item list-group-item-action {% if not notif.is_read %}bg-light{% endif %}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">
+                                        {% if not notif.is_read %}
+                                        <span class="badge bg-primary me-1">Nuevo</span>
+                                        {% endif %}
+                                        {{ notif.title }}
+                                    </h6>
+                                    <small>{{ notif.created_at.strftime('%d/%m') }}</small>
+                                </div>
+                                <p class="mb-1 small">{{ notif.message[:100] }}{% if notif.message|length > 100 %}...{% endif %}</p>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="card-footer text-center">
+                            <a href="{{ url_for('parent.notifications') }}" class="btn btn-sm btn-outline-info">
+                                Ver Todas las Notificaciones
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-bell-slash" style="font-size: 2rem; color: #ccc;"></i>
+                            <p class="text-muted mt-2 mb-0 small">No hay notificaciones</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Consejos para padres -->
+            <div class="card shadow mt-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-lightbulb me-2"></i>
+                        Consejo para Padres
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0 small">
+                        <i class="bi bi-quote"></i>
+                        La constancia en los ejercicios y tests es clave. Motiva a tu hijo/a a completar las actividades regularmente para ver mejores resultados.
+                        <i class="bi bi-quote"></i>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-5px);
+}
+</style>
+{% endblock %}

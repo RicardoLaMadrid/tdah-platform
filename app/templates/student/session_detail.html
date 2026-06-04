@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalle de Sesión{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-activity"></i> Detalle de Sesión
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <div class="score-display mb-3">
+                                {{ session.attention_score or 0 }}%
+                            </div>
+                            <p class="text-muted">Puntuación de Atención</p>
+                        </div>
+                        
+                        <div class="col-md-8">
+                            <h5>Información de la Sesión</h5>
+                            <ul class="list-unstyled">
+                                <li><strong>Actividad:</strong> {{ session.activity.title if session.activity else 'Actividad libre' }}</li>
+                                <li><strong>Fecha:</strong> {{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</li>
+                                <li><strong>Duración:</strong> {{ (session.completion_time // 60) if session.completion_time else 0 }} minutos</li>
+                            </ul>
+                            
+                            {% if session.heatmap_path %}
+                            <div class="mt-3">
+                                <h6>Mapa de Calor de Atención</h6>
+                                <img src="{{ url_for('static', filename=session.heatmap_path.replace('app/static/', '')) }}" 
+                                     class="img-fluid rounded" alt="Heatmap">
+                                <p class="small text-muted mt-2">
+                                    Este mapa muestra dónde concentraste tu atención
+                                </p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <a href="{{ url_for('student.progress') }}" class="btn btn-primary">
+                            <i class="bi bi-arrow-left"></i> Volver a Mi Progreso
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

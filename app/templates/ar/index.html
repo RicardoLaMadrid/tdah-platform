@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% block title %}Actividades de Realidad Aumentada{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ar-card {
+        transition: transform 0.3s, box-shadow 0.3s;
+        cursor: pointer;
+        height: 100%;
+    }
+    .ar-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .ar-icon {
+        font-size: 5rem;
+        margin: 20px 0;
+    }
+    .ar-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1>
+                <i class="bi bi-badge-ar me-2"></i>
+                Actividades de Realidad Aumentada
+            </h1>
+            <p class="lead">Ejercicios interactivos en 3D para mejorar tu atención</p>
+        </div>
+    </div>
+    
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h3>{{ stats.total_ar_activities }}</h3>
+                    <p class="mb-0">Actividades Completadas</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h3>{{ stats.caza_completed }}</h3>
+                    <p class="mb-0">Caza de Objetos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h3>{{ stats.secuencia_completed }}</h3>
+                    <p class="mb-0">Secuencia de Luces</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h3>{{ stats.respiracion_completed }}</h3>
+                    <p class="mb-0">Ejercicio Respiración</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actividades AR -->
+    <div class="row">
+        <!-- Actividad 1: Caza de Objetos -->
+        <div class="col-md-4 mb-4">
+            <div class="card ar-card">
+                <div class="card-body text-center position-relative">
+                    {% if stats.caza_completed > 0 %}
+                    <span class="ar-badge badge bg-success">
+                        {{ stats.caza_completed }} completadas
+                    </span>
+                    {% endif %}
+                    
+                    <div class="ar-icon text-primary">
+                        <i class="bi bi-bullseye"></i>
+                    </div>
+                    
+                    <h3 class="card-title">Caza de Objetos AR</h3>
+                    <p class="card-text">
+                        Encuentra y toca los objetos correctos que aparecen en realidad aumentada.
+                        Mejora tu atención selectiva.
+                    </p>
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-primary">Atención Selectiva</span>
+                        <span class="badge bg-info">5-10 min</span>
+                    </div>
+                    
+                    <a href="{{ url_for('ar.caza_objetos') }}" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-play-fill me-2"></i>
+                        Iniciar Actividad
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actividad 2: Secuencia de Luces -->
+        <div class="col-md-4 mb-4">
+            <div class="card ar-card">
+                <div class="card-body text-center position-relative">
+                    {% if stats.secuencia_completed > 0 %}
+                    <span class="ar-badge badge bg-success">
+                        {{ stats.secuencia_completed }} completadas
+                    </span>
+                    {% endif %}
+                    
+                    <div class="ar-icon text-info">
+                        <i class="bi bi-lightning-fill"></i>
+                    </div>
+                    
+                    <h3 class="card-title">Secuencia de Luces</h3>
+                    <p class="card-text">
+                        Memoriza y repite secuencias de luces en 3D.
+                        Entrena tu memoria de trabajo.
+                    </p>
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-info">Memoria de Trabajo</span>
+                        <span class="badge bg-warning">5-10 min</span>
+                    </div>
+                    
+                    <a href="{{ url_for('ar.secuencia_luces') }}" class="btn btn-info btn-lg w-100">
+                        <i class="bi bi-play-fill me-2"></i>
+                        Iniciar Actividad
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actividad 3: Respiración -->
+        <div class="col-md-4 mb-4">
+            <div class="card ar-card">
+                <div class="card-body text-center position-relative">
+                    {% if stats.respiracion_completed > 0 %}
+                    <span class="ar-badge badge bg-success">
+                        {{ stats.respiracion_completed }} completadas
+                    </span>
+                    {% endif %}
+                    
+                    <div class="ar-icon text-success">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                    </div>
+                    
+                    <h3 class="card-title">Respiración Guiada AR</h3>
+                    <p class="card-text">
+                        Sincroniza tu respiración con una esfera 3D que crece y decrece.
+                        Mejora tu autorregulación.
+                    </p>
+                    
+                    <div class="mb-3">
+                        <span class="badge bg-success">Autorregulación</span>
+                        <span class="badge bg-secondary">3-5 min</span>
+                    </div>
+                    
+                    <a href="{{ url_for('ar.respiracion') }}" class="btn btn-success btn-lg w-100">
+                        <i class="bi bi-play-fill me-2"></i>
+                        Iniciar Actividad
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Instrucciones -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5 class="alert-heading">
+                    <i class="bi bi-info-circle me-2"></i>
+                    ¿Cómo usar las actividades AR?
+                </h5>
+                <ol class="mb-0">
+                    <li><strong>Permite el acceso a la cámara</strong> cuando el navegador lo solicite</li>
+                    <li><strong>Busca un espacio amplio</strong> donde puedas moverte con libertad</li>
+                    <li><strong>Apunta la cámara</strong> hacia un área bien iluminada</li>
+                    <li><strong>Sigue las instrucciones</strong> que aparecen en pantalla</li>
+                    <li><strong>¡Diviértete!</strong> Recuerda que es un juego educativo</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

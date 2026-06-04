@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Usuarios - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="bi bi-people"></i> Gestión de Usuarios</h1>
+        </div>
+<div class="col-md-4 text-end">
+    <a href="{{ url_for('admin.inscribir_alumno') }}" class="btn btn-success me-2">
+        <i class="bi bi-mortarboard-fill"></i> Inscribir Alumno
+    </a>
+    <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary">
+        <i class="bi bi-person-plus"></i> Crear Usuario
+    </a>
+</div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Filtrar por Rol</label>
+<select name="role" class="form-select" onchange="this.form.submit()">
+    <option value="all"     {% if role_filter == 'all'     %}selected{% endif %}>Todos</option>
+    <option value="admin"   {% if role_filter == 'admin'   %}selected{% endif %}>Administradores</option>
+    <option value="teacher" {% if role_filter == 'teacher' %}selected{% endif %}>Profesores</option>
+    <option value="student" {% if role_filter == 'student' %}selected{% endif %}>Estudiantes</option>
+</select>
+<small class="text-muted d-block mt-1">
+    <i class="bi bi-info-circle"></i> Los tutores se gestionan al editar cada alumno
+</small>
+                </div>
+                <div class="col-md-3">
+                    <span class="text-muted small">
+                        {{ users|length }} usuario(s) encontrado(s)
+                    </span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de usuarios -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-custom mb-0">
+                    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Usuario / Nombre</th>
+        <th>Email</th>
+        <th>Rol</th>
+        <th>Info extra</th>
+        <th>Fecha Creación</th>
+        <th>Acciones</th>
+    </tr>
+</thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+    <td class="text-muted small">{{ user.id }}</td>
+    <td>
+        <div class="d-flex align-items-center gap-2">
+            <div class="user-avatar" style="width:32px;height:32px;font-size:.8rem;">
+                {{ user.username[0].upper() }}
+            </div>
+            <div>
+                <strong>{{ user.username }}</strong>
+                {% if user.role == 'student' %}
+                    {% set sp = user.student_profile.first() %}
+                    {% if sp and sp.full_name %}
+                        <br><small class="text-muted">{{ sp.full_name }}</small>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </td>
+    <td>{{ user.email }}</td>
+    <td>
+        {% set role_colors = {
+            'admin': 'danger',
+            'teacher': 'success',
+            'student': 'primary'
+        } %}
+        <span class="badge bg-{{ role_colors.get(user.role, 'secondary') }}">
+            {% if user.role == 'admin' %}Administrador
+            {% elif user.role == 'teacher' %}Profesor
+            {% elif user.role == 'student' %}Estudiante
+            {% else %}{{ user.role }}
+            {% endif %}
+        </span>
+    </td>
+    <td class="small">
+        {% if user.role == 'student' %}
+            {% set sp = user.student_profile.first() %}
+            {% if sp %}
+                {% if sp.age %}<i class="bi bi-cake"></i> {{ sp.age }}a {% endif %}
+                {% if sp.grade %}<span class="badge bg-light text-dark">{{ sp.grade }}</span>{% endif %}
+                {% if sp.tdah_type %}
+                    <br><span class="badge bg-info">{{ sp.tdah_type }}</span>
+                {% endif %}
+            {% endif %}
+        {% elif user.role == 'teacher' %}
+            <i class="bi bi-people"></i> {{ user.students_assigned.count() }} alumnos
+        {% endif %}
+    </td>
+    <td><small>{{ user.created_at.strftime('%d/%m/%Y') }}</small></td>
+    <td>
+        <a href="{{ url_for('admin.edit_user', user_id=user.id) }}"
+           class="btn btn-sm btn-outline-primary" title="Ver / Editar">
+            <i class="bi bi-eye"></i> Ver
+        </a>
+        {% if user.id != current_user.id %}
+        <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+              style="display:inline;"
+              onsubmit="return confirm('¿Eliminar a {{ user.username }}? Esta acción no se puede deshacer.')">
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                <i class="bi bi-trash"></i>
+            </button>
+        </form>
+        {% endif %}
+    </td>
+</tr>
+                        {% endfor %}
+
+                        {% if not users %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                No hay usuarios con el filtro seleccionado
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

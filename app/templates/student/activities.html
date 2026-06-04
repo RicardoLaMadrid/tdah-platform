@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Actividades - Estudiante{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4"><i class="bi bi-controller"></i> Mis Actividades</h1>
+    
+    {% if activities_data %}
+        <div class="row">
+            {% for data in activities_data %}
+            <div class="col-md-4 mb-4">
+                <div class="activity-card card h-100">
+                    {% if data.activity.ar_content and data.activity.ar_content.enabled %}
+                    <span class="ar-badge"><i class="bi bi-badge-ar"></i> AR</span>
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <h5 class="card-title">{{ data.activity.title }}</h5>
+                        <p class="card-text text-muted">{{ data.activity.description }}</p>
+                        
+                        <div class="mb-3">
+                            <span class="badge bg-info">{{ data.activity.activity_type }}</span>
+                            <span class="badge bg-secondary">Nivel {{ data.activity.difficulty_level }}</span>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="mb-2">
+                            <small class="text-muted">Veces Completada:</small>
+                            <strong class="ms-2">{{ data.sessions_count }}</strong>
+                        </div>
+                        
+                        {% if data.last_session %}
+                        <div class="mb-2">
+                            <small class="text-muted">Última vez:</small>
+                            <p class="mb-0 small">{{ data.last_session.created_at.strftime('%d/%m/%Y') }}</p>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-{{ 'success' if data.last_session.attention_score >= 70 else 'warning' if data.last_session.attention_score >= 50 else 'danger' }}" 
+                                     style="width: {{ data.last_session.attention_score or 0 }}%">
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ data.last_session.attention_score or 0 }}% atención</small>
+                        </div>
+                        {% endif %}
+                        
+                        <hr>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('student.activity_detail', activity_id=data.activity.id) }}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-info-circle"></i> Ver Detalles
+                            </a>
+                            <a href="{{ url_for('student.start_activity', activity_id=data.activity.id) }}" 
+                               class="btn btn-primary">
+                                <i class="bi bi-play-circle"></i> Comenzar Actividad
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                <h4 class="mt-3 text-muted">No tienes actividades asignadas</h4>
+                <p class="text-muted">Tu profesor te asignará actividades pronto</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
