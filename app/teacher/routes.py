@@ -318,6 +318,68 @@ def create_report(session_id):
         flash(f'Error al crear reporte: {str(e)}', 'danger')
         return redirect(url_for('teacher.create_report', session_id=session_id))
 
+@teacher_bp.route('/reports/<int:report_id>/pdf')
+@teacher_required
+def report_pdf(report_id):
+    """Genera y descarga el PDF del reporte."""
+    report = Report.query.get_or_404(report_id)
+    student = report.student
+    if student.teacher_id != current_user.id:
+        flash('No autorizado', 'danger')
+        return redirect(url_for('teacher.reports'))
+    try:
+        from app.reports.pdf_generator import generate_report_pdf
+        from flask import send_file
+        import io
+        pdf_bytes = generate_report_pdf(report, student)
+        nombre = student.get_display_name().replace(' ', '_')
+        fecha = report.created_at.strftime('%Y%m%d') if report.created_at else 'sin_fecha'
+        filename = f"reporte_{nombre}_{fecha}.pdf"
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename,
+        )
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        flash(f'Error al generar PDF: {str(e)}', 'danger')
+        return redirect(url_for('teacher.reports'))
+
+
+@teacher_bp.route('/reports/<int:report_id>/send-whatsapp', methods=['POST'])
+@teacher_required
+def report_send_whatsapp(report_id):
+    """Genera el PDF y lo envía por WhatsApp al tutor."""
+    report = Report.query.get_or_404(report_id)
+    student = report.student
+    if student.teacher_id != current_user.id:
+        return jsonify({'error': 'No autorizado'}), 403
+
+    phone = student.tutor_phone or student.emergency_contact_phone
+    if not phone:
+        return jsonify({'error': 'El alumno no tiene teléfono del tutor registrado'}), 400
+
+    try:
+        from app.reports.pdf_generator import generate_report_pdf
+        pdf_bytes = generate_report_pdf(report, student)
+
+        # Notificación interna siempre
+        from app.core.models.notification import Notification
+        Notification.notify_tutor_of_student(
+            student_id=student.id,
+            title="Nuevo reporte disponible",
+            message=f"El docente {current_user.username} ha generado un nuevo reporte. "
+                    f"Consulta la plataforma para verlo completo.",
+            notification_type='new_report',
+            send_whatsapp=True,
+        )
+
+        return jsonify({'success': True, 'message': f'Notificación enviada al tutor ({phone})'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @teacher_bp.route('/sessions/<int:session_id>')
 @teacher_required
 def session_detail(session_id):
