@@ -1,82 +1,181 @@
-{% extends 'base.html' %}
+{% extends 'auth_base.html' %}
 
 {% block title %}Iniciar Sesión - Plataforma TDAH{% endblock %}
 
-{% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card shadow-lg mt-5">
-                <div class="card-body p-5">
-                    <div class="text-center mb-4">
-                        <i class="bi bi-brain text-primary" style="font-size: 4rem;"></i>
-                        <h2 class="mt-3">Plataforma TDAH</h2>
-                        <p class="text-muted">Sistema de apoyo educativo</p>
-                    </div>
-                    
-                    <form method="POST" action="{{ url_for('auth.login') }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        
-                        <div class="mb-3">
-                            <label for="username" class="form-label">
-                                <i class="bi bi-person"></i> Usuario o Email
-                            </label>
-                            <input type="text" class="form-control" id="username" name="username" 
-                                   placeholder="Ingresa tu usuario o email" required autofocus>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="password" class="form-label">
-                                <i class="bi bi-lock"></i> Contraseña
-                            </label>
-                            <input type="password" class="form-control" id="password" name="password" required>
-                        </div>
-                        
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                            <label class="form-check-label" for="remember">
-                                Recordarme por 30 días
-                            </label>
-                        </div>
-                        
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión
-                            </button>
-                        </div>
-                    </form>
-                    
-                    {% if config.GOOGLE_CLIENT_ID %}
-                    <div class="text-center my-3">
-                        <span class="text-muted">— o —</span>
-                    </div>
-                    
-                    <div class="d-grid">
-                        <a href="{{ url_for('oauth.google_login') }}" class="btn btn-outline-danger btn-lg">
-                            <i class="bi bi-google"></i> Continuar con Google
-                        </a>
-                    </div>
-                    {% endif %}
-                    
-                    <div class="mt-4 text-center">
-                        <small class="text-muted">
-                            ¿Olvidaste tu contraseña? Contacta al administrador
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+{% block main_class %}min-h-screen{% endblock %}
 
-<style>
-    body {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-    }
-    .card {
-        border: none;
-        border-radius: 15px;
-    }
-</style>
+{% block content %}
+<div class="min-h-screen flex"
+     x-data="{
+       loading: false,
+       username: '',
+       password: '',
+       usernameError: '',
+       passwordError: '',
+       showPass: false,
+       validate() {
+         this.usernameError = this.username.trim() ? '' : 'Este campo es requerido';
+         this.passwordError = this.password.trim() ? '' : 'Este campo es requerido';
+         return !this.usernameError && !this.passwordError;
+       },
+       submit(e) {
+         if (!this.validate()) { e.preventDefault(); return; }
+         this.loading = true;
+       }
+     }">
+
+  <!-- Panel izquierdo: branding -->
+  <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#1E1B4B] via-[#312E81] to-[#4F46E5] flex-col items-center justify-center p-12 text-white">
+    <div class="max-w-sm text-center">
+      <div class="w-24 h-24 mx-auto mb-8 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur">
+        <svg class="w-14 h-14 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 14.93V15a1 1 0 0 0-2 0v1.93A8 8 0 0 1 4.07 11H6a1 1 0 0 0 0-2H4.07A8 8 0 0 1 11 4.07V6a1 1 0 0 0 2 0V4.07A8 8 0 0 1 19.93 11H18a1 1 0 0 0 0 2h1.93A8 8 0 0 1 13 16.93Z"/>
+        </svg>
+      </div>
+      <h1 class="text-3xl font-bold mb-4">Plataforma TDAH</h1>
+      <p class="text-indigo-200 text-lg leading-relaxed mb-10">
+        Sistema educativo de apoyo para niños con TDAH. Evaluaciones, actividades y seguimiento personalizado.
+      </p>
+      <div class="space-y-4 text-left">
+        <div class="flex items-center gap-3 text-indigo-100">
+          <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <span class="text-sm">Evaluaciones cognitivas especializadas</span>
+        </div>
+        <div class="flex items-center gap-3 text-indigo-100">
+          <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <span class="text-sm">Actividades de realidad aumentada</span>
+        </div>
+        <div class="flex items-center gap-3 text-indigo-100">
+          <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </div>
+          <span class="text-sm">Reportes con inteligencia artificial</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel derecho: formulario -->
+  <div class="flex-1 flex flex-col items-center justify-center p-8 bg-white">
+    <div class="w-full max-w-md">
+
+      <!-- Logo solo en móvil -->
+      <div class="lg:hidden text-center mb-8">
+        <div class="w-16 h-16 mx-auto mb-3 bg-[#4F46E5] rounded-xl flex items-center justify-center">
+          <svg class="w-9 h-9 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 14.93V15a1 1 0 0 0-2 0v1.93A8 8 0 0 1 4.07 11H6a1 1 0 0 0 0-2H4.07A8 8 0 0 1 11 4.07V6a1 1 0 0 0 2 0V4.07A8 8 0 0 1 19.93 11H18a1 1 0 0 0 0 2h1.93A8 8 0 0 1 13 16.93Z"/>
+          </svg>
+        </div>
+        <p class="text-lg font-bold text-[#1F2937]">Plataforma TDAH</p>
+      </div>
+
+      <h2 class="text-2xl font-bold text-[#1F2937] mb-1">Bienvenido de vuelta</h2>
+      <p class="text-[#6B7280] mb-8 text-sm">Ingresa tus credenciales para continuar</p>
+
+      <!-- Google OAuth (más visible, arriba del formulario) -->
+      {% if config.GOOGLE_CLIENT_ID %}
+      <a href="{{ url_for('oauth.google_login') }}"
+         class="flex items-center justify-center gap-3 w-full py-3 px-4 border-2 border-[#E5E7EB] rounded-xl text-sm font-medium text-[#1F2937] hover:bg-[#F9FAFB] hover:border-[#D1D5DB] transition-all mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4F46E5]">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continuar con Google
+      </a>
+      <div class="relative mb-6">
+        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-[#E5E7EB]"></div></div>
+        <div class="relative flex justify-center"><span class="text-xs text-[#9CA3AF] bg-white px-3">o con tu cuenta</span></div>
+      </div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('auth.login') }}" @submit="submit($event)">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+        <!-- Username -->
+        <div class="mb-5">
+          <label for="username" class="block text-sm font-medium text-[#374151] mb-1.5">Usuario o Email</label>
+          <input type="text" id="username" name="username"
+                 x-model="username"
+                 @blur="username.trim() ? (usernameError='') : (usernameError='Este campo es requerido')"
+                 placeholder="tu@email.com o usuario"
+                 autocomplete="username"
+                 required autofocus
+                 class="w-full px-4 py-3 rounded-xl border text-sm transition-colors
+                        focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent
+                        placeholder:text-[#9CA3AF]"
+                 :class="usernameError ? 'border-red-400 bg-red-50' : 'border-[#D1D5DB] hover:border-[#9CA3AF]'">
+          <p x-show="usernameError" x-transition class="mt-1 text-xs text-red-600" x-text="usernameError" role="alert"></p>
+        </div>
+
+        <!-- Password -->
+        <div class="mb-5">
+          <label for="password" class="block text-sm font-medium text-[#374151] mb-1.5">Contraseña</label>
+          <div class="relative">
+            <input :type="showPass ? 'text' : 'password'"
+                   id="password" name="password"
+                   x-model="password"
+                   @blur="password.trim() ? (passwordError='') : (passwordError='Este campo es requerido')"
+                   placeholder="••••••••"
+                   autocomplete="current-password"
+                   required
+                   class="w-full px-4 py-3 pr-11 rounded-xl border text-sm transition-colors
+                          focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent
+                          placeholder:text-[#9CA3AF]"
+                   :class="passwordError ? 'border-red-400 bg-red-50' : 'border-[#D1D5DB] hover:border-[#9CA3AF]'">
+            <button type="button" @click="showPass = !showPass"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#6B7280] transition-colors"
+                    :aria-label="showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+              <svg x-show="!showPass" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              <svg x-show="showPass" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+              </svg>
+            </button>
+          </div>
+          <p x-show="passwordError" x-transition class="mt-1 text-xs text-red-600" x-text="passwordError" role="alert"></p>
+        </div>
+
+        <!-- Remember me -->
+        <div class="flex items-center mb-6">
+          <input type="checkbox" id="remember" name="remember"
+                 class="w-4 h-4 rounded border-[#D1D5DB] text-[#4F46E5] focus:ring-[#4F46E5]">
+          <label for="remember" class="ml-2 text-sm text-[#6B7280] cursor-pointer">Recordarme por 30 días</label>
+        </div>
+
+        <!-- Botón submit con loading state -->
+        <button type="submit"
+                :disabled="loading"
+                class="w-full py-3 px-4 bg-[#4F46E5] hover:bg-[#4338CA] text-white font-semibold rounded-xl
+                       transition-colors focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:ring-offset-2
+                       disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          <svg x-show="loading" class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+          </svg>
+          <span x-show="!loading">Iniciar Sesión</span>
+          <span x-show="loading">Ingresando...</span>
+        </button>
+      </form>
+
+      <p class="mt-8 text-center text-xs text-[#9CA3AF]">
+        ¿Olvidaste tu contraseña? Contacta al administrador del sistema.
+      </p>
+    </div>
+  </div>
+
+</div>
 {% endblock %}

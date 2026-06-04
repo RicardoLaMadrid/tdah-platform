@@ -33,7 +33,7 @@
     {% endwith %}
   </div>
 
-  <main class="min-h-screen flex items-center justify-center p-6">
+  <main class="{% block main_class %}min-h-screen flex items-center justify-center p-6{% endblock %}">
     {% block content %}{% endblock %}
   </main>
 
