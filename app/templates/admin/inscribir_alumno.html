@@ -1,325 +1,422 @@
-{% extends 'base.html' %}
+{% extends '_layouts/admin_layout.html' %}
 {% block title %}Inscribir Alumno - Admin{% endblock %}
+{% block page_title %}Inscribir Nuevo Alumno{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1><i class="bi bi-person-plus-fill text-primary"></i> Inscribir Nuevo Alumno</h1>
-            <p class="text-muted mb-0">Captura todos los datos del alumno y sus tutores en un solo paso.</p>
-        </div>
-        <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Volver
-        </a>
+<div class="max-w-3xl mx-auto"
+     x-data="{
+       step: 1,
+       showParent2: false,
+       studentName: '',
+       studentUsername: '',
+       studentEmail: '',
+       studentPassword: 'estudiante123',
+       parent1Name: '',
+       parent1Email: '',
+       parent1Phone: '',
+
+       stepLabels: ['Datos del alumno', 'Info médica', 'Tutores'],
+
+       canNext() {
+         if (this.step === 1) return this.studentName.trim() && this.studentUsername.trim() && this.studentEmail.trim() && this.studentPassword.trim();
+         if (this.step === 3) return this.parent1Name.trim() && this.parent1Email.trim() && this.parent1Phone.trim();
+         return true;
+       },
+
+       autoUsername() {
+         if (!this.studentUsername) {
+           const parts = this.studentName.toLowerCase().trim()
+             .normalize('NFD').replace(/[̀-ͯ]/g, '')
+             .replace(/[^a-z\s]/g, '').split(/\s+/);
+           if (parts.length >= 2) this.studentUsername = parts[0] + '.' + parts[1];
+           else if (parts[0]) this.studentUsername = parts[0];
+         }
+       },
+
+       confirmSubmit(e) {
+         e.preventDefault();
+         if (!this.canNext()) return;
+         if (confirm('¿Confirmas la inscripción de \"' + this.studentName + '\"?\n\nSe crearán las cuentas del alumno y sus tutores.')) {
+           e.target.closest('form').submit();
+         }
+       }
+     }">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <p class="text-sm text-[#6B7280] mt-0.5">Completa los 3 pasos para registrar al alumno y sus tutores.</p>
     </div>
-    
-    <form method="POST" action="{{ url_for('admin.inscribir_alumno') }}" id="inscripcion-form">
-        
-        <!-- SECCIÓN 1: Datos del Alumno -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-mortarboard-fill me-2"></i>1. Datos del Alumno</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-8">
-                        <label class="form-label">Nombre completo *</label>
-                        <input type="text" class="form-control" name="student_full_name" required
-                               placeholder="Ej: Juan Pérez García" id="student_full_name">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Cédula de Identidad</label>
-                        <input type="text" class="form-control" name="student_national_id"
-                               placeholder="12345678">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Edad *</label>
-                        <input type="number" class="form-control" name="student_age" required
-                               min="5" max="18" value="10">
-                    </div>
-                    <div class="col-md-5">
-                        <label class="form-label">Grado *</label>
-                        <input type="text" class="form-control" name="student_grade" required
-                               placeholder="Ej: 5to Primaria">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Sección</label>
-                        <input type="text" class="form-control" name="student_section"
-                               placeholder="A">
-                    </div>
-                </div>
-                
-                <hr class="my-4">
-                <h6 class="text-muted">🔐 Credenciales de acceso</h6>
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Username *</label>
-                        <input type="text" class="form-control" name="student_username" required
-                               id="student_username">
-                        <small class="text-muted">Se autocompleta del nombre</small>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Email *</label>
-                        <input type="email" class="form-control" name="student_email" required
-                               placeholder="alumno@colegio.com">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Contraseña inicial *</label>
-                        <input type="text" class="form-control" name="student_password" required
-                               value="estudiante123">
-                        <small class="text-muted">El alumno la podrá cambiar después</small>
-                    </div>
-                </div>
-            </div>
+    <a href="{{ url_for('admin.users') }}"
+       class="flex items-center gap-1.5 text-sm text-[#6B7280] hover:text-[#1F2937] transition-colors">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Cancelar
+    </a>
+  </div>
+
+  <!-- Progress steps -->
+  <div class="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB] mb-6">
+    <div class="flex items-center mb-3">
+      <template x-for="i in [1, 2, 3]" :key="i">
+        <div class="flex items-center" :class="i < 3 ? 'flex-1' : ''">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 transition-all duration-200"
+               :class="step > i ? 'bg-emerald-500 text-white' : step === i ? 'bg-[#4F46E5] text-white ring-4 ring-indigo-100' : 'bg-[#F3F4F6] text-[#9CA3AF]'">
+            <template x-if="step > i">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+              </svg>
+            </template>
+            <span x-show="step <= i" x-text="i"></span>
+          </div>
+          <div x-show="i < 3" class="flex-1 h-1 mx-2 rounded-full transition-colors duration-300"
+               :class="step > i ? 'bg-emerald-400' : 'bg-[#E5E7EB]'"></div>
         </div>
-        
-        <!-- SECCIÓN 2: Información Médica -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="bi bi-heart-pulse-fill me-2"></i>2. Información Médica</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-12">
-                        <label class="form-label">Alergias conocidas</label>
-                        <textarea class="form-control" name="student_allergies" rows="2"
-                                  placeholder="Ej: Penicilina, frutos secos, polen..."></textarea>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Condiciones médicas</label>
-                        <textarea class="form-control" name="student_medical_conditions" rows="2"
-                                  placeholder="Ej: Asma, diabetes, epilepsia..."></textarea>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Medicamentos actuales</label>
-                        <textarea class="form-control" name="student_medications" rows="2"
-                                  placeholder="Ej: Metilfenidato 10mg cada 8h..."></textarea>
-                    </div>
-                </div>
-                <div class="alert alert-info mt-3 mb-0 small">
-                    <i class="bi bi-info-circle"></i> Esta información se mantiene confidencial y solo es visible para administradores y el profesor asignado.
-                </div>
-            </div>
+      </template>
+    </div>
+    <div class="flex justify-between">
+      <template x-for="(label, idx) in stepLabels" :key="idx">
+        <span class="text-xs font-medium transition-colors"
+              :class="step >= idx + 1 ? 'text-[#4F46E5]' : 'text-[#9CA3AF]'"
+              x-text="label"></span>
+      </template>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <form method="POST" action="{{ url_for('admin.inscribir_alumno') }}" id="inscripcion-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+    <!-- ══ PASO 1: Datos del alumno ══ -->
+    <div x-show="step === 1"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0 translate-x-4"
+         x-transition:enter-end="opacity-100 translate-x-0">
+
+      <!-- Datos básicos -->
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-6 mb-4">
+        <div class="flex items-center gap-2 mb-5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+            <svg class="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+          </div>
+          <h2 class="text-base font-semibold text-[#1F2937]">Datos del Alumno</h2>
         </div>
-        
-        <!-- SECCIÓN 3: Dirección y Contacto de Emergencia -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="bi bi-geo-alt-fill me-2"></i>3. Dirección y Contacto de Emergencia</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-12">
-                        <label class="form-label">Dirección del alumno</label>
-                        <textarea class="form-control" name="student_address" rows="2"
-                                  placeholder="Calle, número, zona, ciudad..."></textarea>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Contacto de emergencia (nombre)</label>
-                        <input type="text" class="form-control" name="emergency_contact_name"
-                               placeholder="Persona a contactar en urgencias">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Contacto de emergencia (teléfono)</label>
-                        <input type="text" class="form-control" name="emergency_contact_phone"
-                               placeholder="+591 XXXXXXXX">
-                    </div>
-                </div>
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Nombre completo *</label>
+            <input type="text" name="student_full_name" required
+                   x-model="studentName" @blur="autoUsername()"
+                   placeholder="Ej: Juan Pérez García"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Cédula de Identidad</label>
+            <input type="text" name="student_national_id" placeholder="12345678"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Edad *</label>
+            <input type="number" name="student_age" required min="5" max="18" value="10"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Grado *</label>
+            <input type="text" name="student_grade" required placeholder="Ej: 5to Primaria"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Sección</label>
+            <input type="text" name="student_section" placeholder="A"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+          </div>
         </div>
-        
-        <!-- SECCIÓN 4: Tutor Principal -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>4. Tutor Principal <span class="badge bg-light text-dark">Obligatorio</span></h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Nombre completo *</label>
-                        <input type="text" class="form-control" name="parent1_full_name" required
-                               placeholder="Ej: María García López">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Relación *</label>
-                        <select class="form-select" name="parent1_relationship" required>
-                            <option value="madre">Madre</option>
-                            <option value="padre">Padre</option>
-                            <option value="tutor">Tutor legal</option>
-                            <option value="abuelo/abuela">Abuelo/a</option>
-                            <option value="tío/tía">Tío/a</option>
-                            <option value="otro">Otro</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Cédula de Identidad</label>
-                        <input type="text" class="form-control" name="parent1_national_id">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Email *</label>
-                        <input type="email" class="form-control" name="parent1_email" required
-                               placeholder="padre@ejemplo.com">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Teléfono / WhatsApp *</label>
-                        <input type="text" class="form-control" name="parent1_phone" required
-                               placeholder="+591 XXXXXXXX">
-                        <small class="text-muted">Incluye código de país</small>
-                    </div>
-                    
-                    <div class="col-md-12">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" 
-                                   name="parent1_whatsapp_enabled" checked id="p1_wa">
-                            <label for="p1_wa" class="form-check-label">
-                                <i class="bi bi-whatsapp text-success"></i> Recibir notificaciones por WhatsApp
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox"
-                                   name="parent1_create_account" checked id="p1_acc"
-                                   onchange="togglePasswordField('parent1')">
-                            <label for="p1_acc" class="form-check-label">
-                                <i class="bi bi-laptop"></i> Crear cuenta web (puede ver progreso de su hijo)
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6" id="parent1_password_section">
-                        <label class="form-label">Contraseña inicial</label>
-                        <input type="text" class="form-control" name="parent1_password" value="padre123">
-                        <small class="text-muted">El padre la cambia después de su primer login</small>
-                    </div>
-                </div>
-            </div>
+      </div>
+
+      <!-- Credenciales -->
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-6">
+        <div class="flex items-center gap-2 mb-5">
+          <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+            <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+            </svg>
+          </div>
+          <h2 class="text-base font-semibold text-[#1F2937]">Credenciales de Acceso</h2>
         </div>
-        
-        <!-- SECCIÓN 5: Tutor Secundario (opcional) -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>5. Tutor Secundario <span class="badge bg-light text-dark">Opcional</span></h5>
-                <button type="button" class="btn btn-sm btn-light" onclick="toggleParent2()" id="toggle-p2-btn">
-                    <i class="bi bi-plus-circle"></i> Agregar
-                </button>
-            </div>
-            <div class="card-body" id="parent2_section" style="display: none;">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Nombre completo</label>
-                        <input type="text" class="form-control" name="parent2_full_name">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Relación</label>
-                        <select class="form-select" name="parent2_relationship">
-                            <option value="padre">Padre</option>
-                            <option value="madre">Madre</option>
-                            <option value="tutor">Tutor legal</option>
-                            <option value="abuelo/abuela">Abuelo/a</option>
-                            <option value="tío/tía">Tío/a</option>
-                            <option value="otro">Otro</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Cédula</label>
-                        <input type="text" class="form-control" name="parent2_national_id">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Email</label>
-                        <input type="email" class="form-control" name="parent2_email">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Teléfono / WhatsApp</label>
-                        <input type="text" class="form-control" name="parent2_phone">
-                    </div>
-                    
-                    <div class="col-md-12">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" 
-                                   name="parent2_whatsapp_enabled" id="p2_wa">
-                            <label for="p2_wa" class="form-check-label">
-                                <i class="bi bi-whatsapp text-success"></i> Recibir notificaciones por WhatsApp
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox"
-                                   name="parent2_create_account" id="p2_acc"
-                                   onchange="togglePasswordField('parent2')">
-                            <label for="p2_acc" class="form-check-label">
-                                <i class="bi bi-laptop"></i> Crear cuenta web
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6" id="parent2_password_section" style="display:none;">
-                        <label class="form-label">Contraseña inicial</label>
-                        <input type="text" class="form-control" name="parent2_password" value="padre123">
-                    </div>
-                </div>
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Username *</label>
+            <input type="text" name="student_username" required
+                   x-model="studentUsername" placeholder="juan.perez"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+            <p class="text-xs text-[#9CA3AF] mt-1">Se sugiere del nombre automáticamente</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Email *</label>
+            <input type="email" name="student_email" required
+                   x-model="studentEmail" placeholder="alumno@colegio.com"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Contraseña inicial *</label>
+            <input type="text" name="student_password" required
+                   x-model="studentPassword"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+            <p class="text-xs text-[#9CA3AF] mt-1">El alumno puede cambiarla después</p>
+          </div>
         </div>
-        
-        <!-- Botones de acción -->
-        <div class="d-flex justify-content-between mb-5">
-            <a href="{{ url_for('admin.users') }}" class="btn btn-secondary btn-lg">
-                <i class="bi bi-x-circle"></i> Cancelar
-            </a>
-            <button type="submit" class="btn btn-primary btn-lg px-5">
-                <i class="bi bi-check-circle-fill"></i> Inscribir Alumno
-            </button>
+      </div>
+    </div>
+
+    <!-- ══ PASO 2: Información médica + dirección ══ -->
+    <div x-show="step === 2"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0 translate-x-4"
+         x-transition:enter-end="opacity-100 translate-x-0">
+
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-6 mb-4">
+        <div class="flex items-center gap-2 mb-5">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+            <svg class="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+            </svg>
+          </div>
+          <h2 class="text-base font-semibold text-[#1F2937]">Información Médica</h2>
+          <span class="text-xs bg-[#F3F4F6] text-[#6B7280] px-2 py-0.5 rounded-full">Opcional</span>
         </div>
-    </form>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Alergias conocidas</label>
+            <textarea name="student_allergies" rows="2" placeholder="Ej: Penicilina, frutos secos, polen..."
+                      class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Condiciones médicas</label>
+            <textarea name="student_medical_conditions" rows="2" placeholder="Ej: Asma, diabetes, epilepsia..."
+                      class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Medicamentos actuales</label>
+            <textarea name="student_medications" rows="2" placeholder="Ej: Metilfenidato 10mg cada 8h..."
+                      class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"></textarea>
+          </div>
+        </div>
+        <div class="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-100 text-xs text-blue-700">
+          Información confidencial, visible solo para administradores y el profesor asignado.
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-6">
+        <div class="flex items-center gap-2 mb-5">
+          <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+            <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </div>
+          <h2 class="text-base font-semibold text-[#1F2937]">Dirección y Emergencia</h2>
+          <span class="text-xs bg-[#F3F4F6] text-[#6B7280] px-2 py-0.5 rounded-full">Opcional</span>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Dirección del alumno</label>
+            <textarea name="student_address" rows="2" placeholder="Calle, número, zona, ciudad..."
+                      class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"></textarea>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-[#374151] mb-1.5">Contacto de emergencia (nombre)</label>
+              <input type="text" name="emergency_contact_name" placeholder="Persona a contactar en urgencias"
+                     class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-[#374151] mb-1.5">Teléfono de emergencia</label>
+              <input type="text" name="emergency_contact_phone" placeholder="+591 XXXXXXXX"
+                     class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PASO 3: Tutores ══ -->
+    <div x-show="step === 3"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0 translate-x-4"
+         x-transition:enter-end="opacity-100 translate-x-0">
+
+      <!-- Tutor principal -->
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-6 mb-4">
+        <div class="flex items-center gap-2 mb-5">
+          <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+            <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+          </div>
+          <h2 class="text-base font-semibold text-[#1F2937]">Tutor Principal</h2>
+          <span class="text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full font-medium">Obligatorio</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Nombre completo *</label>
+            <input type="text" name="parent1_full_name" required x-model="parent1Name"
+                   placeholder="Ej: María García López"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Relación *</label>
+            <select name="parent1_relationship" required
+                    class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent bg-white">
+              <option value="madre">Madre</option>
+              <option value="padre">Padre</option>
+              <option value="tutor">Tutor legal</option>
+              <option value="abuelo/abuela">Abuelo/a</option>
+              <option value="tío/tía">Tío/a</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Cédula de Identidad</label>
+            <input type="text" name="parent1_national_id"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Email *</label>
+            <input type="email" name="parent1_email" required x-model="parent1Email"
+                   placeholder="padre@ejemplo.com"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Teléfono / WhatsApp *</label>
+            <input type="text" name="parent1_phone" required x-model="parent1Phone"
+                   placeholder="+591 XXXXXXXX"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+            <p class="text-xs text-[#9CA3AF] mt-1">Incluye código de país</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-[#374151] mb-1.5">Contraseña inicial</label>
+            <input type="text" name="parent1_password" value="padre123"
+                   class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+            <p class="text-xs text-[#9CA3AF] mt-1">El padre puede cambiarla después</p>
+          </div>
+          <div class="md:col-span-2 flex flex-wrap gap-5">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="parent1_whatsapp_enabled" checked
+                     class="w-4 h-4 rounded border-[#D1D5DB] text-[#4F46E5] focus:ring-[#4F46E5]">
+              <span class="text-sm text-[#374151]">Notificaciones por WhatsApp</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" name="parent1_create_account" checked
+                     class="w-4 h-4 rounded border-[#D1D5DB] text-[#4F46E5] focus:ring-[#4F46E5]">
+              <span class="text-sm text-[#374151]">Crear cuenta web (puede ver el progreso)</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tutor secundario (colapsable) -->
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+        <button type="button" @click="showParent2 = !showParent2"
+                class="w-full flex items-center justify-between px-6 py-4 text-left transition-colors hover:bg-[#F9FAFB]"
+                :aria-expanded="showParent2">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+              <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+            </div>
+            <span class="text-base font-semibold text-[#1F2937]">Tutor Secundario</span>
+            <span class="text-xs bg-[#F3F4F6] text-[#6B7280] px-2 py-0.5 rounded-full">Opcional</span>
+          </div>
+          <svg class="w-5 h-5 text-[#9CA3AF] transition-transform duration-200" :class="showParent2 ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+        <div x-show="showParent2" x-transition class="px-6 pb-6 border-t border-[#F3F4F6]">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-5">
+            <div>
+              <label class="block text-sm font-medium text-[#374151] mb-1.5">Nombre completo</label>
+              <input type="text" name="parent2_full_name" placeholder="Ej: Carlos López García"
+                     class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-[#374151] mb-1.5">Relación</label>
+              <select name="parent2_relationship"
+                      class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent bg-white">
+                <option value="padre">Padre</option>
+                <option value="madre">Madre</option>
+                <option value="tutor">Tutor legal</option>
+                <option value="abuelo/abuela">Abuelo/a</option>
+                <option value="tío/tía">Tío/a</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-[#374151] mb-1.5">Email</label>
+              <input type="email" name="parent2_email" placeholder="tutor2@ejemplo.com"
+                     class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-[#374151] mb-1.5">Teléfono / WhatsApp</label>
+              <input type="text" name="parent2_phone" placeholder="+591 XXXXXXXX"
+                     class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-[#374151] mb-1.5">Contraseña inicial</label>
+              <input type="text" name="parent2_password" value="padre123"
+                     class="w-full px-4 py-2.5 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+            </div>
+            <div class="flex items-center gap-5">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="parent2_whatsapp_enabled"
+                       class="w-4 h-4 rounded border-[#D1D5DB] text-[#4F46E5] focus:ring-[#4F46E5]">
+                <span class="text-sm text-[#374151]">WhatsApp</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" name="parent2_create_account"
+                       class="w-4 h-4 rounded border-[#D1D5DB] text-[#4F46E5] focus:ring-[#4F46E5]">
+                <span class="text-sm text-[#374151]">Crear cuenta web</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Navegación ══ -->
+    <div class="flex items-center justify-between mt-6 mb-8">
+      <!-- Anterior -->
+      <button type="button" @click="step--" x-show="step > 1"
+              class="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-[#6B7280] bg-white border border-[#E5E7EB] rounded-xl hover:bg-[#F9FAFB] transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Anterior
+      </button>
+      <div x-show="step === 1"></div>
+
+      <!-- Siguiente -->
+      <button type="button" @click="canNext() && step++" x-show="step < 3"
+              :class="canNext() ? 'bg-[#4F46E5] hover:bg-[#4338CA] text-white' : 'bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed'"
+              class="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl transition-colors">
+        Siguiente
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </button>
+
+      <!-- Inscribir (paso 3) -->
+      <button type="button" x-show="step === 3" @click="confirmSubmit($event)"
+              :class="canNext() ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-[#E5E7EB] text-[#9CA3AF] cursor-not-allowed'"
+              class="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-xl transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Inscribir Alumno
+      </button>
+    </div>
+  </form>
 </div>
-
-{% block extra_js %}
-<script>
-// Auto-suggest username del nombre completo
-document.getElementById('student_full_name').addEventListener('blur', function() {
-    const usernameField = document.getElementById('student_username');
-    if (!usernameField.value) {
-        const parts = this.value.toLowerCase().trim()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // quitar acentos
-            .replace(/[^a-z\s]/g, '') // solo letras
-            .split(/\s+/);
-        if (parts.length >= 2) {
-            usernameField.value = parts[0] + '.' + parts[1];
-        } else if (parts.length === 1) {
-            usernameField.value = parts[0];
-        }
-    }
-});
-
-function togglePasswordField(prefix) {
-    const checkbox = document.querySelector(`[name="${prefix}_create_account"]`);
-    const section = document.getElementById(`${prefix}_password_section`);
-    section.style.display = checkbox.checked ? 'block' : 'none';
-}
-
-function toggleParent2() {
-    const section = document.getElementById('parent2_section');
-    const btn = document.getElementById('toggle-p2-btn');
-    if (section.style.display === 'none') {
-        section.style.display = 'block';
-        btn.innerHTML = '<i class="bi bi-x-circle"></i> Quitar';
-        btn.classList.remove('btn-light');
-        btn.classList.add('btn-danger');
-    } else {
-        section.style.display = 'none';
-        btn.innerHTML = '<i class="bi bi-plus-circle"></i> Agregar';
-        btn.classList.add('btn-light');
-        btn.classList.remove('btn-danger');
-        // Limpiar valores
-        section.querySelectorAll('input[type="text"], input[type="email"], input[type="password"]')
-            .forEach(el => el.value = '');
-    }
-}
-
-// Confirmar antes de enviar
-document.getElementById('inscripcion-form').addEventListener('submit', function(e) {
-    const studentName = document.querySelector('[name="student_full_name"]').value;
-    if (!confirm(`¿Confirmas la inscripción de "${studentName}"?\n\nSe crearán las cuentas del alumno y sus tutores.`)) {
-        e.preventDefault();
-    }
-});
-</script>
-{% endblock %}
 {% endblock %}
