@@ -100,20 +100,59 @@ def index():
         'pending_activities': len(pending_activities),
         'vision_tests': vision_tests,
         'audio_tests': audio_tests,
-        'stroop_tests': stroop_tests,  
+        'stroop_tests': stroop_tests,
         'gonogo_tests': gonogo_tests,
         'total_tests': vision_tests + audio_tests + stroop_tests + gonogo_tests,
-        'total_ar': Report.query.filter(
-            Report.student_id == student_profile.id,
-            Report.report_type.in_(['ar_caza', 'ar_secuencia', 'ar_respiracion'])
-        ).count()  
+        'total_ar': Session.query.filter_by(student_id=student_profile.id).count(),
     }
-    
+
+    # Racha: días consecutivos con al menos 1 sesión o 1 test
+    streak = _calcular_racha(student_profile.id)
+
     return render_template('student/index.html',
                             student=student_profile,
                             pending_activities=pending_activities,
                             recent_sessions=recent_sessions,
-                            stats=stats)
+                            stats=stats,
+                            streak=streak,
+                            badges=[])
+def _calcular_racha(student_id: int) -> int:
+    """Días consecutivos con actividad (sesión o test) hasta hoy."""
+    from sqlalchemy import cast, Date as SqlDate
+    today = datetime.utcnow().date()
+    streak = 0
+    for offset in range(0, 30):
+        day = today - timedelta(days=offset)
+        has_session = db.session.query(Session.id).filter(
+            Session.student_id == student_id,
+            cast(Session.created_at, SqlDate) == day,
+        ).first()
+        has_report = db.session.query(Report.id).filter(
+            Report.student_id == student_id,
+            cast(Report.created_at, SqlDate) == day,
+            Report.report_type != 'manual_teacher',
+        ).first()
+        if has_session or has_report:
+            streak += 1
+        elif streak > 0:
+            break
+    return streak
+
+
+@student_bp.route('/tests')
+@student_required
+def tests_index():
+    """Selector visual de tests cognitivos."""
+    student_profile = get_student_profile()
+    counts = {
+        'vision_test':  Report.query.filter_by(student_id=student_profile.id, report_type='vision_test').count(),
+        'audio_test':   Report.query.filter_by(student_id=student_profile.id, report_type='audio_test').count(),
+        'stroop_test':  Report.query.filter_by(student_id=student_profile.id, report_type='stroop_test').count(),
+        'gonogo_test':  Report.query.filter_by(student_id=student_profile.id, report_type='gonogo_test').count(),
+    }
+    return render_template('student/tests_index.html', student=student_profile, counts=counts)
+
+
 @student_bp.route('/activities')
 @student_required
 def activities():

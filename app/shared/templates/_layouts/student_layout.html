@@ -1,15 +1,25 @@
 {% extends "base.html" %}
-{# Layout especial para estudiantes: tipografía 18px, botones grandes, más color #}
+{#
+  Layout exclusivo para estudiantes:
+  - Tipografía base 18px / botones extra grandes
+  - Paleta indigo (primary) + amber (accent)
+  - Sidebar simplificada: 4 ítems
+  - Header con saludo personalizado
+  - Mascota Tito (robot SVG) en esquina inferior derecha
+#}
 
-{% macro nav_link(endpoint, label, icon_path) %}
+{# ── Sidebar links ──────────────────────────────────────────────────────── #}
+{% macro slink(endpoint, label, icon_path, exact=False) %}
+  {% set active = (request.endpoint == endpoint) if exact else (request.endpoint and request.endpoint.startswith(endpoint.split('.')[0] ~ '.')) %}
   <a href="{{ url_for(endpoint) }}"
-     class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-base font-semibold transition-colors
-            {% if request.endpoint and request.endpoint.startswith(endpoint.split('.')[0]) %}
-              bg-[#4F46E5] text-white shadow
+     class="flex items-center gap-3 px-3 py-3 rounded-xl font-semibold text-base transition-all duration-150
+            {% if active %}
+              bg-[#4F46E5] text-white shadow-md
             {% else %}
               text-[#C7D2FE] hover:bg-[#312E81] hover:text-white
             {% endif %}">
-    <svg class="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <svg class="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" aria-hidden="true">
       {{ icon_path }}
     </svg>
     <span x-show="sidebarOpen" x-transition class="truncate">{{ label }}</span>
@@ -17,12 +27,90 @@
 {% endmacro %}
 
 {% block sidebar_nav %}
-  {{ nav_link('student.index', 'Inicio',
-    '<path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>') }}
-  {{ nav_link('student.activities', 'Mis Actividades',
+  {{ slink('student.index', 'Inicio',
+    '<path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>',
+    exact=True) }}
+
+  {{ slink('student.tests_index', 'Mis Tests',
+    '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>') }}
+
+  {{ slink('student.activities', 'Mis Actividades',
     '<path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>') }}
-  {{ nav_link('student.progress', 'Mi Progreso',
+
+  {{ slink('student.progress', 'Mi Progreso',
     '<path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>') }}
-  {{ nav_link('ar.index', 'Actividades AR',
-    '<path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.876v6.248a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>') }}
+{% endblock %}
+
+{# ── Topbar personalizado ─────────────────────────────────────────────────── #}
+{% block topbar_actions %}
+  <div class="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl">
+    <svg class="w-4 h-4 text-amber-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+    </svg>
+    <span class="text-xs font-semibold text-amber-700">
+      {{ student.tdah_confidence|round(0)|int if student is defined and student else '—' }}% confianza
+    </span>
+  </div>
+{% endblock %}
+
+{# ── Mascota Tito ──────────────────────────────────────────────────────────── #}
+{% block extra_js %}
+<div id="tito-mascot"
+     class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2 select-none"
+     x-data="{ bubble: true, bubbleText: '{{ tito_message | default('¡Hola! Soy Tito. ¿Listo para practicar hoy?') }}' }"
+     aria-hidden="true">
+
+  {# Globo de diálogo #}
+  <div x-show="bubble"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 translate-y-2"
+       x-transition:enter-end="opacity-100 translate-y-0"
+       class="relative bg-white border-2 border-[#4F46E5] rounded-2xl rounded-br-none px-4 py-2.5
+              shadow-lg max-w-[200px] text-sm font-medium text-[#1F2937] leading-snug">
+    <span x-text="bubbleText"></span>
+    <button @click="bubble = false"
+            class="absolute -top-2 -right-2 w-5 h-5 bg-gray-200 hover:bg-gray-300
+                   rounded-full flex items-center justify-center text-gray-500 text-xs">✕</button>
+  </div>
+
+  {# Robot SVG #}
+  <button @click="bubble = !bubble"
+          class="w-16 h-16 drop-shadow-lg hover:scale-110 active:scale-95 transition-transform duration-150 focus:outline-none"
+          title="Tito, tu asistente">
+    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="Tito el robot">
+      {# Antena #}
+      <line x1="32" y1="4" x2="32" y2="12" stroke="#4F46E5" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="32" cy="3" r="3" fill="#F59E0B"/>
+      {# Cabeza #}
+      <rect x="16" y="12" width="32" height="22" rx="6" fill="#4F46E5"/>
+      {# Ojos #}
+      <rect x="21" y="18" width="8" height="6" rx="2" fill="white"/>
+      <rect x="35" y="18" width="8" height="6" rx="2" fill="white"/>
+      <circle cx="25" cy="21" r="2" fill="#312E81"/>
+      <circle cx="39" cy="21" r="2" fill="#312E81"/>
+      {# Brillos en ojos #}
+      <circle cx="26" cy="20" r="0.8" fill="white"/>
+      <circle cx="40" cy="20" r="0.8" fill="white"/>
+      {# Boca #}
+      <rect x="22" y="28" width="20" height="3" rx="1.5" fill="#818CF8"/>
+      {# Cuerpo #}
+      <rect x="19" y="36" width="26" height="20" rx="5" fill="#6366F1"/>
+      {# Botones cuerpo #}
+      <circle cx="27" cy="43" r="2.5" fill="#F59E0B"/>
+      <circle cx="37" cy="43" r="2.5" fill="#F59E0B"/>
+      <rect x="26" y="49" width="12" height="4" rx="2" fill="#4F46E5"/>
+      {# Brazos #}
+      <rect x="8"  y="37" width="10" height="5" rx="2.5" fill="#6366F1"/>
+      <rect x="46" y="37" width="10" height="5" rx="2.5" fill="#6366F1"/>
+      {# Manos #}
+      <circle cx="10" cy="46" r="4" fill="#818CF8"/>
+      <circle cx="54" cy="46" r="4" fill="#818CF8"/>
+      {# Pies #}
+      <rect x="21" y="57" width="9" height="5" rx="2.5" fill="#4F46E5"/>
+      <rect x="34" y="57" width="9" height="5" rx="2.5" fill="#4F46E5"/>
+    </svg>
+  </button>
+</div>
+
+{{ super() }}
 {% endblock %}
