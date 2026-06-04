@@ -24,11 +24,21 @@ class Student(db.Model):
     medical_conditions = db.Column(db.Text)
     medications = db.Column(db.Text)
     
-    # ⭐ NUEVOS — Dirección y emergencia
+    # Dirección y emergencia
     address = db.Column(db.Text)
     emergency_contact_name = db.Column(db.String(200))
     emergency_contact_phone = db.Column(db.String(20))
-    
+
+    # Datos del tutor (migrados desde tabla parents)
+    tutor_full_name = db.Column(db.String(200))
+    tutor_relationship = db.Column(db.String(50), default='padre/madre')
+    tutor_phone = db.Column(db.String(20))
+    tutor_email = db.Column(db.String(120))
+    tutor_national_id = db.Column(db.String(50))
+    tutor_whatsapp_enabled = db.Column(db.Boolean, default=True)
+    tutor_secondary_name = db.Column(db.String(200))
+    tutor_secondary_phone = db.Column(db.String(20))
+
     # TDAH (existente)
     tdah_type = db.Column(db.String(50))
     tdah_confidence = db.Column(db.Float, default=0)
@@ -235,34 +245,25 @@ class Student(db.Model):
         """Retorna nombre completo si existe, sino username"""
         return self.full_name or (self.user.username if self.user else 'Sin nombre')
     
-    def get_parents(self):
-        """Retorna los padres/tutores vinculados con sus datos"""
-        from app.models.parent import ParentStudent, Parent
-        from app.extensions import db
-        
-        result = []
-        links = ParentStudent.query.filter_by(student_id=self.id).all()
-        for link in links:
-            parent = db.session.get(Parent, link.parent_id)
-            if parent:
-                result.append({
-                    'parent': parent,
-                    'relationship': link.relationship,
-                    'phone': parent.phone,
-                    'email': parent.user.email if parent.user else None,
-                    'name': parent.get_display_name()
-                })
-        return result
-    
+    def get_tutor_info(self):
+        """Retorna los datos del tutor principal como dict."""
+        return {
+            'name': self.tutor_full_name,
+            'relationship': self.tutor_relationship,
+            'phone': self.tutor_phone,
+            'email': self.tutor_email,
+            'whatsapp_enabled': self.tutor_whatsapp_enabled,
+        }
+
     def get_confianza_color(self):
-        """Retorna clase de Bootstrap según nivel de confianza"""
+        """Retorna clase de color Tailwind según nivel de confianza."""
         if not self.tdah_confidence:
-            return 'secondary'
+            return 'gray'
         if self.tdah_confidence >= 80:
-            return 'success'
+            return 'green'
         elif self.tdah_confidence >= 60:
-            return 'info'
+            return 'blue'
         elif self.tdah_confidence >= 40:
-            return 'warning'
+            return 'yellow'
         else:
-            return 'danger'
+            return 'red'

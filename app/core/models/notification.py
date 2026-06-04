@@ -38,12 +38,9 @@ class Notification(db.Model):
     def notify_tutor_of_student(student_id, title, message, notification_type='info', send_whatsapp=True):
         """
         Crea una notificación para el usuario del estudiante y opcionalmente
-        envía WhatsApp al contacto de emergencia del estudiante.
-
-        TODO (Fase 1): migrar a student.tutor_phone cuando ese campo se agregue
-        TODO (Fase 1): respetar student.tutor_whatsapp_enabled cuando se agregue
+        envía WhatsApp al tutor registrado en el campo tutor_phone.
         """
-        from app.models.student import Student
+        from app.core.models.student import Student
         from app.extensions import db as _db
 
         student = _db.session.get(Student, student_id)
@@ -58,11 +55,11 @@ class Notification(db.Model):
             student_id=student_id
         )
 
-        # TODO (Fase 1): reemplazar emergency_contact_phone por tutor_phone
-        phone = student.emergency_contact_phone
-        if send_whatsapp and phone:
+        phone = student.tutor_phone or student.emergency_contact_phone
+        whatsapp_ok = student.tutor_whatsapp_enabled if student.tutor_phone else True
+        if send_whatsapp and phone and whatsapp_ok:
             try:
-                from app.services.whatsapp_service import send_whatsapp_message
+                from app.notifications.whatsapp import send_whatsapp_message
                 from flask import current_app
                 if current_app.config.get('WHATSAPP_ENABLED', False):
                     sent = send_whatsapp_message(

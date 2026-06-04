@@ -1,0 +1,41 @@
+{# ============================================================
+   Macro: card(title, subtitle, actions)
+   Uso: {% from '_components/card.html' import card %}
+        {% call card(title='Nombre') %}contenido{% endcall %}
+   ============================================================ #}
+{% macro card(title=None, subtitle=None, padding='p-6', extra_class='') %}
+<div class="bg-white rounded-xl border border-[#E5E7EB] shadow-sm {{ extra_class }}">
+  {% if title %}
+  <div class="px-6 pt-5 pb-4 border-b border-[#E5E7EB]">
+    <h2 class="text-base font-semibold text-[#1F2937]">{{ title }}</h2>
+    {% if subtitle %}
+    <p class="mt-0.5 text-sm text-[#6B7280]">{{ subtitle }}</p>
+    {% endif %}
+  </div>
+  {% endif %}
+  <div class="{{ padding }}">
+    {{ caller() }}
+  </div>
+</div>
+{% endmacro %}
+
+{# Card métrica simple (número grande + etiqueta) #}
+{% macro metric_card(value, label, color='indigo', icon=None) %}
+  {% set colors = {
+    'indigo': 'bg-[#EEF2FF] text-[#4F46E5]',
+    'green':  'bg-[#ECFDF5] text-[#10B981]',
+    'amber':  'bg-[#FFFBEB] text-[#F59E0B]',
+    'red':    'bg-[#FEF2F2] text-[#EF4444]',
+  } %}
+<div class="bg-white rounded-xl border border-[#E5E7EB] shadow-sm p-5 flex items-center gap-4">
+  {% if icon %}
+  <div class="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0 {{ colors.get(color, colors['indigo']) }}">
+    {{ icon }}
+  </div>
+  {% endif %}
+  <div class="min-w-0">
+    <p class="text-2xl font-bold text-[#1F2937] leading-none">{{ value }}</p>
+    <p class="mt-1 text-sm text-[#6B7280] truncate">{{ label }}</p>
+  </div>
+</div>
+{% endmacro %}

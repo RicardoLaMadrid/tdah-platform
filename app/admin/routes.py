@@ -32,8 +32,6 @@ def index():
     total_sessions = Session.query.count()
     
     # ⭐ NUEVO: Contar padres
-    total_parents = User.query.filter_by(role='parent').count()
-    
     # Usuarios recientes
     recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
     
@@ -44,7 +42,6 @@ def index():
         'total_users': total_users,
         'total_students': total_students,
         'total_teachers': total_teachers,
-        'total_parents': total_parents,  # ⭐ NUEVO
         'total_activities': total_activities,
         'total_sessions': total_sessions
     }
@@ -61,13 +58,7 @@ def users():
     role_filter = request.args.get('role', 'all')
     
     query = User.query
-    if role_filter == 'all':
-        # Excluye padres del listado general
-        query = query.filter(User.role != 'parent')
-    elif role_filter == 'parent':
-        # Si alguien fuerza el filtro de padres, redirigir
-        return redirect(url_for('admin.users'))
-    else:
+    if role_filter != 'all':
         query = query.filter_by(role=role_filter)
     
     users = query.order_by(User.created_at.desc()).all()
@@ -112,15 +103,6 @@ def create_user():
                 section=data.get('section')
             )
             db.session.add(student_profile)
-        
-        # ⭐ NUEVO: Si es padre, crear perfil de padre
-        elif data.get('role') == 'parent':
-            from app.models.parent import Parent
-            parent_profile = Parent(
-                user_id=new_user.id,
-                phone=data.get('phone', '')
-            )
-            db.session.add(parent_profile)
         
         db.session.commit()
         
@@ -177,16 +159,6 @@ def edit_user(user_id):
                 sp.address = data.get('address', '').strip() or None
                 sp.emergency_contact_name = data.get('emergency_contact_name', '').strip() or None
                 sp.emergency_contact_phone = data.get('emergency_contact_phone', '').strip() or None
-        
-        # Si es padre: actualizar perfil
-        elif user.role == 'parent':
-            from app.models.parent import Parent
-            pp = user.parent_profile.first()
-            if pp:
-                pp.full_name = data.get('parent_full_name', '').strip() or None
-                pp.phone = data.get('parent_phone', '').strip() or None
-                pp.whatsapp_enabled = bool(data.get('parent_whatsapp_enabled'))
-                pp.receive_notifications = bool(data.get('parent_receive_notifications'))
         
         db.session.commit()
         flash(f'✅ Cambios guardados para {user.username}', 'success')
@@ -261,95 +233,6 @@ def assign_student():
     
     return redirect(url_for('admin.assignments'))
 
-# ⭐ NUEVO: Gestión de vínculos padre-hijo
-@admin_bp.route('/parent-links')
-@admin_required
-def parent_links():
-    """Ver y gestionar vínculos padre-hijo"""
-    from app.models.parent import Parent, ParentStudent
-    
-    parents = Parent.query.all()
-    students = Student.query.all()
-    links = ParentStudent.query.all()
-    
-    return render_template('admin/parent_links.html',
-                         parents=parents,
-                         students=students,
-                         links=links)
-
-@admin_bp.route('/parent-links/create', methods=['POST'])
-@admin_required
-def create_parent_link():
-    """Crear vínculo padre-hijo"""
-    from app.models.parent import Parent, ParentStudent
-    
-    data = request.form
-    
-    try:
-        parent_id = data.get('parent_id')
-        student_id = data.get('student_id')
-        relationship = data.get('relationship', 'padre/madre')
-        
-        # Verificar que no exista
-        existing = ParentStudent.query.filter_by(
-            parent_id=parent_id,
-            student_id=student_id
-        ).first()
-        
-        if existing:
-            flash('Este vínculo ya existe', 'warning')
-            return redirect(url_for('admin.parent_links'))
-        
-        # Crear vínculo
-        link = ParentStudent(
-            parent_id=parent_id,
-            student_id=student_id,
-            relationship=relationship
-        )
-        db.session.add(link)
-        db.session.commit()
-        
-        # ⭐ Notificar al padre
-        from app.models.notification import Notification
-        parent = Parent.query.get(parent_id)
-        student = Student.query.get(student_id)
-        
-        if parent and student:
-            Notification.create_notification(
-                user_id=parent.user_id,
-                title="Cuenta vinculada",
-                message=f"Tu cuenta ha sido vinculada con el estudiante {student.user.username}",
-                notification_type='info',
-                student_id=student_id
-            )
-        
-        flash('Vínculo creado exitosamente', 'success')
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error al crear vínculo: {str(e)}', 'danger')
-    
-    return redirect(url_for('admin.parent_links'))
-
-@admin_bp.route('/parent-links/<int:link_id>/delete', methods=['POST'])
-@admin_required
-def delete_parent_link(link_id):
-    """Eliminar vínculo padre-hijo"""
-    from app.models.parent import ParentStudent
-    
-    try:
-        link = ParentStudent.query.get_or_404(link_id)
-        db.session.delete(link)
-        db.session.commit()
-        
-        flash('Vínculo eliminado exitosamente', 'success')
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error al eliminar vínculo: {str(e)}', 'danger')
-    
-    return redirect(url_for('admin.parent_links'))
-
 @admin_bp.route('/reports')
 @admin_required
 def reports():
@@ -398,7 +281,7 @@ def api_stats():
             'admins': User.query.filter_by(role='admin').count(),
             'teachers': User.query.filter_by(role='teacher').count(),
             'students': User.query.filter_by(role='student').count(),
-            'parents': User.query.filter_by(role='parent').count()  # ⭐ NUEVO
+            'parents': 0  # rol eliminado
         },
         'activities': {
             'total': Activity.query.count(),
@@ -478,15 +361,21 @@ def inscribir_alumno():
         db.session.add(student)
         db.session.flush()
         
-        # 3. Tutor Principal (obligatorio)
-        if not data.get('parent1_email'):
-            raise ValueError('Tutor principal es obligatorio')
-        _crear_o_vincular_tutor(data, prefix='parent1', student=student)
-        
-        # 4. Tutor Secundario (opcional)
-        if data.get('parent2_email'):
-            _crear_o_vincular_tutor(data, prefix='parent2', student=student)
-        
+        # 3. Datos del tutor principal (inline en Student)
+        if not data.get('tutor_full_name'):
+            raise ValueError('El nombre del tutor es obligatorio')
+        student.tutor_full_name       = data.get('tutor_full_name', '').strip()
+        student.tutor_relationship    = data.get('tutor_relationship', 'padre/madre')
+        student.tutor_phone           = data.get('tutor_phone', '').strip() or None
+        student.tutor_email           = data.get('tutor_email', '').strip() or None
+        student.tutor_national_id     = data.get('tutor_national_id', '').strip() or None
+        student.tutor_whatsapp_enabled = bool(data.get('tutor_whatsapp_enabled'))
+
+        # 4. Tutor secundario (opcional)
+        if data.get('tutor_secondary_name'):
+            student.tutor_secondary_name  = data.get('tutor_secondary_name', '').strip()
+            student.tutor_secondary_phone = data.get('tutor_secondary_phone', '').strip() or None
+
         db.session.commit()
         
         flash(f'✅ Alumno {student.get_display_name()} inscrito correctamente', 'success')
@@ -504,81 +393,3 @@ def inscribir_alumno():
         return redirect(url_for('admin.inscribir_alumno'))
 
 
-def _crear_o_vincular_tutor(data, prefix, student):
-    """Helper: crea o vincula un tutor a un estudiante"""
-    from app.models.parent import Parent, ParentStudent
-    import secrets
-    
-    email = data.get(f'{prefix}_email', '').strip()
-    full_name = data.get(f'{prefix}_full_name', '').strip()
-    relationship = data.get(f'{prefix}_relationship', 'padre/madre')
-    phone = data.get(f'{prefix}_phone', '').strip()
-    whatsapp_enabled = bool(data.get(f'{prefix}_whatsapp_enabled'))
-    create_account = bool(data.get(f'{prefix}_create_account'))
-    
-    if not email or not full_name:
-        raise ValueError(f'Tutor {prefix}: nombre y email son obligatorios')
-    
-    # ¿Ya existe usuario con ese email?
-    parent_user = User.query.filter_by(email=email).first()
-    
-    if parent_user:
-        if parent_user.role != 'parent':
-            raise ValueError(f'El email {email} pertenece a un usuario con rol {parent_user.role}')
-        
-        parent = Parent.query.filter_by(user_id=parent_user.id).first()
-        if not parent:
-            parent = Parent(
-                user_id=parent_user.id,
-                full_name=full_name,
-                phone=phone,
-                whatsapp_enabled=whatsapp_enabled,
-                receive_notifications=True
-            )
-            db.session.add(parent)
-            db.session.flush()
-    else:
-        # Generar username único basado en email
-        base_username = email.split('@')[0].lower().replace('.', '_')
-        username = base_username
-        counter = 1
-        while User.query.filter_by(username=username).first():
-            username = f"{base_username}_{counter}"
-            counter += 1
-        
-        parent_user = User(
-            username=username,
-            email=email,
-            role='parent'
-        )
-        
-        # Si pidió crear cuenta: usa password del form. Si no: random
-        if create_account:
-            password = data.get(f'{prefix}_password', '').strip() or 'padre123'
-        else:
-            password = secrets.token_urlsafe(12)
-        parent_user.set_password(password)
-        db.session.add(parent_user)
-        db.session.flush()
-        
-        parent = Parent(
-            user_id=parent_user.id,
-            full_name=full_name,
-            phone=phone,
-            whatsapp_enabled=whatsapp_enabled,
-            receive_notifications=True
-        )
-        db.session.add(parent)
-        db.session.flush()
-    
-    # Vincular padre con estudiante (si no está ya vinculado)
-    existing = ParentStudent.query.filter_by(
-        parent_id=parent.id, student_id=student.id
-    ).first()
-    if not existing:
-        link = ParentStudent(
-            parent_id=parent.id,
-            student_id=student.id,
-            relationship=relationship
-        )
-        db.session.add(link)

@@ -1,4 +1,5 @@
 from flask import Flask, redirect, url_for
+import os
 from flask_login import current_user
 from config import config
 from app.extensions import db, migrate, login_manager, csrf
@@ -11,7 +12,12 @@ def load_user(user_id):
 
 
 def create_app(config_name='development'):
+    from jinja2 import ChoiceLoader, FileSystemLoader
     app = Flask(__name__)
+    # Agrega shared/templates como directorio adicional de plantillas
+    shared_tpl = os.path.join(os.path.dirname(__file__), 'shared', 'templates')
+    # shared/templates primero: base.html, macros y layouts Tailwind
+    app.jinja_loader = ChoiceLoader([FileSystemLoader(shared_tpl), app.jinja_loader])
     app.config.from_object(config[config_name])
 
     db.init_app(app)
@@ -30,7 +36,6 @@ def create_app(config_name='development'):
                     'admin': 'admin.index',
                     'teacher': 'teacher.index',
                     'student': 'student.index',
-                    'parent': 'parent.index',
                 }
                 endpoint = role_redirects.get(current_user.role)
                 if endpoint:
@@ -69,14 +74,6 @@ def _register_blueprints(app):
     from app.teacher.routes import teacher_bp
     csrf.exempt(teacher_bp)
     app.register_blueprint(teacher_bp)
-
-    # Parent se elimina en Tarea 1.5
-    try:
-        from app.routes.parent import parent_bp
-        csrf.exempt(parent_bp)
-        app.register_blueprint(parent_bp)
-    except ImportError:
-        pass
 
     try:
         from app.ar.routes import ar_bp

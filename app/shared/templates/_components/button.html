@@ -1,0 +1,28 @@
+{# ============================================================
+   Macro: btn(label, variant, href, type, disabled, icon, size)
+   Variantes: primary | secondary | danger | ghost
+   ============================================================ #}
+{% macro btn(label, variant='primary', href=None, type='button', disabled=False, icon=None, size='md') %}
+  {% set base = 'inline-flex items-center gap-2 font-semibold rounded-lg transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2' %}
+  {% set sizes = {'sm': 'px-3 py-1.5 text-xs', 'md': 'px-5 py-2.5 text-sm', 'lg': 'px-6 py-3.5 text-base'} %}
+  {% set variants = {
+    'primary':   'bg-[#4F46E5] text-white hover:bg-[#4338CA] focus-visible:ring-[#4F46E5]',
+    'secondary': 'bg-[#10B981] text-white hover:bg-[#059669] focus-visible:ring-[#10B981]',
+    'danger':    'bg-[#EF4444] text-white hover:bg-red-600 focus-visible:ring-[#EF4444]',
+    'ghost':     'bg-transparent text-[#4F46E5] border border-[#4F46E5] hover:bg-[#EEF2FF] focus-visible:ring-[#4F46E5]',
+  } %}
+  {% set cls = base ~ ' ' ~ sizes.get(size, sizes['md']) ~ ' ' ~ variants.get(variant, variants['primary']) %}
+  {% if disabled %}{% set cls = cls ~ ' opacity-50 cursor-not-allowed' %}{% endif %}
+
+  {% if href %}
+    <a href="{{ href }}" class="{{ cls }}" {% if disabled %}aria-disabled="true"{% endif %}>
+      {% if icon %}<span aria-hidden="true">{{ icon }}</span>{% endif %}
+      {{ label }}
+    </a>
+  {% else %}
+    <button type="{{ type }}" class="{{ cls }}" {% if disabled %}disabled{% endif %}>
+      {% if icon %}<span aria-hidden="true">{{ icon }}</span>{% endif %}
+      {{ label }}
+    </button>
+  {% endif %}
+{% endmacro %}
