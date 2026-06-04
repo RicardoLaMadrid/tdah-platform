@@ -967,10 +967,22 @@ def main() -> None:
         db.session.commit()
         print(f"        {classified}/{len(students_list)} alumnos clasificados por el algoritmo")
 
-        print("  [6/6] Generando notificaciones...")
+        print("  [6/7] Generando notificaciones...")
         n_notifs = seed_notifications(db, Notification, students_list)
         db.session.commit()
         print(f"        {n_notifs} notificaciones creadas")
+
+        print("  [7/7] Otorgando insignias...")
+        try:
+            from app.services.badge_service import ensure_badges_exist, check_and_award_badges
+            ensure_badges_exist()
+            total_badges = 0
+            for student, _ in students_list:
+                awarded = check_and_award_badges(student)
+                total_badges += len(awarded)
+            print(f"        {total_badges} insignias otorgadas")
+        except Exception as e:
+            print(f"        Badges omitidos: {e}")
 
         counters = {
             "reports": n_reports,

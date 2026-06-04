@@ -106,8 +106,13 @@ def index():
         'total_ar': Session.query.filter_by(student_id=student_profile.id).count(),
     }
 
-    # Racha: días consecutivos con al menos 1 sesión o 1 test
     streak = _calcular_racha(student_profile.id)
+
+    try:
+        from app.services.badge_service import get_student_badges
+        badges = get_student_badges(student_profile)
+    except Exception:
+        badges = []
 
     return render_template('student/index.html',
                             student=student_profile,
@@ -115,7 +120,7 @@ def index():
                             recent_sessions=recent_sessions,
                             stats=stats,
                             streak=streak,
-                            badges=[])
+                            badges=badges)
 def _calcular_racha(student_id: int) -> int:
     """Días consecutivos con actividad (sesión o test) hasta hoy."""
     from sqlalchemy import cast, Date as SqlDate

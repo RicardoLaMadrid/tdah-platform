@@ -27,7 +27,7 @@ def create_app(config_name='development'):
 
     with app.app_context():
         # Importar modelos para que Flask-Migrate los detecte
-        from app.core.models import user, student, activity, report, parent, notification
+        from app.core.models import user, student, activity, report, parent, notification, badge
 
         @app.route('/')
         def index():
