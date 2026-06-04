@@ -267,54 +267,96 @@
     {% if user.role == 'student' %}
     {% set sp = user.student_profile.first() %}
     {% if sp %}
-    {% set parents_info = sp.get_parents() %}
-    {% if parents_info %}
+    {% if sp.tutor_full_name %}
     <div class="card shadow-sm mb-4">
-        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Tutores Vinculados ({{ parents_info|length }})</h5>
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Tutores del Alumno</h5>
         </div>
         <div class="card-body">
             <div class="row g-3">
-                {% for p in parents_info %}
+                <!-- Tutor Principal -->
                 <div class="col-md-6">
                     <div class="card border-success h-100">
+                        <div class="card-header bg-success bg-opacity-10">
+                            <strong><i class="bi bi-person-fill me-1"></i>Tutor Principal</strong>
+                        </div>
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h6 class="mb-0">{{ p.name }}</h6>
-                                <span class="badge bg-success">{{ p.relationship }}</span>
+                                <h6 class="mb-0">{{ sp.tutor_full_name }}</h6>
+                                {% if sp.tutor_relationship %}
+                                <span class="badge bg-success">{{ sp.tutor_relationship }}</span>
+                                {% endif %}
                             </div>
+                            {% if sp.tutor_email %}
                             <p class="small text-muted mb-1">
-                                <i class="bi bi-envelope"></i> {{ p.email }}
+                                <i class="bi bi-envelope"></i> {{ sp.tutor_email }}
                             </p>
-                            {% if p.phone %}
+                            {% endif %}
+                            {% if sp.tutor_phone %}
+                            <p class="small text-muted mb-1">
+                                <i class="bi bi-phone"></i> {{ sp.tutor_phone }}
+                            </p>
+                            {% endif %}
+                            {% if sp.tutor_national_id %}
+                            <p class="small text-muted mb-1">
+                                <i class="bi bi-card-text"></i> CI: {{ sp.tutor_national_id }}
+                            </p>
+                            {% endif %}
                             <p class="small text-muted mb-2">
-                                <i class="bi bi-phone"></i> {{ p.phone }}
+                                {% if sp.tutor_whatsapp_enabled %}
+                                <i class="bi bi-whatsapp text-success"></i> WhatsApp habilitado
+                                {% else %}
+                                <i class="bi bi-whatsapp text-muted"></i> WhatsApp deshabilitado
+                                {% endif %}
                             </p>
+                            {% if sp.tutor_phone %}
                             <div class="d-flex gap-1 flex-wrap">
-                                <a href="tel:{{ p.phone }}" class="btn btn-sm btn-outline-primary">
+                                <a href="tel:{{ sp.tutor_phone }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-telephone-fill"></i> Llamar
                                 </a>
-                                <a href="https://wa.me/{{ p.phone|replace('+','')|replace(' ','') }}" 
+                                <a href="https://wa.me/{{ sp.tutor_phone|replace('+','')|replace(' ','') }}"
                                    target="_blank" class="btn btn-sm btn-outline-success">
                                     <i class="bi bi-whatsapp"></i> WhatsApp
-                                </a>
-                                <a href="{{ url_for('admin.edit_user', user_id=p.parent.user_id) }}"
-                                   class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-pencil"></i> Editar
                                 </a>
                             </div>
                             {% endif %}
                         </div>
                     </div>
                 </div>
-                {% endfor %}
+                {% if sp.tutor_secondary_name %}
+                <!-- Tutor Secundario -->
+                <div class="col-md-6">
+                    <div class="card border-secondary h-100">
+                        <div class="card-header bg-secondary bg-opacity-10">
+                            <strong><i class="bi bi-person me-1"></i>Tutor Secundario</strong>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="mb-2">{{ sp.tutor_secondary_name }}</h6>
+                            {% if sp.tutor_secondary_phone %}
+                            <p class="small text-muted mb-2">
+                                <i class="bi bi-phone"></i> {{ sp.tutor_secondary_phone }}
+                            </p>
+                            <div class="d-flex gap-1 flex-wrap">
+                                <a href="tel:{{ sp.tutor_secondary_phone }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-telephone-fill"></i> Llamar
+                                </a>
+                                <a href="https://wa.me/{{ sp.tutor_secondary_phone|replace('+','')|replace(' ','') }}"
+                                   target="_blank" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-whatsapp"></i> WhatsApp
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
     {% else %}
     <div class="alert alert-warning">
         <i class="bi bi-exclamation-triangle"></i>
-        Este alumno no tiene tutores vinculados. 
+        Este alumno no tiene tutores registrados.
         <a href="{{ url_for('admin.inscribir_alumno') }}">Inscribe un nuevo alumno con tutores</a>.
     </div>
     {% endif %}
