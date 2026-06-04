@@ -6,7 +6,7 @@ Variables de entorno: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
 from flask import Blueprint, redirect, url_for, flash, current_app, session
 from flask_login import login_user, current_user
 from authlib.integrations.flask_client import OAuth
-from app import db
+from app.extensions import db
 from app.models.user import User
 
 oauth_bp = Blueprint('oauth', __name__, url_prefix='/oauth')

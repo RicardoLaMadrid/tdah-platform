@@ -2,71 +2,68 @@ from flask import Blueprint, render_template, request, jsonify, flash, redirect,
 from flask_login import login_required, current_user
 from datetime import datetime
 import json
+import random
 from app.models.student import Student
 from app.models.report import Report
-from app import db
+from app.extensions import db
 
-stroop_bp = Blueprint('stroop', __name__, url_prefix='/stroop')
+gonogo_bp = Blueprint('gonogo', __name__, url_prefix='/gonogo')
 
 # Configuración del test
-STROOP_CONFIG = {
-    'total_trials': 30,  # 30 intentos
-    'time_per_trial': 3000,  # 3 segundos por intento (ms)
-    'colors': ['rojo', 'azul', 'verde', 'amarillo', 'morado', 'naranja'],
-    'color_codes': {
-        'rojo': '#FF0000',
-        'azul': '#0000FF',
-        'verde': '#00FF00',
-        'amarillo': '#FFD700',
-        'morado': '#800080',
-        'naranja': '#FF8C00'
-    }
+GONOGO_CONFIG = {
+    'total_trials': 40,  # 40 estímulos
+    'go_percentage': 70,  # 70% son "GO" (debe responder)
+    'stimulus_duration': 1000,  # 1 segundo por estímulo (ms)
+    'inter_stimulus_interval': 500,  # 0.5s entre estímulos
+    'target_stimulus': 'X',  # Debe responder a X
+    'nogo_stimulus': 'O',  # NO debe responder a O
 }
 
-# VALORES DE REFERENCIA para Stroop
-REFERENCE_VALUES_STROOP = {
+# VALORES DE REFERENCIA para Go/No-Go
+REFERENCE_VALUES_GONOGO = {
     'typical': {
-        'precision': (80, 100),
-        'tiempo_promedio': (800, 1500),  # ms
-        'errores_incongruentes': (0, 3),
-        'efecto_stroop': (100, 300)  # diferencia congruente vs incongruente
+        'precision_go': (85, 100),  # % aciertos en GO
+        'precision_nogo': (85, 100),  # % aciertos en NO-GO (no responder)
+        'falsos_positivos': (0, 3),  # Responder cuando no debe
+        'tiempo_reaccion_promedio': (300, 600)  # ms
     },
     'inatento': {
-        'precision': (50, 75),
-        'tiempo_promedio': (1500, 2500),
-        'errores_incongruentes': (4, 10),
-        'efecto_stroop': (300, 600)
+        'precision_go': (60, 80),
+        'precision_nogo': (70, 90),
+        'falsos_positivos': (2, 6),
+        'tiempo_reaccion_promedio': (500, 900)
     },
     'hiperactivo': {
-        'precision': (60, 85),
-        'tiempo_promedio': (600, 1200),  # Muy rápido (impulsivo)
-        'errores_incongruentes': (5, 12),
-        'efecto_stroop': (200, 500)
+        'precision_go': (75, 95),
+        'precision_nogo': (40, 70),  # Muchos falsos positivos (impulsividad)
+        'falsos_positivos': (8, 20),
+        'tiempo_reaccion_promedio': (200, 400)  # Muy rápido
     },
     'combinado': {
-        'precision': (45, 70),
-        'tiempo_promedio': (1200, 2200),
-        'errores_incongruentes': (6, 15),
-        'efecto_stroop': (350, 700)
+        'precision_go': (55, 75),
+        'precision_nogo': (50, 75),
+        'falsos_positivos': (5, 12),
+        'tiempo_reaccion_promedio': (400, 700)
     }
 }
 
-class StroopTestSession:
+class GoNoGoTestSession:
     def __init__(self, user_id):
         self.user_id = user_id
         self.start_time = datetime.now()
-        self.trials = []  # Lista de intentos
+        self.trials = []
         self.metricas = {
-            'total_intentos': 0,
-            'correctos': 0,
-            'incorrectos': 0,
-            'precision': 0,
-            'tiempo_promedio': 0,
-            'errores_congruentes': 0,
-            'errores_incongruentes': 0,
-            'tiempo_congruente': 0,
-            'tiempo_incongruente': 0,
-            'efecto_stroop': 0
+            'total_go': 0,
+            'total_nogo': 0,
+            'aciertos_go': 0,
+            'aciertos_nogo': 0,
+            'errores_omision': 0,  # No responder cuando debe (GO)
+            'falsos_positivos': 0,  # Responder cuando NO debe (NO-GO)
+            'precision_go': 0,
+            'precision_nogo': 0,
+            'tiempo_reaccion_promedio': 0,
+            'tiempos_reaccion_go': [],
+            'anticipaciones': 0  # Respuestas < 200ms (demasiado rápido)
         }
     
     def agregar_trial(self, trial_data):
@@ -74,46 +71,47 @@ class StroopTestSession:
         self.trials.append(trial_data)
     
     def analizar_resultados(self):
-        """Analiza los resultados del test Stroop"""
-        if len(self.trials) < 10:
+        """Analiza los resultados del Go/No-Go Test"""
+        if len(self.trials) < 15:
             return None
         
         print(f"\n{'='*60}")
-        print(f"🎨 ANÁLISIS DE TEST STROOP")
+        print(f"🎮 ANÁLISIS DE TEST GO/NO-GO")
         print(f"{'='*60}")
         
-        # Separar trials congruentes e incongruentes
-        congruentes = [t for t in self.trials if t['tipo'] == 'congruente']
-        incongruentes = [t for t in self.trials if t['tipo'] == 'incongruente']
+        # Separar trials GO y NO-GO
+        go_trials = [t for t in self.trials if t['tipo'] == 'go']
+        nogo_trials = [t for t in self.trials if t['tipo'] == 'nogo']
         
-        # Calcular métricas básicas
-        self.metricas['total_intentos'] = len(self.trials)
-        self.metricas['correctos'] = sum(1 for t in self.trials if t['correcto'])
-        self.metricas['incorrectos'] = self.metricas['total_intentos'] - self.metricas['correctos']
-        self.metricas['precision'] = (self.metricas['correctos'] / self.metricas['total_intentos'] * 100)
+        self.metricas['total_go'] = len(go_trials)
+        self.metricas['total_nogo'] = len(nogo_trials)
         
-        # Tiempos de reacción
-        tiempos_validos = [t['tiempo_reaccion'] for t in self.trials if t['correcto']]
-        self.metricas['tiempo_promedio'] = sum(tiempos_validos) / len(tiempos_validos) if tiempos_validos else 0
+        # Análisis de GO trials (debe responder)
+        self.metricas['aciertos_go'] = sum(1 for t in go_trials if t['respondio'])
+        self.metricas['errores_omision'] = sum(1 for t in go_trials if not t['respondio'])
         
-        # Errores por tipo
-        self.metricas['errores_congruentes'] = sum(1 for t in congruentes if not t['correcto'])
-        self.metricas['errores_incongruentes'] = sum(1 for t in incongruentes if not t['correcto'])
+        # Análisis de NO-GO trials (NO debe responder)
+        self.metricas['aciertos_nogo'] = sum(1 for t in nogo_trials if not t['respondio'])
+        self.metricas['falsos_positivos'] = sum(1 for t in nogo_trials if t['respondio'])
         
-        # Tiempos por tipo (solo correctos)
-        tiempos_congr = [t['tiempo_reaccion'] for t in congruentes if t['correcto']]
-        tiempos_incongr = [t['tiempo_reaccion'] for t in incongruentes if t['correcto']]
+        # Precisión
+        self.metricas['precision_go'] = (self.metricas['aciertos_go'] / self.metricas['total_go'] * 100) if self.metricas['total_go'] > 0 else 0
+        self.metricas['precision_nogo'] = (self.metricas['aciertos_nogo'] / self.metricas['total_nogo'] * 100) if self.metricas['total_nogo'] > 0 else 0
         
-        self.metricas['tiempo_congruente'] = sum(tiempos_congr) / len(tiempos_congr) if tiempos_congr else 0
-        self.metricas['tiempo_incongruente'] = sum(tiempos_incongr) / len(tiempos_incongr) if tiempos_incongr else 0
+        # Tiempos de reacción (solo GO respondidos)
+        tiempos_go = [t['tiempo_reaccion'] for t in go_trials if t['respondio'] and t['tiempo_reaccion'] is not None]
+        self.metricas['tiempos_reaccion_go'] = tiempos_go
+        self.metricas['tiempo_reaccion_promedio'] = sum(tiempos_go) / len(tiempos_go) if tiempos_go else 0
         
-        # Efecto Stroop (diferencia de tiempos)
-        self.metricas['efecto_stroop'] = self.metricas['tiempo_incongruente'] - self.metricas['tiempo_congruente']
+        # Anticipaciones (respuestas muy rápidas < 200ms, indica impulsividad)
+        self.metricas['anticipaciones'] = sum(1 for t in tiempos_go if t < 200)
         
         print(f"📊 Métricas:")
-        for key, value in self.metricas.items():
-            if key not in ['total_intentos']:
-                print(f"   • {key}: {value:.2f}")
+        print(f"   • GO: {self.metricas['aciertos_go']}/{self.metricas['total_go']} ({self.metricas['precision_go']:.1f}%)")
+        print(f"   • NO-GO: {self.metricas['aciertos_nogo']}/{self.metricas['total_nogo']} ({self.metricas['precision_nogo']:.1f}%)")
+        print(f"   • Falsos positivos: {self.metricas['falsos_positivos']}")
+        print(f"   • Tiempo promedio: {self.metricas['tiempo_reaccion_promedio']:.0f}ms")
+        print(f"   • Anticipaciones: {self.metricas['anticipaciones']}")
         
         # Calcular scores detallados
         scores_detallados = self._calcular_scores_detallados()
@@ -128,7 +126,7 @@ class StroopTestSession:
         return {
             'tipo_tdah': tipo_tdah,
             'confianza': int(confianza),
-            'metricas': self.metricas,
+            'metricas': {k: v for k, v in self.metricas.items() if k != 'tiempos_reaccion_go'},
             'scores_detallados': scores_detallados,
             'duracion': (datetime.now() - self.start_time).seconds
         }
@@ -137,7 +135,7 @@ class StroopTestSession:
         """Calcula probabilidad para cada tipo de TDAH"""
         scores = {}
         
-        for tipo, rangos in REFERENCE_VALUES_STROOP.items():
+        for tipo, rangos in REFERENCE_VALUES_GONOGO.items():
             probabilidad = 0
             detalles = {}
             
@@ -189,32 +187,40 @@ class StroopTestSession:
 test_sessions = {}
 
 
-@stroop_bp.route('/')
+@gonogo_bp.route('/')
 @login_required
 def index():
-    """Página principal del Stroop Test"""
+    """Página principal del Go/No-Go Test"""
     if current_user.role != 'student':
         flash('Solo los estudiantes pueden realizar esta prueba', 'warning')
         return redirect(url_for('auth.dashboard'))
     
-    return render_template('student/test_stroop.html', config=STROOP_CONFIG)
+    return render_template('student/test_gonogo.html', config=GONOGO_CONFIG)
 
 
-@stroop_bp.route('/start_test', methods=['POST'])
+@gonogo_bp.route('/start_test', methods=['POST'])
 @login_required
 def start_test():
-    """Inicia nueva sesión de Stroop"""
+    """Inicia nueva sesión de Go/No-Go"""
     session_id = f"{current_user.id}_{datetime.now().timestamp()}"
-    test_sessions[session_id] = StroopTestSession(current_user.id)
+    test_sessions[session_id] = GoNoGoTestSession(current_user.id)
+    
+    # Generar secuencia de estímulos
+    num_go = int(GONOGO_CONFIG['total_trials'] * GONOGO_CONFIG['go_percentage'] / 100)
+    num_nogo = GONOGO_CONFIG['total_trials'] - num_go
+    
+    sequence = ['go'] * num_go + ['nogo'] * num_nogo
+    random.shuffle(sequence)
     
     return jsonify({
         'success': True,
         'session_id': session_id,
-        'config': STROOP_CONFIG
+        'config': GONOGO_CONFIG,
+        'sequence': sequence
     })
 
 
-@stroop_bp.route('/submit_trial', methods=['POST'])
+@gonogo_bp.route('/submit_trial', methods=['POST'])
 @login_required
 def submit_trial():
     """Guarda un intento individual"""
@@ -227,12 +233,9 @@ def submit_trial():
         
         session = test_sessions[session_id]
         session.agregar_trial({
-            'palabra': data.get('palabra'),
-            'color': data.get('color'),
-            'respuesta': data.get('respuesta'),
-            'correcto': data.get('correcto'),
-            'tiempo_reaccion': data.get('tiempo_reaccion'),
-            'tipo': data.get('tipo')  # 'congruente' o 'incongruente'
+            'tipo': data.get('tipo'),  # 'go' o 'nogo'
+            'respondio': data.get('respondio'),
+            'tiempo_reaccion': data.get('tiempo_reaccion')
         })
         
         return jsonify({'success': True})
@@ -241,7 +244,7 @@ def submit_trial():
         return jsonify({'success': False, 'message': str(e)})
 
 
-@stroop_bp.route('/finish_test', methods=['POST'])
+@gonogo_bp.route('/finish_test', methods=['POST'])
 @login_required
 def finish_test():
     """Finaliza el test y guarda resultados"""
@@ -263,7 +266,7 @@ def finish_test():
         if student:
             report = Report(
                 student_id=student.id,
-                report_type='stroop_test',
+                report_type='gonogo_test',
                 content=json.dumps(resultado, ensure_ascii=False),
                 recommendations=f"Tipo: {resultado['tipo_tdah']} ({resultado['confianza']}%)"
             )
@@ -285,8 +288,8 @@ def finish_test():
                 from app.models.notification import Notification
                 notifications_sent = Notification.notify_parents_of_student(
                     student_id=student.id,
-                    title="Test de Stroop Completado",
-                    message=f"Tu hijo/a ha completado un test de Stroop. Clasificación: {resultado['tipo_tdah']} ({resultado['confianza']}%)",
+                    title="Test Go/No-Go Completado",
+                    message=f"Tu hijo/a ha completado un test Go/No-Go. Clasificación: {resultado['tipo_tdah']} ({resultado['confianza']}%)",
                     notification_type='test_completed'
                 )
                 if notifications_sent > 0:
@@ -298,7 +301,7 @@ def finish_test():
         
         return jsonify({
             'success': True,
-            'redirect_url': url_for('stroop.results',
+            'redirect_url': url_for('gonogo.results',
                                    tipo_tdah=resultado['tipo_tdah'],
                                    confianza=resultado['confianza'],
                                    metricas=json.dumps(resultado['metricas']),
@@ -313,16 +316,16 @@ def finish_test():
         return jsonify({'success': False, 'message': str(e)})
 
 
-@stroop_bp.route('/results')
+@gonogo_bp.route('/results')
 @login_required
 def results():
-    """Muestra resultados del Stroop Test"""
+    """Muestra resultados del Go/No-Go Test"""
     tipo_tdah = request.args.get('tipo_tdah')
     confianza = request.args.get('confianza', 0, type=int)
     metricas = json.loads(request.args.get('metricas', '{}'))
     scores = json.loads(request.args.get('scores', '{}'))
     
-    return render_template('student/resultado_stroop.html',
+    return render_template('student/resultado_gonogo.html',
                          tipo_tdah=tipo_tdah,
                          confianza=confianza,
                          metricas=metricas,

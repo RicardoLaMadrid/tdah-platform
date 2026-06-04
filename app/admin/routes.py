@@ -4,7 +4,7 @@ from app.models.user import User
 from app.models.student import Student
 from app.models.activity import Activity, Session
 from app.models.report import Report
-from app import db
+from app.extensions import db
 from functools import wraps
 from werkzeug.security import generate_password_hash
 

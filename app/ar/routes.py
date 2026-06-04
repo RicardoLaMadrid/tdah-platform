@@ -69,7 +69,7 @@ def respiracion():
 @ar_bp.route('/save-result', methods=['POST'])
 @student_required
 def save_result():
-    from app import db, csrf
+    from app.extensions import db, csrf
     from app.models.student import Student
     from app.models.report import Report
     

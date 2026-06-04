@@ -8,7 +8,7 @@ import json
 import numpy as np
 from app.models.student import Student
 from app.models.report import Report
-from app import db
+from app.extensions import db
 
 audio_bp = Blueprint('audio', __name__, url_prefix='/audio')
 

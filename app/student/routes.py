@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from app.models.student import Student
 from app.models.activity import Activity, Session
 from app.models.report import Report
-from app import db
+from app.extensions import db
 from functools import wraps
 from werkzeug.utils import secure_filename
 import os

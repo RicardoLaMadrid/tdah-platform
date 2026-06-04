@@ -4,8 +4,8 @@ from app.models.user import User
 from app.models.student import Student
 from app.models.activity import Activity, Session
 from app.models.report import Report
-from app.services.ai_generator import AIActivityGenerator
-from app import db
+from app.reports.ai_generator import AIActivityGenerator
+from app.extensions import db
 from functools import wraps
 from datetime import datetime, timedelta
 

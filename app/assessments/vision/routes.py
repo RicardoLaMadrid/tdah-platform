@@ -13,7 +13,7 @@ import json
 import os
 from app.models.student import Student
 from app.models.report import Report
-from app import db
+from app.extensions import db
 from sqlalchemy import desc
 
 vision_bp = Blueprint('vision', __name__, url_prefix='/vision')

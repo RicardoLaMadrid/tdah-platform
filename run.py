@@ -1,9 +1,9 @@
 import os
 from app import create_app, db
-from app.models.user import User
-from app.models.student import Student
-from app.models.activity import Activity, Session
-from app.models.report import Report
+from app.core.models.user import User
+from app.core.models.student import Student
+from app.core.models.activity import Activity, Session
+from app.core.models.report import Report
 
 # Crear la aplicación
 app = create_app(os.getenv('FLASK_ENV', 'development'))
