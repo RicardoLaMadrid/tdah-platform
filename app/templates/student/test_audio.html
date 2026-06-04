@@ -1,5 +1,14 @@
-{% extends 'base.html' %}
-{% block title %}Test de Audio - TDAH{% endblock %}
+{% extends "_layouts/student_layout.html" %}
+{% block title %}Test de Escucha — Plataforma TDAH{% endblock %}
+{% block page_title %}Test de Escucha{% endblock %}
+{% set tito_message = "¡Lee en voz alta y con calma!" %}
+
+{% block extra_css %}
+<style>
+  aside { display: none !important; }
+  #main-content { padding: 0 !important; }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container mt-4">

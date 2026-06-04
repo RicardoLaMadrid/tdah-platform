@@ -1,5 +1,14 @@
-{% extends 'base.html' %}
-{% block title %}Test de Atención Visual - TDAH{% endblock %}
+{% extends "_layouts/student_layout.html" %}
+{% block title %}Test de Visión — Plataforma TDAH{% endblock %}
+{% block page_title %}Test de Visión{% endblock %}
+{% set tito_message = "¡Sigue los puntos solo con tus ojos!" %}
+
+{% block extra_css %}
+<style>
+  aside { display: none !important; }
+  #main-content { padding: 0 !important; }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
