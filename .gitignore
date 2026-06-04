@@ -1,0 +1,53 @@
+# Entorno y secretos
+.env
+*.env.*
+!.env.example
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Base de datos
+*.db
+*.sqlite3
+
+# Node (para Tailwind)
+node_modules/
+package-lock.json
+
+# Tailwind output generado
+app/static/css/output.css
+
+# Uploads de usuarios (datos reales, no van al repo)
+app/static/uploads/heatmaps/
+app/static/uploads/audios/
+app/static/uploads/videos/
+
+# Logs
+*.log
+logs/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Flask / Werkzeug
+instance/
+.webassets-cache
+
+# Migraciones (mantener el histórico, pero ignorar pycache de alembic)
+migrations/__pycache__/
