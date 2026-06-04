@@ -26,7 +26,8 @@ def run():
 
         # ── Conteos generales ────────────────────────────────────────
         total_students  = Student.query.count()
-        with_tutor      = Student.query.filter(Student.tutor_full_name.isnot(None)).count()
+        # Criterio: tutor_phone (los padres demo no tenían full_name cargado)
+        with_tutor      = Student.query.filter(Student.tutor_phone.isnot(None)).count()
         without_tutor   = total_students - with_tutor
 
         # Intentar contar parents (tabla puede ya no existir)
@@ -61,7 +62,7 @@ def run():
         print(f"{'users con role=parent':30} {str(parent_users):>8}")
 
         # ── Estudiantes huérfanos ────────────────────────────────────
-        orphans = Student.query.filter(Student.tutor_full_name.is_(None)).all()
+        orphans = Student.query.filter(Student.tutor_phone.is_(None)).all()
         if orphans:
             print(f"\nESTUDIANTES SIN TUTOR ({len(orphans)}):")
             print("-" * 40)
@@ -72,7 +73,7 @@ def run():
             print("\n Todos los estudiantes tienen tutor asignado.")
 
         # ── Sample de 3 students con datos tutor ────────────────────
-        samples = Student.query.filter(Student.tutor_full_name.isnot(None)).limit(3).all()
+        samples = Student.query.filter(Student.tutor_phone.isnot(None)).limit(3).all()
         if samples:
             print(f"\nMUESTRA DE MIGRACIÓN (primeros {len(samples)} alumnos con tutor):")
             print("-" * 40)
