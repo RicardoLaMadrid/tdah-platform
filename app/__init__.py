@@ -29,6 +29,9 @@ def create_app(config_name='development'):
         # Importar modelos para que Flask-Migrate los detecte
         from app.core.models import user, student, activity, report, parent, notification, badge
 
+        from app.shared.context_processors import register_context_processors
+        register_context_processors(app)
+
         @app.route('/')
         def index():
             if current_user.is_authenticated:
