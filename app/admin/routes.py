@@ -54,15 +54,45 @@ def index():
 @admin_bp.route('/users')
 @admin_required
 def users():
-    """Lista de usuarios — padres se gestionan a través de los alumnos"""
-    role_filter = request.args.get('role', 'all')
-    
-    query = User.query
-    if role_filter != 'all':
-        query = query.filter_by(role=role_filter)
-    
-    users = query.order_by(User.created_at.desc()).all()
-    return render_template('admin/users.html', users=users, role_filter=role_filter)
+    """Lista de usuarios con filtros y búsqueda HTMX."""
+    from app.shared.helpers import filter_users_query, get_student_filter_options
+
+    q             = request.args.get('q', '').strip()
+    role_filter   = request.args.get('role', 'all')
+    grade_filter  = request.args.get('grade', '')
+    section_filter= request.args.get('section', '')
+    tdah_filter   = request.args.get('tdah_type', '')
+    teacher_filter= request.args.get('teacher_id', '')
+
+    users_list = filter_users_query(
+        q=q or None,
+        role=role_filter if role_filter != 'all' else None,
+        grade=grade_filter or None,
+        section=section_filter or None,
+        tdah_type=tdah_filter or None,
+        teacher_id=teacher_filter or None,
+    ).all()
+
+    grades, sections, teachers = get_student_filter_options()
+
+    ctx = dict(
+        users=users_list,
+        q=q,
+        role_filter=role_filter,
+        grade_filter=grade_filter,
+        section_filter=section_filter,
+        tdah_filter=tdah_filter,
+        teacher_filter=teacher_filter,
+        grade_options=[(g, g) for g in grades],
+        section_options=[(s, s) for s in sections],
+        teacher_options=[(str(t.id), t.username) for t in teachers],
+    )
+
+    # HTMX partial request → devuelve solo la tabla
+    if request.headers.get('HX-Request'):
+        return render_template('admin/_users_table.html', **ctx)
+
+    return render_template('admin/users.html', **ctx)
 
 @admin_bp.route('/users/create', methods=['GET', 'POST'])
 @admin_required
