@@ -24,40 +24,73 @@ def teacher_required(f):
 @teacher_bp.route('/')
 @teacher_required
 def index():
-    """Dashboard del profesor"""
-    # Mis estudiantes
-    my_students = Student.query.filter_by(teacher_id=current_user.id).all()
-    
-    # Actividades recientes que he creado
+    """Dashboard del profesor con búsqueda y filtros en el grid de alumnos."""
+    from app.shared.helpers import filter_students_query, get_student_filter_options
+
+    # ── Parámetros de filtro ──────────────────────────────────────────────
+    q               = request.args.get('q', '').strip()
+    tdah_filter     = request.args.get('tdah_type', '')
+    grade_filter    = request.args.get('grade', '')
+    activity_status = request.args.get('activity_status', '')
+    sort            = request.args.get('sort', '')
+
+    # ── Alumnos filtrados ─────────────────────────────────────────────────
+    students = filter_students_query(
+        teacher_id_filter=current_user.id,
+        q=q or None,
+        tdah_type=tdah_filter or None,
+        grade=grade_filter or None,
+        activity_status=activity_status or None,
+        sort=sort or None,
+    ).all()
+
+    # ── Opciones de dropdowns ─────────────────────────────────────────────
+    grades, _, _ = get_student_filter_options(teacher_id=current_user.id)
+    grade_options = [(g, g) for g in grades]
+
+    filter_ctx = dict(
+        students=students,
+        q=q,
+        tdah_filter=tdah_filter,
+        grade_filter=grade_filter,
+        activity_status=activity_status,
+        sort=sort,
+        grade_options=grade_options,
+    )
+
+    # HTMX partial → devuelve solo el grid
+    if request.headers.get('HX-Request'):
+        return render_template('teacher/_students_grid.html', **filter_ctx)
+
+    # ── Datos del dashboard (no afectados por filtros) ────────────────────
+    all_student_ids = [
+        s.id for s in Student.query.filter_by(teacher_id=current_user.id).all()
+    ]
     recent_activities = Activity.query.filter_by(
         teacher_id=current_user.id
     ).order_by(Activity.created_at.desc()).limit(5).all()
-    
-    # Sesiones recientes de mis estudiantes
-    student_ids = [s.id for s in my_students]
+
     recent_sessions = Session.query.filter(
-        Session.student_id.in_(student_ids)
-    ).order_by(Session.created_at.desc()).limit(5).all() if student_ids else []
-    
-    # Estadísticas
+        Session.student_id.in_(all_student_ids)
+    ).order_by(Session.created_at.desc()).limit(5).all() if all_student_ids else []
+
     stats = {
-        'total_students': len(my_students),
+        'total_students': Student.query.filter_by(teacher_id=current_user.id).count(),
         'total_activities': Activity.query.filter_by(teacher_id=current_user.id).count(),
         'pending_reports': Report.query.filter_by(
-            teacher_id=current_user.id,
-            sent_to_parents=False
+            teacher_id=current_user.id, sent_to_parents=False
         ).count(),
         'sessions_today': Session.query.filter(
-            Session.student_id.in_(student_ids),
+            Session.student_id.in_(all_student_ids),
             Session.created_at >= datetime.utcnow().date()
-        ).count() if student_ids else 0
+        ).count() if all_student_ids else 0,
     }
-    
+
     return render_template('teacher/index.html',
-                         students=my_students,
-                         recent_activities=recent_activities,
-                         recent_sessions=recent_sessions,
-                         stats=stats)
+                           recent_activities=recent_activities,
+                           recent_sessions=recent_sessions,
+                           stats=stats,
+                           **filter_ctx)
 
 @teacher_bp.route('/students')
 @teacher_required

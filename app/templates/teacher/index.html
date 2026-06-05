@@ -1,4 +1,6 @@
 {% extends '_layouts/teacher_layout.html' %}
+{% from '_components/search_bar.html'    import search_bar %}
+{% from '_components/filter_dropdown.html' import filter_dropdown %}
 
 {% block title %}Dashboard Profesor - Plataforma TDAH{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
@@ -61,54 +63,128 @@
   </div>
 </div>
 
-<!-- ── Grid de alumnos ── -->
-<div class="mb-8">
+<!-- ── Grid de alumnos con búsqueda y filtros ── -->
+<div class="mb-8"
+     x-data="{
+       q: '{{ q | e }}',
+       tdahType: '{{ tdah_filter | e }}',
+       grade: '{{ grade_filter | e }}',
+       actStatus: '{{ activity_status | e }}',
+       sort: '{{ sort | e }}',
+       get hasFilters() {
+         return this.q.trim() !== '' || this.tdahType !== '' ||
+                this.grade !== '' || this.actStatus !== '' || this.sort !== '';
+       }
+     }">
+
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-sm font-semibold text-[#1F2937]">Mis Alumnos</h2>
-    <a href="{{ url_for('teacher.students') }}" class="text-xs text-[#4F46E5] hover:underline font-medium">Ver todos</a>
+    <div class="flex items-center gap-2">
+      <a x-show="hasFilters" x-cloak
+         href="{{ url_for('teacher.index') }}"
+         class="text-xs text-[#6B7280] hover:text-[#374151] flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+        Limpiar
+      </a>
+      <a href="{{ url_for('teacher.students') }}" class="text-xs text-[#4F46E5] hover:underline font-medium">Ver todos</a>
+    </div>
   </div>
 
-  {% if students %}
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-    {% for student in students[:8] %}
-    <a href="{{ url_for('teacher.student_detail', student_id=student.id) }}"
-       class="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB] hover:shadow-md hover:border-[#C7D2FE] transition-all group">
-      <div class="flex items-center gap-3 mb-3">
-        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#818CF8] text-white flex items-center justify-center text-base font-bold flex-shrink-0" aria-hidden="true">
-          {{ (student.full_name or student.user.username)[0].upper() }}
-        </div>
-        <div class="min-w-0">
-          <p class="text-sm font-semibold text-[#1F2937] truncate group-hover:text-[#4F46E5] transition-colors">
-            {{ student.full_name or student.user.username }}
-          </p>
-          {% if student.grade %}<p class="text-xs text-[#9CA3AF] truncate">{{ student.grade }}</p>{% endif %}
-        </div>
-      </div>
-      <div class="flex items-center justify-between">
-        {% if student.tdah_type %}
-        <span class="text-xs px-2 py-0.5 rounded-full font-medium
-          {% if 'hiperactivo' in (student.tdah_type or '')|lower %}bg-red-100 text-red-700
-          {% elif 'inatento' in (student.tdah_type or '')|lower %}bg-amber-100 text-amber-700
-          {% else %}bg-indigo-100 text-indigo-700{% endif %}">
-          {{ student.tdah_type }}
-        </span>
-        {% else %}
-        <span class="text-xs bg-[#F3F4F6] text-[#9CA3AF] px-2 py-0.5 rounded-full">Sin diagnóstico</span>
-        {% endif %}
-        {% if student.age %}<span class="text-xs text-[#9CA3AF]">{{ student.age }} años</span>{% endif %}
-      </div>
-    </a>
-    {% endfor %}
+  {# Barra de filtros #}
+  <div class="bg-white rounded-xl border border-[#E5E7EB] p-3 mb-4">
+    <form id="student-filters-form" class="flex flex-wrap gap-3 items-end">
+
+      {{ search_bar(
+          placeholder='Buscar alumno por nombre…',
+          value=q,
+          hx_get=url_for('teacher.index'),
+          hx_target='#students-grid',
+          hx_include='#student-filters-form',
+          hx_indicator='#student-spinner',
+          x_ref='studentSearch'
+      ) }}
+
+      {{ filter_dropdown(
+          name='tdah_type',
+          label='Tipo TDAH',
+          options=[
+            ('sin_evaluar', 'Sin evaluar'),
+            ('typical',     'Típico'),
+            ('inatento',    'Inatento'),
+            ('hiperactivo', 'Hiperactivo'),
+            ('combinado',   'Combinado'),
+          ],
+          current=tdah_filter,
+          hx_get=url_for('teacher.index'),
+          hx_target='#students-grid',
+          hx_include='#student-filters-form',
+          hx_indicator='#student-spinner',
+          x_model='tdahType',
+          blank_label='Todos los tipos',
+          extra_class='w-full sm:w-40'
+      ) }}
+
+      {% if grade_options %}
+      {{ filter_dropdown(
+          name='grade',
+          label='Grado',
+          options=grade_options,
+          current=grade_filter,
+          hx_get=url_for('teacher.index'),
+          hx_target='#students-grid',
+          hx_include='#student-filters-form',
+          hx_indicator='#student-spinner',
+          x_model='grade',
+          blank_label='Todos los grados',
+          extra_class='w-full sm:w-40'
+      ) }}
+      {% endif %}
+
+      {{ filter_dropdown(
+          name='activity_status',
+          label='Actividad',
+          options=[
+            ('recent',   'Tests últimos 7 días'),
+            ('inactive', 'Sin actividad +14 días'),
+          ],
+          current=activity_status,
+          hx_get=url_for('teacher.index'),
+          hx_target='#students-grid',
+          hx_include='#student-filters-form',
+          hx_indicator='#student-spinner',
+          x_model='actStatus',
+          blank_label='Cualquier estado',
+          extra_class='w-full sm:w-44'
+      ) }}
+
+      {{ filter_dropdown(
+          name='sort',
+          label='Ordenar por',
+          options=[
+            ('name',        'Nombre A–Z'),
+            ('recent_test', 'Último test'),
+            ('tdah',        'Tipo TDAH'),
+          ],
+          current=sort,
+          hx_get=url_for('teacher.index'),
+          hx_target='#students-grid',
+          hx_include='#student-filters-form',
+          hx_indicator='#student-spinner',
+          x_model='sort',
+          blank_label='Relevancia',
+          extra_class='w-full sm:w-40'
+      ) }}
+
+    </form>
   </div>
-  {% else %}
-  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] py-12 flex flex-col items-center text-[#9CA3AF]">
-    <svg class="w-12 h-12 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-    </svg>
-    <p class="text-sm font-medium mb-1">Sin alumnos asignados</p>
-    <p class="text-xs">El administrador debe asignarte alumnos.</p>
+
+  {# Grid reemplazado por HTMX #}
+  <div id="students-grid">
+    {% include 'teacher/_students_grid.html' %}
   </div>
-  {% endif %}
+
 </div>
 
 <!-- ── Actividad reciente ── -->
