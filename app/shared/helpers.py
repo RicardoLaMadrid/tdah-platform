@@ -109,12 +109,23 @@ def filter_students_query(teacher_id_filter, q=None, tdah_type=None,
         ]
         query = query.filter(Student.id.notin_(active_ids))
 
+    # MariaDB no soporta NULLS LAST: usar CASE para poner NULLs al final
+    from sqlalchemy import case as sa_case
     if sort == 'name':
-        query = query.order_by(Student.full_name.asc())
+        query = query.order_by(
+            sa_case((Student.full_name.is_(None), 1), else_=0),
+            Student.full_name.asc()
+        )
     elif sort == 'tdah':
-        query = query.order_by(Student.tdah_type.asc().nullslast())
+        query = query.order_by(
+            sa_case((Student.tdah_type.is_(None), 1), else_=0),
+            Student.tdah_type.asc()
+        )
     else:
-        query = query.order_by(Student.last_evaluation_date.desc().nullslast())
+        query = query.order_by(
+            sa_case((Student.last_evaluation_date.is_(None), 1), else_=0),
+            Student.last_evaluation_date.desc()
+        )
 
     return query
 
