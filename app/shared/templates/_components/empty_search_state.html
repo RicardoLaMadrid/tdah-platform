@@ -1,0 +1,29 @@
+{% macro empty_search_state(
+    title='Sin resultados',
+    subtitle='Intenta con otros términos o elimina los filtros.',
+    clear_url=''
+) %}
+<div class="flex flex-col items-center justify-center py-16 text-center">
+  {# Ilustración simple SVG #}
+  <svg class="w-20 h-20 text-[#E5E7EB] mb-4" fill="none" viewBox="0 0 80 80" aria-hidden="true">
+    <circle cx="34" cy="34" r="22" stroke="currentColor" stroke-width="4"/>
+    <line x1="50" y1="50" x2="68" y2="68" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+    <line x1="26" y1="34" x2="42" y2="34" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    <line x1="34" y1="26" x2="34" y2="42" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+  </svg>
+
+  <p class="text-lg font-semibold text-[#374151] mb-1">{{ title }}</p>
+  <p class="text-sm text-[#9CA3AF] max-w-xs">{{ subtitle }}</p>
+
+  {% if clear_url %}
+  <a href="{{ clear_url }}"
+     class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium
+            text-[#4F46E5] bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+    Limpiar filtros
+  </a>
+  {% endif %}
+</div>
+{% endmacro %}
