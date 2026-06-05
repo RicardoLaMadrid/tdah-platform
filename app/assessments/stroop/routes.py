@@ -185,8 +185,8 @@ class StroopTestSession:
             return 'Mínima'
 
 
-# Almacenamiento de sesiones
-test_sessions = {}
+# FIX: estado migrado de dict en memoria (test_sessions) a BD (active_test_sessions)
+# para sobrevivir hot-reload del servidor en desarrollo
 
 
 @stroop_bp.route('/')
@@ -196,47 +196,58 @@ def index():
     if current_user.role != 'student':
         flash('Solo los estudiantes pueden realizar esta prueba', 'warning')
         return redirect(url_for('auth.dashboard'))
-    
     return render_template('student/test_stroop.html', config=STROOP_CONFIG)
 
 
 @stroop_bp.route('/start_test', methods=['POST'])
 @login_required
 def start_test():
-    """Inicia nueva sesión de Stroop"""
+    """Inicia nueva sesión de Stroop — persiste en BD."""
+    from app.core.models.active_test_session import ActiveTestSession
+
+    ActiveTestSession.cleanup_stale('stroop')
+
     session_id = f"{current_user.id}_{datetime.now().timestamp()}"
-    test_sessions[session_id] = StroopTestSession(current_user.id)
-    
-    return jsonify({
-        'success': True,
-        'session_id': session_id,
-        'config': STROOP_CONFIG
-    })
+    ats = ActiveTestSession(
+        session_id=session_id,
+        test_type='stroop',
+        user_id=current_user.id,
+        data={'trials': [], 'start_time': datetime.now().isoformat()},
+    )
+    db.session.add(ats)
+    db.session.commit()
+
+    return jsonify({'success': True, 'session_id': session_id, 'config': STROOP_CONFIG})
 
 
 @stroop_bp.route('/submit_trial', methods=['POST'])
 @login_required
 def submit_trial():
-    """Guarda un intento individual"""
+    """Guarda un intento individual en BD."""
     try:
-        data = request.get_json()
-        session_id = data.get('session_id')
-        
-        if not session_id or session_id not in test_sessions:
-            return jsonify({'success': False, 'message': 'Sesión inválida'})
-        
-        session = test_sessions[session_id]
-        session.agregar_trial({
-            'palabra': data.get('palabra'),
-            'color': data.get('color'),
-            'respuesta': data.get('respuesta'),
-            'correcto': data.get('correcto'),
-            'tiempo_reaccion': data.get('tiempo_reaccion'),
-            'tipo': data.get('tipo')  # 'congruente' o 'incongruente'
-        })
-        
+        from app.core.models.active_test_session import ActiveTestSession
+        payload = request.get_json()
+        session_id = payload.get('session_id')
+
+        ats = ActiveTestSession.query.get(session_id) if session_id else None
+        if not ats:
+            return jsonify({'success': False, 'message': 'Sesión no encontrada. Recarga e intenta de nuevo.'})
+
+        # Reasignar el dict completo para que SQLAlchemy detecte el cambio en JSON
+        new_data = dict(ats.data)
+        new_data['trials'] = list(new_data.get('trials', [])) + [{
+            'palabra':        payload.get('palabra'),
+            'color':          payload.get('color'),
+            'respuesta':      payload.get('respuesta'),
+            'correcto':       payload.get('correcto'),
+            'tiempo_reaccion':payload.get('tiempo_reaccion'),
+            'tipo':           payload.get('tipo'),
+        }]
+        ats.data = new_data
+        db.session.commit()
+
         return jsonify({'success': True})
-        
+
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -244,71 +255,71 @@ def submit_trial():
 @stroop_bp.route('/finish_test', methods=['POST'])
 @login_required
 def finish_test():
-    """Finaliza el test y guarda resultados"""
+    """Finaliza el test, analiza y guarda resultados."""
     try:
-        data = request.get_json()
-        session_id = data.get('session_id')
-        
-        if not session_id or session_id not in test_sessions:
-            return jsonify({'success': False, 'message': 'Sesión no encontrada'})
-        
-        session = test_sessions[session_id]
-        resultado = session.analizar_resultados()
-        
+        from app.core.models.active_test_session import ActiveTestSession
+        payload = request.get_json()
+        session_id = payload.get('session_id')
+
+        ats = ActiveTestSession.query.get(session_id) if session_id else None
+        if not ats:
+            return jsonify({'success': False, 'message': 'Sesión no encontrada. El servidor se reinició durante el test — inicia el test de nuevo.'})
+
+        # Reconstruir el objeto de sesión desde los datos persistidos
+        session_obj = StroopTestSession(current_user.id)
+        session_obj.trials = ats.data.get('trials', [])
+        try:
+            session_obj.start_time = datetime.fromisoformat(ats.data.get('start_time', datetime.now().isoformat()))
+        except (ValueError, TypeError):
+            session_obj.start_time = datetime.now()
+
+        resultado = session_obj.analizar_resultados()
         if not resultado:
-            return jsonify({'success': False, 'message': 'Datos insuficientes'})
-        
-        # Guardar en base de datos
+            return jsonify({'success': False, 'message': 'Datos insuficientes para el análisis (mínimo 10 trials)'})
+
         student = Student.query.filter_by(user_id=current_user.id).first()
         if student:
             report = Report(
                 student_id=student.id,
                 report_type='stroop_test',
                 content=json.dumps(resultado, ensure_ascii=False),
-                recommendations=f"Tipo: {resultado['tipo_tdah']} ({resultado['confianza']}%)"
+                recommendations=f"Tipo: {resultado['tipo_tdah']} ({resultado['confianza']}%)",
             )
             db.session.add(report)
             db.session.commit()
-            
-            # ⭐ Recalcular tipo TDAH automáticamente
-            print(f"🔄 Recalculando tipo de TDAH automáticamente...")
+
             resultado_tdah = student.calcular_tipo_tdah()
-            
             if resultado_tdah and resultado_tdah['tipo']:
                 db.session.commit()
-                print(f"✅ Tipo de TDAH actualizado: {resultado_tdah['tipo']} ({resultado_tdah['confianza']:.1f}%)")
-            else:
-                print(f"ℹ️  Tipo de TDAH no actualizado (insuficientes datos o baja confianza)")
-            
-            # ⭐ NUEVO: Notificar a los padres
+
             try:
                 from app.models.notification import Notification
-                notifications_sent = Notification.notify_parents_of_student(
+                Notification.notify_parents_of_student(
                     student_id=student.id,
                     title="Test de Stroop Completado",
-                    message=f"Tu hijo/a ha completado un test de Stroop. Clasificación: {resultado['tipo_tdah']} ({resultado['confianza']}%)",
-                    notification_type='test_completed'
+                    message=f"Tu hijo/a completó un test de Stroop. Clasificación: {resultado['tipo_tdah']} ({resultado['confianza']}%)",
+                    notification_type='test_completed',
                 )
-                if notifications_sent > 0:
-                    print(f"📧 Notificados {notifications_sent} padre(s)")
             except Exception as e:
-                print(f"⚠️  Error al notificar padres: {e}")
-        
-        del test_sessions[session_id]
-        
+                print(f"Notificación Stroop falló: {e}")
+
+        db.session.delete(ats)
+        db.session.commit()
+
         return jsonify({
             'success': True,
-            'redirect_url': url_for('stroop.results',
-                                   tipo_tdah=resultado['tipo_tdah'],
-                                   confianza=resultado['confianza'],
-                                   metricas=json.dumps(resultado['metricas']),
-                                   scores=json.dumps(resultado['scores_detallados']))
+            'redirect_url': url_for(
+                'stroop.results',
+                tipo_tdah=resultado['tipo_tdah'],
+                confianza=resultado['confianza'],
+                metricas=json.dumps(resultado['metricas']),
+                scores=json.dumps(resultado['scores_detallados']),
+            ),
         })
-        
+
     except Exception as e:
-        print(f"💥 Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"Error finish_test Stroop: {e}")
+        import traceback; traceback.print_exc()
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)})
 

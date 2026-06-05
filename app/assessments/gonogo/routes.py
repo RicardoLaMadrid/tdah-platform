@@ -183,8 +183,8 @@ class GoNoGoTestSession:
             return 'Mínima'
 
 
-# Almacenamiento de sesiones
-test_sessions = {}
+# FIX: estado migrado de dict en memoria (test_sessions) a BD (active_test_sessions)
+# para sobrevivir hot-reload del servidor en desarrollo
 
 
 @gonogo_bp.route('/')
@@ -194,52 +194,64 @@ def index():
     if current_user.role != 'student':
         flash('Solo los estudiantes pueden realizar esta prueba', 'warning')
         return redirect(url_for('auth.dashboard'))
-    
     return render_template('student/test_gonogo.html', config=GONOGO_CONFIG)
 
 
 @gonogo_bp.route('/start_test', methods=['POST'])
 @login_required
 def start_test():
-    """Inicia nueva sesión de Go/No-Go"""
-    session_id = f"{current_user.id}_{datetime.now().timestamp()}"
-    test_sessions[session_id] = GoNoGoTestSession(current_user.id)
-    
-    # Generar secuencia de estímulos
-    num_go = int(GONOGO_CONFIG['total_trials'] * GONOGO_CONFIG['go_percentage'] / 100)
+    """Inicia nueva sesión de Go/No-Go — persiste en BD."""
+    from app.core.models.active_test_session import ActiveTestSession
+
+    ActiveTestSession.cleanup_stale('gonogo')
+
+    num_go   = int(GONOGO_CONFIG['total_trials'] * GONOGO_CONFIG['go_percentage'] / 100)
     num_nogo = GONOGO_CONFIG['total_trials'] - num_go
-    
     sequence = ['go'] * num_go + ['nogo'] * num_nogo
     random.shuffle(sequence)
-    
+
+    session_id = f"{current_user.id}_{datetime.now().timestamp()}"
+    ats = ActiveTestSession(
+        session_id=session_id,
+        test_type='gonogo',
+        user_id=current_user.id,
+        data={'trials': [], 'start_time': datetime.now().isoformat()},
+    )
+    db.session.add(ats)
+    db.session.commit()
+
     return jsonify({
         'success': True,
         'session_id': session_id,
         'config': GONOGO_CONFIG,
-        'sequence': sequence
+        'sequence': sequence,
     })
 
 
 @gonogo_bp.route('/submit_trial', methods=['POST'])
 @login_required
 def submit_trial():
-    """Guarda un intento individual"""
+    """Guarda un intento individual en BD."""
     try:
-        data = request.get_json()
-        session_id = data.get('session_id')
-        
-        if not session_id or session_id not in test_sessions:
-            return jsonify({'success': False, 'message': 'Sesión inválida'})
-        
-        session = test_sessions[session_id]
-        session.agregar_trial({
-            'tipo': data.get('tipo'),  # 'go' o 'nogo'
-            'respondio': data.get('respondio'),
-            'tiempo_reaccion': data.get('tiempo_reaccion')
-        })
-        
+        from app.core.models.active_test_session import ActiveTestSession
+        payload = request.get_json()
+        session_id = payload.get('session_id')
+
+        ats = ActiveTestSession.query.get(session_id) if session_id else None
+        if not ats:
+            return jsonify({'success': False, 'message': 'Sesión no encontrada. Recarga e intenta de nuevo.'})
+
+        new_data = dict(ats.data)
+        new_data['trials'] = list(new_data.get('trials', [])) + [{
+            'tipo':           payload.get('tipo'),
+            'respondio':      payload.get('respondio'),
+            'tiempo_reaccion':payload.get('tiempo_reaccion'),
+        }]
+        ats.data = new_data
+        db.session.commit()
+
         return jsonify({'success': True})
-        
+
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
@@ -247,71 +259,70 @@ def submit_trial():
 @gonogo_bp.route('/finish_test', methods=['POST'])
 @login_required
 def finish_test():
-    """Finaliza el test y guarda resultados"""
+    """Finaliza el test, analiza y guarda resultados."""
     try:
-        data = request.get_json()
-        session_id = data.get('session_id')
-        
-        if not session_id or session_id not in test_sessions:
-            return jsonify({'success': False, 'message': 'Sesión no encontrada'})
-        
-        session = test_sessions[session_id]
-        resultado = session.analizar_resultados()
-        
+        from app.core.models.active_test_session import ActiveTestSession
+        payload = request.get_json()
+        session_id = payload.get('session_id')
+
+        ats = ActiveTestSession.query.get(session_id) if session_id else None
+        if not ats:
+            return jsonify({'success': False, 'message': 'Sesión no encontrada. El servidor se reinició durante el test — inicia el test de nuevo.'})
+
+        session_obj = GoNoGoTestSession(current_user.id)
+        session_obj.trials = ats.data.get('trials', [])
+        try:
+            session_obj.start_time = datetime.fromisoformat(ats.data.get('start_time', datetime.now().isoformat()))
+        except (ValueError, TypeError):
+            session_obj.start_time = datetime.now()
+
+        resultado = session_obj.analizar_resultados()
         if not resultado:
-            return jsonify({'success': False, 'message': 'Datos insuficientes'})
-        
-        # Guardar en base de datos
+            return jsonify({'success': False, 'message': 'Datos insuficientes para el análisis (mínimo 15 trials)'})
+
         student = Student.query.filter_by(user_id=current_user.id).first()
         if student:
             report = Report(
                 student_id=student.id,
                 report_type='gonogo_test',
                 content=json.dumps(resultado, ensure_ascii=False),
-                recommendations=f"Tipo: {resultado['tipo_tdah']} ({resultado['confianza']}%)"
+                recommendations=f"Tipo: {resultado['tipo_tdah']} ({resultado['confianza']}%)",
             )
             db.session.add(report)
             db.session.commit()
-            
-            # ⭐ Recalcular tipo TDAH automáticamente
-            print(f"🔄 Recalculando tipo de TDAH automáticamente...")
+
             resultado_tdah = student.calcular_tipo_tdah()
-            
             if resultado_tdah and resultado_tdah['tipo']:
                 db.session.commit()
-                print(f"✅ Tipo de TDAH actualizado: {resultado_tdah['tipo']} ({resultado_tdah['confianza']:.1f}%)")
-            else:
-                print(f"ℹ️  Tipo de TDAH no actualizado (insuficientes datos o baja confianza)")
-            
-            # ⭐ NUEVO: Notificar a los padres
+
             try:
                 from app.models.notification import Notification
-                notifications_sent = Notification.notify_parents_of_student(
+                Notification.notify_parents_of_student(
                     student_id=student.id,
                     title="Test Go/No-Go Completado",
-                    message=f"Tu hijo/a ha completado un test Go/No-Go. Clasificación: {resultado['tipo_tdah']} ({resultado['confianza']}%)",
-                    notification_type='test_completed'
+                    message=f"Tu hijo/a completó un test Go/No-Go. Clasificación: {resultado['tipo_tdah']} ({resultado['confianza']}%)",
+                    notification_type='test_completed',
                 )
-                if notifications_sent > 0:
-                    print(f"📧 Notificados {notifications_sent} padre(s)")
             except Exception as e:
-                print(f"⚠️  Error al notificar padres: {e}")
-        
-        del test_sessions[session_id]
-        
+                print(f"Notificación GoNoGo falló: {e}")
+
+        db.session.delete(ats)
+        db.session.commit()
+
         return jsonify({
             'success': True,
-            'redirect_url': url_for('gonogo.results',
-                                   tipo_tdah=resultado['tipo_tdah'],
-                                   confianza=resultado['confianza'],
-                                   metricas=json.dumps(resultado['metricas']),
-                                   scores=json.dumps(resultado['scores_detallados']))
+            'redirect_url': url_for(
+                'gonogo.results',
+                tipo_tdah=resultado['tipo_tdah'],
+                confianza=resultado['confianza'],
+                metricas=json.dumps(resultado['metricas']),
+                scores=json.dumps(resultado['scores_detallados']),
+            ),
         })
-        
+
     except Exception as e:
-        print(f"💥 Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        print(f"Error finish_test GoNoGo: {e}")
+        import traceback; traceback.print_exc()
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)})
 

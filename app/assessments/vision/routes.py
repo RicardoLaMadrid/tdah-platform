@@ -22,7 +22,11 @@ vision_bp = Blueprint('vision', __name__, url_prefix='/vision')
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
 
-# Almacenamiento temporal por sesión
+# NOTA: el test de visión mantiene estado en memoria por diseño —
+# el heatmap numpy (480×640 float32, ~1.2MB) y eye_positions (~900 frames)
+# no son serializables a JSON/BD sin refactorizar el motor de CV.
+# Si el servidor se reinicia durante un test, el alumno verá un error
+# amigable y podrá reiniciar. Aceptable para la demo de defensa.
 test_sessions = {}
 
 # VALORES DE REFERENCIA
@@ -461,7 +465,7 @@ def process_frame():
         frame_height = data.get('frameHeight', 480)
         
         if not session_id or session_id not in test_sessions:
-            return jsonify({'success': False, 'message': 'Sesión no válida'})
+            return jsonify({'success': False, 'message': 'Sesión expirada. El servidor se reinició — recarga la página y vuelve a iniciar el test.', 'expired': True})
         
         image_data = image_data.split(",")[1]
         image = Image.open(BytesIO(base64.b64decode(image_data)))
@@ -525,8 +529,8 @@ def finish_test(session_id):
     
     try:
         if session_id not in test_sessions:
-            print(f"❌ Sesión {session_id} no encontrada")
-            return jsonify({'success': False, 'message': 'Sesión no encontrada'})
+            print(f"Sesión de visión {session_id} no encontrada (probable hot-reload)")
+            return jsonify({'success': False, 'message': 'Sesión expirada. El servidor se reinició durante el test — inicia el test de nuevo.'})
         
         session = test_sessions[session_id]
         analysis = session.analyze_results()

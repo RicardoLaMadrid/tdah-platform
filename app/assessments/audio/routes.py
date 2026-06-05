@@ -258,8 +258,8 @@ class AudioTestSession:
             return 'Mínima'
 
 
-# Almacenamiento temporal de sesiones
-test_sessions = {}
+# FIX: estado migrado de dict en memoria (test_sessions) a BD (active_test_sessions)
+# para sobrevivir hot-reload del servidor en desarrollo
 
 
 @audio_bp.route('/')
@@ -294,15 +294,22 @@ def index():
 @audio_bp.route('/start_test', methods=['POST'])
 @login_required
 def start_test():
-    """Inicia una nueva sesión de prueba de audio"""
+    """Inicia una nueva sesión de prueba de audio — persiste en BD."""
+    from app.core.models.active_test_session import ActiveTestSession
+
+    ActiveTestSession.cleanup_stale('audio')
+
     session_id = f"{current_user.id}_{datetime.now().timestamp()}"
-    test_sessions[session_id] = AudioTestSession(current_user.id)
-    
-    return jsonify({
-        'success': True,
-        'session_id': session_id,
-        'message': 'Sesión iniciada correctamente'
-    })
+    ats = ActiveTestSession(
+        session_id=session_id,
+        test_type='audio',
+        user_id=current_user.id,
+        data={'start_time': datetime.now().isoformat()},
+    )
+    db.session.add(ats)
+    db.session.commit()
+
+    return jsonify({'success': True, 'session_id': session_id, 'message': 'Sesión iniciada correctamente'})
 
 
 @audio_bp.route('/upload_audio', methods=['POST'])
@@ -323,18 +330,28 @@ def upload_audio():
             flash('No se seleccionó ningún archivo', 'danger')
             return redirect(url_for('audio.index'))
         
-        if not session_id or session_id not in test_sessions:
+        from app.core.models.active_test_session import ActiveTestSession
+        ats = ActiveTestSession.query.get(session_id) if session_id else None
+        if not ats:
+            # Crea sesión de respaldo si el servidor se reinició (sesión perdida)
             session_id = f"{current_user.id}_{datetime.now().timestamp()}"
-            test_sessions[session_id] = AudioTestSession(current_user.id)
-        
+            ats = ActiveTestSession(
+                session_id=session_id,
+                test_type='audio',
+                user_id=current_user.id,
+                data={'start_time': datetime.now().isoformat()},
+            )
+            db.session.add(ats)
+            db.session.commit()
+
         upload_dir = os.path.join('app', 'static', 'uploads', 'audios')
         os.makedirs(upload_dir, exist_ok=True)
-        
+
         filename = f"audio_{current_user.id}_{datetime.now().timestamp()}.wav"
         audio_path = os.path.join(upload_dir, filename)
         audio_file.save(audio_path)
-        
-        session = test_sessions[session_id]
+
+        session = AudioTestSession(current_user.id)
         texto_original = TEXTOS_LECTURA[nivel]
         resultado = session.analizar_audio(audio_path, texto_original)
         
@@ -384,8 +401,9 @@ def upload_audio():
             else:
                 print(f"ℹ️  Tipo de TDAH no actualizado (insuficientes datos o baja confianza)")
         
-        if session_id in test_sessions:
-            del test_sessions[session_id]
+        if ats:
+            db.session.delete(ats)
+            db.session.commit()
         
         return redirect(url_for('audio.results', 
                               tipo_tdah=resultado['tipo_tdah'],
