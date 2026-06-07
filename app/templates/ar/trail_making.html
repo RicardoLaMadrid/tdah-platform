@@ -101,8 +101,8 @@
     <!-- Status bar -->
     <div id="status-bar" style="display: none;">
         <div><small>Tiempo</small><strong id="time-display">0:00</strong></div>
-        <div><small>Aciertos</small><strong id="correct-display" class="text-success">0</strong></div>
-        <div><small>Errores</small><strong id="errors-display" class="text-danger">0</strong></div>
+        <div><small>Aciertos</small><strong id="correct-display" style="color:#16a34a;">0</strong></div>
+        <div><small>Errores</small><strong id="errors-display" style="color:#dc3545;">0</strong></div>
     </div>
     
     <!-- Next number indicator -->
@@ -114,7 +114,7 @@
     <div id="instructions-overlay">
         <div class="modal-card">
             <h2>🎯 Trail Making AR</h2>
-            <p class="lead">Test de Conexión de Números</p>
+            <p class="text-lg">Test de Conexión de Números</p>
             <hr>
             <p>Aparecerán números del <strong>1 al 10</strong> en pantalla.</p>
             <p>Tu tarea: <strong>tócalos en orden</strong> (1, 2, 3...)</p>
@@ -123,10 +123,10 @@
                 <li>❌ Error: cuenta como fallo pero sigues jugando</li>
                 <li>⏱️ Tiempo límite: 60 segundos</li>
             </ul>
-            <p class="text-muted small mt-3">
+            <p class="text-slate-500 text-sm mt-3">
                 <em>Este test mide tu atención visual, velocidad de procesamiento y función ejecutiva.</em>
             </p>
-            <button class="btn btn-primary btn-lg" onclick="startGame()">
+            <button class="mt-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-base font-bold rounded-xl cursor-pointer transition-colors" onclick="startGame()">
                 🚀 Comenzar
             </button>
         </div>
@@ -136,23 +136,23 @@
     <div id="results-overlay" style="display: none;">
         <div class="modal-card">
             <h2>🎉 ¡Test completado!</h2>
-            <div class="row text-center my-4">
-                <div class="col-4">
+            <div class="flex justify-center gap-8 text-center my-4">
+                <div>
                     <h3 id="final-time">0s</h3>
                     <small>Tiempo Total</small>
                 </div>
-                <div class="col-4">
-                    <h3 class="text-success" id="final-correct">0</h3>
+                <div>
+                    <h3 style="color:#16a34a;" id="final-correct">0</h3>
                     <small>Aciertos</small>
                 </div>
-                <div class="col-4">
-                    <h3 class="text-danger" id="final-errors">0</h3>
+                <div>
+                    <h3 style="color:#dc3545;" id="final-errors">0</h3>
                     <small>Errores</small>
                 </div>
             </div>
-            <div class="alert" id="result-message"></div>
-            <button class="btn btn-primary me-2" onclick="location.reload()">🔄 Repetir</button>
-            <a href="{{ url_for('ar.index') }}" class="btn btn-secondary">🏠 Volver al menú</a>
+            <div id="result-message" class="p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800 mb-4"></div>
+            <button class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl cursor-pointer transition-colors mr-2" onclick="location.reload()">🔄 Repetir</button>
+            <a href="{{ url_for('ar.index') }}" class="inline-block px-5 py-2.5 bg-slate-500 hover:bg-slate-600 text-white text-sm font-bold rounded-xl transition-colors">🏠 Volver al menú</a>
         </div>
     </div>
 </div>
