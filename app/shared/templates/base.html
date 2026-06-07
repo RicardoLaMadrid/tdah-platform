@@ -30,7 +30,7 @@
     Salir
   </a>
   <main class="w-screen h-screen overflow-hidden" id="main-content">
-    {% block content %}{% endblock %}
+    {{ self.content() }}
   </main>
 
 {% else %}
