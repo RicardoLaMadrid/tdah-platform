@@ -1,58 +1,63 @@
 {% extends 'base.html' %}
-
-{% block title %}Mi Perfil{% endblock %}
+{% block title %}Mi Perfil — Plataforma TDAH{% endblock %}
+{% block page_title %}Mi Perfil{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="bi bi-person"></i> Mi Perfil
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-4">
-                        <div class="col-md-4 text-center">
-                            <div class="user-avatar mx-auto mb-3" style="width: 100px; height: 100px; font-size: 3rem;">
-                                {{ current_user.username[0].upper() }}
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <h5>{{ current_user.username }}</h5>
-                            <p class="text-muted">{{ current_user.email }}</p>
-                            <span class="badge bg-primary">{{ current_user.role }}</span>
-                        </div>
-                    </div>
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
-                    <hr>
-
-                    <form method="POST" action="{{ url_for('auth.profile') }}">
-                        <h6>Actualizar Información</h6>
-                        
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email" 
-                                   value="{{ current_user.email }}" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Nueva Contraseña</label>
-                            <input type="password" class="form-control" id="password" name="password"
-                                   placeholder="Dejar en blanco para mantener la actual">
-                            <small class="text-muted">Solo ingresa si deseas cambiarla</small>
-                        </div>
-
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-circle"></i> Guardar Cambios
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+    <div class="bg-indigo-600 px-6 py-4">
+      <h4 class="text-white font-bold text-base">Mi Perfil</h4>
     </div>
+
+    <div class="p-6">
+      {# Avatar + datos #}
+      <div class="flex flex-col sm:flex-row items-center sm:items-start gap-5 mb-6">
+        <div class="w-24 h-24 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+          <span class="text-5xl font-bold text-indigo-600">
+            {{ current_user.username[0].upper() }}
+          </span>
+        </div>
+        <div>
+          <h5 class="text-xl font-bold text-[#1F2937]">{{ current_user.username }}</h5>
+          <p class="text-[#6B7280] text-sm mt-0.5">{{ current_user.email }}</p>
+          <span class="inline-flex items-center mt-2 px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">
+            {{ current_user.role }}
+          </span>
+        </div>
+      </div>
+
+      <hr class="border-slate-200 mb-6">
+
+      <form method="POST" action="{{ url_for('auth.profile') }}" class="space-y-4">
+        <h6 class="text-sm font-semibold text-[#6B7280] uppercase tracking-wider">Actualizar Información</h6>
+
+        <div>
+          <label for="email" class="block text-sm font-medium text-[#1F2937] mb-1">Email</label>
+          <input type="email" id="email" name="email" value="{{ current_user.email }}" required
+                 class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white
+                        focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent">
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-[#1F2937] mb-1">Nueva Contraseña</label>
+          <input type="password" id="password" name="password"
+                 placeholder="Dejar en blanco para mantener la actual"
+                 class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white
+                        focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent">
+          <p class="text-xs text-[#9CA3AF] mt-1">Solo ingresa si deseas cambiarla</p>
+        </div>
+
+        <button type="submit"
+                class="flex items-center justify-center gap-2 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700
+                       text-white text-sm font-bold rounded-xl transition-colors shadow-sm">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+          Guardar Cambios
+        </button>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}
