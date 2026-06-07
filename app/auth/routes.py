@@ -80,12 +80,13 @@ def dashboard():
         'admin': 'admin.index',
         'teacher': 'teacher.index',
         'student': 'student.index',
-        'parent': 'parent.index'
     }
     endpoint = role_redirects.get(current_user.role)
     if endpoint:
         return redirect(url_for(endpoint))
-    flash('Rol no reconocido.', 'danger')
+    import logging
+    logging.warning(f"Login con rol no reconocido: user={current_user.username} role={current_user.role}")
+    flash('Tu cuenta tiene un rol no válido. Contacta al administrador.', 'danger')
     return redirect(url_for('auth.logout'))
 
 
