@@ -1,57 +1,75 @@
 {% extends 'base.html' %}
-
-{% block title %}Detalle de Sesión{% endblock %}
+{% block title %}Detalle de Sesión — Plataforma TDAH{% endblock %}
+{% block page_title %}Detalle de Sesión{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="bi bi-activity"></i> Detalle de Sesión
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4 text-center">
-                            <div class="score-display mb-3">
-                                {{ session.attention_score or 0 }}%
-                            </div>
-                            <p class="text-muted">Puntuación de Atención</p>
-                        </div>
-                        
-                        <div class="col-md-8">
-                            <h5>Información de la Sesión</h5>
-                            <ul class="list-unstyled">
-                                <li><strong>Actividad:</strong> {{ session.activity.title if session.activity else 'Actividad libre' }}</li>
-                                <li><strong>Fecha:</strong> {{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</li>
-                                <li><strong>Duración:</strong> {{ (session.completion_time // 60) if session.completion_time else 0 }} minutos</li>
-                            </ul>
-                            
-                            {% if session.heatmap_path %}
-                            <div class="mt-3">
-                                <h6>Mapa de Calor de Atención</h6>
-                                <img src="{{ url_for('static', filename=session.heatmap_path.replace('app/static/', '')) }}" 
-                                     class="img-fluid rounded" alt="Heatmap">
-                                <p class="small text-muted mt-2">
-                                    Este mapa muestra dónde concentraste tu atención
-                                </p>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <hr>
-                    
-                    <div class="text-center">
-                        <a href="{{ url_for('student.progress') }}" class="btn btn-primary">
-                            <i class="bi bi-arrow-left"></i> Volver a Mi Progreso
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="max-w-3xl mx-auto">
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="bg-indigo-600 px-6 py-4">
+      <h4 class="text-white font-bold text-base">Detalle de Sesión</h4>
     </div>
+    <div class="p-6">
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+        {# Puntuación #}
+        <div class="text-center">
+          <p class="text-6xl font-black {{ 'text-emerald-600' if (session.attention_score or 0) >= 70
+                                           else 'text-amber-500' if (session.attention_score or 0) >= 50
+                                           else 'text-red-500' }}">
+            {{ session.attention_score or 0 }}%
+          </p>
+          <p class="text-[#6B7280] text-sm mt-1">Puntuación de Atención</p>
+          <div class="mt-3 h-3 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full rounded-full {{ 'bg-emerald-500' if (session.attention_score or 0) >= 70
+                                               else 'bg-amber-400' if (session.attention_score or 0) >= 50
+                                               else 'bg-red-400' }}"
+                 style="width: {{ session.attention_score|default(0)|int }}%">
+            </div>
+          </div>
+        </div>
+
+        {# Info #}
+        <div class="sm:col-span-2">
+          <h5 class="font-bold text-[#1F2937] mb-3">Información de la Sesión</h5>
+          <dl class="space-y-2 text-sm">
+            <div class="flex gap-2">
+              <dt class="font-semibold text-[#1F2937] w-24 flex-shrink-0">Actividad:</dt>
+              <dd class="text-[#6B7280]">{{ session.activity.title if session.activity else 'Actividad libre' }}</dd>
+            </div>
+            <div class="flex gap-2">
+              <dt class="font-semibold text-[#1F2937] w-24 flex-shrink-0">Fecha:</dt>
+              <dd class="text-[#6B7280]">{{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</dd>
+            </div>
+            <div class="flex gap-2">
+              <dt class="font-semibold text-[#1F2937] w-24 flex-shrink-0">Duración:</dt>
+              <dd class="text-[#6B7280]">{{ (session.completion_time // 60) if session.completion_time else 0 }} minutos</dd>
+            </div>
+          </dl>
+
+          {% if session.heatmap_path %}
+          <div class="mt-5">
+            <h6 class="font-semibold text-[#1F2937] text-sm mb-2">Mapa de Calor de Atención</h6>
+            <img src="{{ url_for('static', filename=session.heatmap_path.replace('app/static/', '')) }}"
+                 class="w-full rounded-xl border border-slate-200" alt="Heatmap de atención">
+            <p class="text-xs text-[#9CA3AF] mt-2">Este mapa muestra dónde concentraste tu atención</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <hr class="border-slate-200 mb-5">
+
+      <div class="text-center">
+        <a href="{{ url_for('student.progress') }}"
+           class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700
+                  text-white text-sm font-bold rounded-xl transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+          Volver a Mi Progreso
+        </a>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
