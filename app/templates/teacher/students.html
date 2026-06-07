@@ -1,76 +1,84 @@
 {% extends '_layouts/teacher_layout.html' %}
-
 {% block title %}Mis Estudiantes — Profesor{% endblock %}
 {% block page_title %}Mis Estudiantes{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h1 class="mb-4"><i class="bi bi-people"></i> Mis Estudiantes</h1>
-    
-    {% if student_data %}
-        <div class="row">
-            {% for data in student_data %}
-            <div class="col-md-4 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="text-center mb-3">
-                            <div class="user-avatar mx-auto mb-2" style="width: 80px; height: 80px; font-size: 2.5rem;">
-                                {{ data.student.user.username[0].upper() }}
-                            </div>
-                            <h5 class="card-title">{{ data.student.user.username }}</h5>
-                            <span class="badge bg-info">{{ data.student.tdah_type or 'No especificado' }}</span>
-                        </div>
-                        
-                        <hr>
-                        
-                        <div class="mb-3">
-                            <small class="text-muted">Edad:</small>
-                            <p class="mb-1"><strong>{{ data.student.age or 'N/A' }} años</strong></p>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <small class="text-muted">Sesiones Completadas:</small>
-                            <p class="mb-1"><strong>{{ data.sessions_count }}</strong></p>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <small class="text-muted">Atención Promedio:</small>
-                            <div class="progress mt-1" style="height: 25px;">
-                                <div class="progress-bar bg-{{ 'success' if data.avg_attention >= 70 else 'warning' if data.avg_attention >= 50 else 'danger' }}" 
-                                     style="width: {{ data.avg_attention }}%">
-                                    {{ data.avg_attention }}%
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {% if data.last_session %}
-                        <div class="mb-3">
-                            <small class="text-muted">Última Sesión:</small>
-                            <p class="mb-1 small">{{ data.last_session.created_at.strftime('%d/%m/%Y') }}</p>
-                        </div>
-                        {% endif %}
-                        
-                        <hr>
-                        
-                        <div class="d-grid gap-2">
-                            <a href="{{ url_for('teacher.student_detail', student_id=data.student.id) }}" 
-                               class="btn btn-primary">
-                                <i class="bi bi-eye"></i> Ver Detalle
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="card">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
-                <h4 class="mt-3 text-muted">No tienes estudiantes asignados</h4>
-                <p class="text-muted">Contacta al administrador para que te asigne estudiantes</p>
-            </div>
-        </div>
-    {% endif %}
+<div class="mb-6">
+  <h2 class="text-2xl font-bold text-[#1F2937]">Mis Estudiantes</h2>
 </div>
+
+{% if student_data %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    {% for data in student_data %}
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm
+                hover:shadow-md hover:-translate-y-1 transition-all duration-200 flex flex-col">
+      <div class="p-6 flex flex-col flex-1">
+
+        <div class="flex flex-col items-center mb-4">
+          <div class="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center mb-2">
+            <span class="text-4xl font-bold text-indigo-600">
+              {{ data.student.user.username[0].upper() }}
+            </span>
+          </div>
+          <h5 class="font-bold text-[#1F2937] text-lg">{{ data.student.user.username }}</h5>
+          <span class="inline-flex items-center px-3 py-1 bg-sky-100 text-sky-700 text-xs font-bold rounded-full mt-1">
+            {{ data.student.tdah_type or 'No especificado' }}
+          </span>
+        </div>
+
+        <hr class="border-slate-100 mb-4">
+
+        <div class="space-y-3 flex-1">
+          <div>
+            <p class="text-xs text-[#9CA3AF] mb-0.5">Edad</p>
+            <p class="font-bold text-[#1F2937]">{{ data.student.age or 'N/A' }} años</p>
+          </div>
+          <div>
+            <p class="text-xs text-[#9CA3AF] mb-0.5">Sesiones Completadas</p>
+            <p class="font-bold text-[#1F2937]">{{ data.sessions_count }}</p>
+          </div>
+          <div>
+            <p class="text-xs text-[#9CA3AF] mb-1">Atención Promedio</p>
+            <div class="h-6 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full rounded-full flex items-center justify-center text-xs font-bold text-white
+                          {{ 'bg-emerald-500' if data.avg_attention >= 70
+                             else 'bg-amber-400' if data.avg_attention >= 50
+                             else 'bg-red-400' }}"
+                   style="width: {{ [data.avg_attention, 100]|min }}%">
+                {{ data.avg_attention }}%
+              </div>
+            </div>
+          </div>
+          {% if data.last_session %}
+          <div>
+            <p class="text-xs text-[#9CA3AF] mb-0.5">Última Sesión</p>
+            <p class="text-sm text-[#1F2937]">{{ data.last_session.created_at.strftime('%d/%m/%Y') }}</p>
+          </div>
+          {% endif %}
+        </div>
+
+        <hr class="border-slate-100 my-4">
+
+        <a href="{{ url_for('teacher.student_detail', student_id=data.student.id) }}"
+           class="flex items-center justify-center gap-2 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700
+                  text-white font-bold rounded-xl text-sm transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          Ver Detalle
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+{% else %}
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-16 text-center">
+    <p class="text-6xl opacity-30 mb-4" aria-hidden="true">📭</p>
+    <h4 class="text-lg font-bold text-[#1F2937] mb-2">No tienes estudiantes asignados</h4>
+    <p class="text-[#6B7280] text-sm">Contacta al administrador para que te asigne estudiantes</p>
+  </div>
+{% endif %}
 {% endblock %}
