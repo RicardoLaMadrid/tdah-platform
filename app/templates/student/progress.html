@@ -1,410 +1,253 @@
 {% extends 'base.html' %}
-{% block title %}Mi Progreso - Dashboard{% endblock %}
-
-{% block extra_css %}
-<style>
-    .stat-card {
-        background: white;
-        border-radius: 15px;
-        padding: 25px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    
-    .stat-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-    
-    .stat-number {
-        font-size: 2.5rem;
-        font-weight: bold;
-        margin: 10px 0;
-    }
-    
-    .stat-label {
-        color: #6c757d;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    
-    .trend-badge {
-        font-size: 1.5rem;
-        padding: 5px 10px;
-        border-radius: 10px;
-    }
-    
-    .trend-up {
-        background: #d4edda;
-        color: #155724;
-    }
-    
-    .trend-down {
-        background: #f8d7da;
-        color: #721c24;
-    }
-    
-    .trend-stable {
-        background: #fff3cd;
-        color: #856404;
-    }
-    
-    .chart-container {
-        position: relative;
-        height: 350px;
-        margin-bottom: 30px;
-    }
-    
-    .filter-tabs {
-        background: white;
-        border-radius: 10px;
-        padding: 15px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        margin-bottom: 20px;
-    }
-    
-    .filter-tabs .btn {
-        margin: 0 5px;
-        border-radius: 20px;
-        padding: 8px 20px;
-    }
-    
-    .test-history-card {
-        background: white;
-        border-left: 4px solid;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
-        transition: all 0.3s ease;
-    }
-    
-    .test-history-card:hover {
-        transform: translateX(5px);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    
-    .test-history-card.vision {
-        border-left-color: #667eea;
-    }
-    
-    .test-history-card.audio {
-        border-left-color: #f093fb;
-    }
-    
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        color: #6c757d;
-    }
-    
-    .empty-state i {
-        font-size: 5rem;
-        opacity: 0.3;
-        margin-bottom: 20px;
-    }
-</style>
-{% endblock %}
+{% block title %}Mi Progreso — Plataforma TDAH{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="mb-2">
-                        <i class="bi bi-graph-up-arrow me-2"></i>
-                        Mi Progreso
-                    </h1>
-                    <p class="text-muted mb-0">Seguimiento detallado de tu evolución</p>
-                </div>
-                <div>
-                    <a href="{{ url_for('student.progress_export') }}" class="btn btn-outline-primary">
-                        <i class="bi bi-download me-2"></i>
-                        Exportar Datos (CSV)
-                    </a>
-                </div>
-            </div>
-        </div>
+{# ── Header ──────────────────────────────────────────────────────────────── #}
+<div class="flex items-center justify-between mb-6 flex-wrap gap-4">
+  <div>
+    <h2 class="text-2xl font-bold text-[#1F2937]">Mi Progreso</h2>
+    <p class="text-[#6B7280] mt-1">Seguimiento detallado de tu evolución</p>
+  </div>
+  <a href="{{ url_for('student.progress_export') }}"
+     class="inline-flex items-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-600
+            hover:bg-indigo-50 rounded-lg text-sm font-medium transition-colors">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round"
+            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+    </svg>
+    Exportar Datos (CSV)
+  </a>
+</div>
+
+{# ── Filtros ──────────────────────────────────────────────────────────────── #}
+<div class="bg-white border border-slate-200 rounded-2xl p-4 mb-6
+            flex flex-wrap items-center justify-between gap-3">
+  <div class="flex gap-2 flex-wrap">
+    {% for label, d in [('Última Semana', 7), ('Último Mes', 30), ('3 Meses', 90), ('Todo el Año', 365)] %}
+    <a href="{{ url_for('student.progress', days=d, type=test_type) }}"
+       class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors
+              {{ 'bg-indigo-600 text-white shadow-sm' if days == d else 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+  <div class="flex gap-2 flex-wrap">
+    {% for label, t in [('Todos', 'all'), ('Visión', 'vision'), ('Audio', 'audio')] %}
+    <a href="{{ url_for('student.progress', days=days, type=t) }}"
+       class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors
+              {{ 'bg-emerald-600 text-white shadow-sm' if test_type == t else 'bg-slate-100 text-slate-600 hover:bg-slate-200' }}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+{# ── Stats cards ──────────────────────────────────────────────────────────── #}
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm
+              hover:shadow-md hover:-translate-y-1 transition-all duration-200">
+    <p class="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Tests Completados</p>
+    <p class="text-4xl font-black text-indigo-600 my-2">{{ stats.total_tests }}</p>
+    <div class="flex justify-between text-xs text-[#9CA3AF]">
+      <span>👁️ {{ stats.total_vision }}</span>
+      <span>🎙️ {{ stats.total_audio }}</span>
     </div>
+  </div>
 
-    <!-- Filtros -->
-    <div class="row">
-        <div class="col-12">
-            <div class="filter-tabs">
-                <div class="d-flex justify-content-between align-items-center flex-wrap">
-                    <div class="btn-group" role="group">
-                        <a href="{{ url_for('student.progress', days=7, type=test_type) }}" 
-                           class="btn {{ 'btn-primary' if days == 7 else 'btn-outline-primary' }}">
-                            Última Semana
-                        </a>
-                        <a href="{{ url_for('student.progress', days=30, type=test_type) }}" 
-                           class="btn {{ 'btn-primary' if days == 30 else 'btn-outline-primary' }}">
-                            Último Mes
-                        </a>
-                        <a href="{{ url_for('student.progress', days=90, type=test_type) }}" 
-                           class="btn {{ 'btn-primary' if days == 90 else 'btn-outline-primary' }}">
-                            3 Meses
-                        </a>
-                        <a href="{{ url_for('student.progress', days=365, type=test_type) }}" 
-                           class="btn {{ 'btn-primary' if days == 365 else 'btn-outline-primary' }}">
-                            Todo el Año
-                        </a>
-                    </div>
-                    
-                    <div class="btn-group" role="group">
-                        <a href="{{ url_for('student.progress', days=days, type='all') }}" 
-                           class="btn {{ 'btn-success' if test_type == 'all' else 'btn-outline-success' }}">
-                            Todos
-                        </a>
-                        <a href="{{ url_for('student.progress', days=days, type='vision') }}" 
-                           class="btn {{ 'btn-success' if test_type == 'vision' else 'btn-outline-success' }}">
-                            <i class="bi bi-eye me-1"></i> Visión
-                        </a>
-                        <a href="{{ url_for('student.progress', days=days, type='audio') }}" 
-                           class="btn {{ 'btn-success' if test_type == 'audio' else 'btn-outline-success' }}">
-                            <i class="bi bi-headphones me-1"></i> Audio
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm
+              hover:shadow-md hover:-translate-y-1 transition-all duration-200">
+    <p class="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Confianza Visión</p>
+    <p class="text-4xl font-black text-sky-500 my-2">{{ stats.promedio_confianza_vision|round(1) }}%</p>
+    {%- set tv = tendencias.vision -%}
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold
+      {{ 'bg-emerald-100 text-emerald-700' if tv.direccion == '↑'
+         else 'bg-red-100 text-red-700' if tv.direccion == '↓'
+         else 'bg-amber-100 text-amber-700' }}">
+      {{ tv.direccion }} {{ tv.texto }}{% if tv.porcentaje > 0 %} ({{ tv.porcentaje }}%){% endif %}
+    </span>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm
+              hover:shadow-md hover:-translate-y-1 transition-all duration-200">
+    <p class="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Confianza Audio</p>
+    <p class="text-4xl font-black text-emerald-600 my-2">{{ stats.promedio_confianza_audio|round(1) }}%</p>
+    {%- set ta = tendencias.audio -%}
+    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold
+      {{ 'bg-emerald-100 text-emerald-700' if ta.direccion == '↑'
+         else 'bg-red-100 text-red-700' if ta.direccion == '↓'
+         else 'bg-amber-100 text-amber-700' }}">
+      {{ ta.direccion }} {{ ta.texto }}{% if ta.porcentaje > 0 %} ({{ ta.porcentaje }}%){% endif %}
+    </span>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm
+              hover:shadow-md hover:-translate-y-1 transition-all duration-200">
+    <p class="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">Tipo TDAH Actual</p>
+    <p class="text-xl font-black text-amber-500 my-2 leading-tight">
+      {{ student.tdah_type|upper if student.tdah_type else 'SIN DETERMINAR' }}
+    </p>
+    <p class="text-xs text-[#9CA3AF]">Según tests realizados</p>
+  </div>
+
+</div>
+
+{# ── Gráficas ─────────────────────────────────────────────────────────────── #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="bg-indigo-600 px-5 py-3">
+      <h5 class="text-white font-bold text-sm">Evolución de Confianza</h5>
     </div>
-
-    <!-- Estadísticas Generales -->
-    <div class="row">
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-label">Tests Completados</div>
-                <div class="stat-number text-primary">{{ stats.total_tests }}</div>
-                <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted">
-                        <i class="bi bi-eye me-1"></i> {{ stats.total_vision }}
-                    </small>
-                    <small class="text-muted">
-                        <i class="bi bi-headphones me-1"></i> {{ stats.total_audio }}
-                    </small>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-label">Confianza Promedio - Visión</div>
-                <div class="stat-number text-info">{{ stats.promedio_confianza_vision|round(1) }}%</div>
-                <div class="trend-badge {{ 'trend-up' if tendencias.vision.direccion == '↑' else 'trend-down' if tendencias.vision.direccion == '↓' else 'trend-stable' }}">
-                    {{ tendencias.vision.direccion }} {{ tendencias.vision.texto }}
-                    {% if tendencias.vision.porcentaje > 0 %}
-                        ({{ tendencias.vision.porcentaje }}%)
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-label">Confianza Promedio - Audio</div>
-                <div class="stat-number text-success">{{ stats.promedio_confianza_audio|round(1) }}%</div>
-                <div class="trend-badge {{ 'trend-up' if tendencias.audio.direccion == '↑' else 'trend-down' if tendencias.audio.direccion == '↓' else 'trend-stable' }}">
-                    {{ tendencias.audio.direccion }} {{ tendencias.audio.texto }}
-                    {% if tendencias.audio.porcentaje > 0 %}
-                        ({{ tendencias.audio.porcentaje }}%)
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-3">
-            <div class="stat-card">
-                <div class="stat-label">Tipo TDAH Actual</div>
-                <div class="stat-number text-warning" style="font-size: 1.5rem;">
-                    {{ student.tdah_type|upper if student.tdah_type else 'NO DETERMINADO' }}
-                </div>
-                <small class="text-muted">Según tests realizados</small>
-            </div>
-        </div>
+    <div class="p-5">
+      <div style="position: relative; height: 320px;">
+        <canvas id="confidenceChart"></canvas>
+      </div>
     </div>
+  </div>
 
-    <!-- Gráficas -->
-    <div class="row mt-4">
-        <!-- Gráfica de Evolución de Confianza -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-line-chart me-2"></i>
-                        Evolución de Confianza
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="confidenceChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Gráfica de Métricas de Visión -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-eye me-2"></i>
-                        Métricas de Test Visual
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="visionMetricsChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="bg-sky-500 px-5 py-3">
+      <h5 class="text-white font-bold text-sm">Métricas de Test Visual</h5>
     </div>
-
-    <div class="row mt-4">
-        <!-- Gráfica de Métricas de Audio -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-headphones me-2"></i>
-                        Métricas de Test de Audio
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="audioMetricsChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Distribución de Tipos TDAH -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">
-                        <i class="bi bi-pie-chart me-2"></i>
-                        Distribución de Clasificaciones
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="distributionChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="p-5">
+      <div style="position: relative; height: 320px;">
+        <canvas id="visionMetricsChart"></canvas>
+      </div>
     </div>
+  </div>
 
-    <!-- Timeline unificado: TODOS los tests y actividades -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="bi bi-clock-history me-2"></i>
-                        Historial Completo ({{ all_tests|length }} registros)
-                    </h5>
-                    <div class="d-flex gap-2">
-                        <span class="badge bg-light text-dark">👁️ {{ stats.total_vision }}</span>
-                        <span class="badge bg-light text-dark">🎙️ {{ stats.total_audio }}</span>
-                        <span class="badge bg-light text-dark">🎨 {{ stats.total_stroop }}</span>
-                        <span class="badge bg-light text-dark">⚡ {{ stats.total_gonogo }}</span>
-                        <span class="badge bg-light text-dark">🎯 {{ stats.total_ar }} AR</span>
-                    </div>
-                </div>
-                <div class="card-body p-0">
-                    {% if all_tests %}
-                        <div class="list-group list-group-flush">
-                        {% for test in all_tests %}
-                            {%- set border_map = {
-                                'indigo':  '#6366F1',
-                                'pink':    '#EC4899',
-                                'violet':  '#7C3AED',
-                                'amber':   '#F59E0B',
-                                'emerald': '#10B981',
-                                'yellow':  '#EAB308',
-                                'teal':    '#14B8A6',
-                                'blue':    '#3B82F6',
-                                'gray':    '#9CA3AF'
-                            } -%}
-                            <div class="list-group-item d-flex align-items-center gap-3 py-3"
-                                 style="border-left: 4px solid {{ border_map.get(test.color, '#9CA3AF') }};">
-                                <span style="font-size: 1.4rem;" title="{{ test.tipo_label }}">{{ test.icon }}</span>
-                                <div class="flex-grow-1">
-                                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-1">
-                                        <strong>{{ test.tipo_label }}</strong>
-                                        <small class="text-muted">{{ test.fecha }}</small>
-                                    </div>
-                                    <div class="d-flex gap-2 mt-1 flex-wrap">
-                                        {% if test.tipo_tdah and test.tipo_tdah not in ('N/A', 'sin_determinar') %}
-                                        <span class="badge" style="background:{{ border_map.get(test.color, '#9CA3AF') }}; color:#fff;">
-                                            {{ test.tipo_tdah|upper }}
-                                        </span>
-                                        {% endif %}
-                                        {% if test.confianza %}
-                                        <span class="badge bg-light text-dark border">
-                                            {{ test.confianza }}% confianza
-                                        </span>
-                                        {% endif %}
-                                        {% if test.score %}
-                                        <span class="badge bg-light text-dark border">
-                                            Score: {{ test.score }}
-                                        </span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="empty-state">
-                            <i class="bi bi-inbox"></i>
-                            <h4>No hay registros en este período</h4>
-                            <p class="text-muted">Realiza tests cognitivos o actividades AR para ver tu progreso aquí</p>
-                            <div class="mt-3 d-flex gap-2 justify-content-center flex-wrap">
-                                <a href="{{ url_for('student.tests_index') }}" class="btn btn-primary">
-                                    <i class="bi bi-clipboard-check me-2"></i>Mis Tests
-                                </a>
-                                <a href="{{ url_for('ar.index') }}" class="btn btn-outline-primary">
-                                    <i class="bi bi-badge-ar me-2"></i>Actividades AR
-                                </a>
-                            </div>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="bg-emerald-600 px-5 py-3">
+      <h5 class="text-white font-bold text-sm">Métricas de Test de Audio</h5>
     </div>
+    <div class="p-5">
+      <div style="position: relative; height: 320px;">
+        <canvas id="audioMetricsChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="bg-amber-500 px-5 py-3">
+      <h5 class="text-white font-bold text-sm">Distribución de Clasificaciones</h5>
+    </div>
+    <div class="p-5">
+      <div style="position: relative; height: 320px;">
+        <canvas id="distributionChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{# ── Timeline histórico ───────────────────────────────────────────────────── #}
+<div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+  <div class="bg-slate-600 px-5 py-3 flex items-center justify-between flex-wrap gap-2">
+    <h5 class="text-white font-bold text-sm">
+      Historial Completo ({{ all_tests|length }} registros)
+    </h5>
+    <div class="flex gap-1.5 flex-wrap">
+      <span class="inline-flex items-center px-2 py-0.5 bg-white/20 text-white text-xs font-medium rounded-full">
+        👁️ {{ stats.total_vision }}
+      </span>
+      <span class="inline-flex items-center px-2 py-0.5 bg-white/20 text-white text-xs font-medium rounded-full">
+        🎙️ {{ stats.total_audio }}
+      </span>
+      <span class="inline-flex items-center px-2 py-0.5 bg-white/20 text-white text-xs font-medium rounded-full">
+        🎨 {{ stats.total_stroop }}
+      </span>
+      <span class="inline-flex items-center px-2 py-0.5 bg-white/20 text-white text-xs font-medium rounded-full">
+        ⚡ {{ stats.total_gonogo }}
+      </span>
+      <span class="inline-flex items-center px-2 py-0.5 bg-white/20 text-white text-xs font-medium rounded-full">
+        🎯 {{ stats.total_ar }} AR
+      </span>
+    </div>
+  </div>
+
+  {% if all_tests %}
+    {%- set border_map = {
+        'indigo':  '#6366F1',
+        'pink':    '#EC4899',
+        'violet':  '#7C3AED',
+        'amber':   '#F59E0B',
+        'emerald': '#10B981',
+        'yellow':  '#EAB308',
+        'teal':    '#14B8A6',
+        'blue':    '#3B82F6',
+        'gray':    '#9CA3AF'
+    } -%}
+    <div class="divide-y divide-slate-100">
+    {% for test in all_tests %}
+      <div class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors"
+           style="border-left: 4px solid {{ border_map.get(test.color, '#9CA3AF') }};">
+        <span class="text-2xl flex-shrink-0" title="{{ test.tipo_label }}" aria-hidden="true">{{ test.icon }}</span>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-start justify-between flex-wrap gap-1 mb-1">
+            <span class="font-semibold text-sm text-[#1F2937]">{{ test.tipo_label }}</span>
+            <span class="text-xs text-[#9CA3AF] flex-shrink-0">{{ test.fecha }}</span>
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            {% if test.tipo_tdah and test.tipo_tdah not in ('N/A', 'sin_determinar') %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold text-white"
+                  style="background: {{ border_map.get(test.color, '#9CA3AF') }};">
+              {{ test.tipo_tdah|upper }}
+            </span>
+            {% endif %}
+            {% if test.confianza %}
+            <span class="inline-flex items-center px-2 py-0.5 bg-slate-100 text-slate-600 text-xs
+                         font-medium rounded-full border border-slate-200">
+              {{ test.confianza }}% confianza
+            </span>
+            {% endif %}
+            {% if test.score %}
+            <span class="inline-flex items-center px-2 py-0.5 bg-slate-100 text-slate-600 text-xs
+                         font-medium rounded-full border border-slate-200">
+              Score: {{ test.score }}
+            </span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+    </div>
+  {% else %}
+    <div class="text-center py-16 px-4">
+      <p class="text-6xl opacity-30 mb-4" aria-hidden="true">📭</p>
+      <h4 class="text-lg font-bold text-[#1F2937] mb-2">No hay registros en este período</h4>
+      <p class="text-[#6B7280] text-sm mb-6">
+        Realiza tests cognitivos o actividades AR para ver tu progreso aquí
+      </p>
+      <div class="flex gap-3 justify-center flex-wrap">
+        <a href="{{ url_for('student.tests_index') }}"
+           class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700
+                  text-white text-sm font-medium rounded-lg transition-colors">
+          Mis Tests
+        </a>
+        <a href="{{ url_for('ar.index') }}"
+           class="inline-flex items-center gap-2 px-4 py-2 border border-indigo-300 text-indigo-600
+                  hover:bg-indigo-50 text-sm font-medium rounded-lg transition-colors">
+          Actividades AR
+        </a>
+      </div>
+    </div>
+  {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
-// Datos del servidor
 const chartData = {{ chart_data|tojson }};
 
-console.log('Chart data:', chartData);
-
-// Configuración común de gráficas
 const commonOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: {
-        legend: {
-            position: 'bottom'
-        }
-    }
+    plugins: { legend: { position: 'bottom' } }
 };
 
-// 1. Gráfica de Evolución de Confianza
 if (chartData.vision.labels.length > 0 || chartData.audio.labels.length > 0) {
     const ctx1 = document.getElementById('confidenceChart').getContext('2d');
     new Chart(ctx1, {
@@ -436,18 +279,13 @@ if (chartData.vision.labels.length > 0 || chartData.audio.labels.length > 0) {
                 y: {
                     beginAtZero: true,
                     max: 100,
-                    ticks: {
-                        callback: function(value) {
-                            return value + '%';
-                        }
-                    }
+                    ticks: { callback: value => value + '%' }
                 }
             }
         }
     });
 }
 
-// 2. Gráfica de Métricas de Visión
 if (chartData.vision.labels.length > 0) {
     const ctx2 = document.getElementById('visionMetricsChart').getContext('2d');
     new Chart(ctx2, {
@@ -459,27 +297,18 @@ if (chartData.vision.labels.length > 0) {
                 data: [
                     chartData.vision.dispersion.reduce((a, b) => a + b, 0) / chartData.vision.dispersion.length || 0,
                     chartData.vision.atencion_central.reduce((a, b) => a + b, 0) / chartData.vision.atencion_central.length || 0,
-                    50, // Placeholder para periférica
-                    20  // Placeholder para dispersa
+                    50,
+                    20
                 ],
                 borderColor: '#667eea',
                 backgroundColor: 'rgba(102, 126, 234, 0.2)',
                 pointBackgroundColor: '#667eea'
             }]
         },
-        options: {
-            ...commonOptions,
-            scales: {
-                r: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
-        }
+        options: { ...commonOptions, scales: { r: { beginAtZero: true, max: 100 } } }
     });
 }
 
-// 3. Gráfica de Métricas de Audio
 if (chartData.audio.labels.length > 0) {
     const ctx3 = document.getElementById('audioMetricsChart').getContext('2d');
     new Chart(ctx3, {
@@ -503,29 +332,15 @@ if (chartData.audio.labels.length > 0) {
                 }
             ]
         },
-        options: {
-            ...commonOptions,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
+        options: { ...commonOptions, scales: { y: { beginAtZero: true } } }
     });
 }
 
-// 4. Gráfica de Distribución de Tipos TDAH
-const tiposCounts = {
-    'inatento': 0,
-    'hiperactivo': 0,
-    'combinado': 0,
-    'typical': 0
-};
+const tiposCounts = { 'inatento': 0, 'hiperactivo': 0, 'combinado': 0, 'typical': 0 };
 
 {% for test in vision_data %}
     tiposCounts['{{ test.tipo }}'] = (tiposCounts['{{ test.tipo }}'] || 0) + 1;
 {% endfor %}
-
 {% for test in audio_data %}
     tiposCounts['{{ test.tipo }}'] = (tiposCounts['{{ test.tipo }}'] || 0) + 1;
 {% endfor %}
@@ -554,11 +369,7 @@ new Chart(ctx4, {
     },
     options: {
         ...commonOptions,
-        plugins: {
-            legend: {
-                position: 'right'
-            }
-        }
+        plugins: { legend: { position: 'right' } }
     }
 });
 </script>
