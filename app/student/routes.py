@@ -289,20 +289,20 @@ def progress():
     # Fecha de inicio
     start_date = datetime.now() - timedelta(days=days)
     
-    # Obtener tests de visión
+    # Obtener tests de visión (para gráficas existentes)
     vision_reports = Report.query.filter(
         Report.student_id == student_profile.id,
         Report.report_type == 'vision_test',
         Report.created_at >= start_date
     ).order_by(Report.created_at.asc()).all()
-    
-    # Obtener tests de audio
+
+    # Obtener tests de audio (para gráficas existentes)
     audio_reports = Report.query.filter(
         Report.student_id == student_profile.id,
         Report.report_type == 'audio_test',
         Report.created_at >= start_date
     ).order_by(Report.created_at.asc()).all()
-    
+
     # Procesar datos de visión
     vision_data = []
     for report in vision_reports:
@@ -317,7 +317,7 @@ def progress():
             })
         except:
             continue
-    
+
     # Procesar datos de audio
     audio_data = []
     for report in audio_reports:
@@ -331,26 +331,75 @@ def progress():
             })
         except:
             continue
-    
+
+    # Timeline unificado: TODOS los tipos de test
+    ALL_TEST_TYPES = [
+        'vision_test', 'audio_test', 'stroop_test', 'gonogo_test',
+        'ar_caza', 'ar_secuencia', 'ar_respiracion', 'ar_trail_making',
+    ]
+    TYPE_META = {
+        'vision_test':    {'label': 'Test Visual',           'icon': '👁️',  'color': 'indigo'},
+        'audio_test':     {'label': 'Test de Audio',         'icon': '🎙️',  'color': 'pink'},
+        'stroop_test':    {'label': 'Test Stroop',           'icon': '🎨',  'color': 'violet'},
+        'gonogo_test':    {'label': 'Go / No-Go',            'icon': '⚡',  'color': 'amber'},
+        'ar_caza':        {'label': 'AR: Caza de Objetos',   'icon': '🎯',  'color': 'emerald'},
+        'ar_secuencia':   {'label': 'AR: Secuencia Luces',   'icon': '💡',  'color': 'yellow'},
+        'ar_respiracion': {'label': 'AR: Respiración',       'icon': '🧘',  'color': 'teal'},
+        'ar_trail_making':{'label': 'AR: Trail Making',      'icon': '🔢',  'color': 'blue'},
+    }
+    all_reports = Report.query.filter(
+        Report.student_id == student_profile.id,
+        Report.report_type.in_(ALL_TEST_TYPES),
+        Report.created_at >= start_date
+    ).order_by(Report.created_at.desc()).all()
+
+    all_tests = []
+    for r in all_reports:
+        meta = TYPE_META.get(r.report_type, {'label': r.report_type, 'icon': '📋', 'color': 'gray'})
+        try:
+            content = json.loads(r.content) if r.content else {}
+            tipo_tdah = content.get('tipo_tdah', r.tipo_tdah or 'N/A')
+            confianza = content.get('confianza', r.confianza or 0)
+            results_dict = content.get('results', {})
+            score = content.get('score', results_dict.get('score', 0) if isinstance(results_dict, dict) else 0)
+        except Exception:
+            tipo_tdah = r.tipo_tdah or 'N/A'
+            confianza = r.confianza or 0
+            score = 0
+        all_tests.append({
+            'fecha': r.created_at.strftime('%d/%m/%Y %H:%M'),
+            'tipo_label': meta['label'],
+            'icon': meta['icon'],
+            'color': meta['color'],
+            'tipo_tdah': tipo_tdah,
+            'confianza': round(float(confianza), 1),
+            'score': round(float(score), 1) if score else None,
+            'report_type': r.report_type,
+        })
+
     # Calcular tendencias
     tendencias = calcular_tendencias(vision_data, audio_data)
-    
-    # Estadísticas generales
+
+    # Estadísticas generales (ahora incluye todos los tipos)
     stats = {
         'total_vision': len(vision_reports),
         'total_audio': len(audio_reports),
-        'total_tests': len(vision_reports) + len(audio_reports),
+        'total_stroop': sum(1 for t in all_tests if t['report_type'] == 'stroop_test'),
+        'total_gonogo': sum(1 for t in all_tests if t['report_type'] == 'gonogo_test'),
+        'total_ar': sum(1 for t in all_tests if t['report_type'].startswith('ar_')),
+        'total_tests': len(all_tests),
         'promedio_confianza_vision': sum([d['confianza'] for d in vision_data]) / len(vision_data) if vision_data else 0,
         'promedio_confianza_audio': sum([d['confianza'] for d in audio_data]) / len(audio_data) if audio_data else 0
     }
-    
+
     # Datos para gráficas
     chart_data = preparar_datos_graficas(vision_data, audio_data)
-    
+
     return render_template('student/progress.html',
                          student=student_profile,
                          vision_data=vision_data,
                          audio_data=audio_data,
+                         all_tests=all_tests,
                          stats=stats,
                          tendencias=tendencias,
                          chart_data=chart_data,
