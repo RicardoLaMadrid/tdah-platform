@@ -1,367 +1,342 @@
 {% extends '_layouts/admin_layout.html' %}
-
 {% block title %}{{ user.username }} — Admin{% endblock %}
 {% block page_title %}{{ user.username }}{% endblock %}
 
-{% block content %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1>
-                <i class="bi bi-{{ 'mortarboard-fill' if user.role == 'student' else 'person-circle' }} text-primary"></i>
-                {% if user.role == 'student' and user.student_profile.first() and user.student_profile.first().full_name %}
-                    {{ user.student_profile.first().full_name }}
-                {% else %}
-                    {{ user.username }}
-                {% endif %}
-            </h1>
-            <p class="text-muted mb-0">
-                <span class="badge bg-secondary">{{ user.role }}</span>
-                @{{ user.username }} · {{ user.email }}
-            </p>
-        </div>
-        <div>
-            <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left"></i> Volver
-            </a>
-            {% if user.id != current_user.id %}
-            <button type="button" class="btn btn-outline-danger" 
-                    onclick="document.getElementById('deleteForm').submit()"
-                    data-bs-toggle="tooltip" title="Eliminar usuario">
-                <i class="bi bi-trash"></i> Eliminar
-            </button>
-            <form id="deleteForm" method="POST" 
-                  action="{{ url_for('admin.delete_user', user_id=user.id) }}" 
-                  style="display:none;"
-                  onsubmit="return confirm('¿Eliminar definitivamente a {{ user.username }}? Esta acción NO se puede deshacer.')">
-            </form>
-            {% endif %}
-        </div>
-    </div>
-    
-    <form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
-        
-        <!-- ====== DATOS BÁSICOS (todos los roles) ====== -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-person-fill me-2"></i>Datos de la Cuenta</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Username</label>
-                        <input type="text" class="form-control" value="{{ user.username }}" disabled>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Email *</label>
-                        <input type="email" class="form-control" name="email" value="{{ user.email }}" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Nueva Contraseña</label>
-                        <input type="password" class="form-control" name="password" 
-                               placeholder="Dejar vacío para mantener actual">
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        {% if user.role == 'student' %}
-        {% set sp = user.student_profile.first() %}
-        {% if sp %}
-        
-        <!-- ====== DATOS DEL ALUMNO ====== -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="bi bi-mortarboard-fill me-2"></i>Datos del Alumno</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Nombre completo</label>
-                        <input type="text" class="form-control" name="full_name" value="{{ sp.full_name or '' }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Cédula de Identidad</label>
-                        <input type="text" class="form-control" name="national_id" value="{{ sp.national_id or '' }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Edad</label>
-                        <input type="number" class="form-control" name="age" value="{{ sp.age or '' }}" min="5" max="18">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Grado</label>
-                        <input type="text" class="form-control" name="grade" value="{{ sp.grade or '' }}">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Sección</label>
-                        <input type="text" class="form-control" name="section" value="{{ sp.section or '' }}">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Profesor asignado</label>
-                        <select class="form-select" name="teacher_id">
-                            <option value="">Sin asignar</option>
-                            {% for t in teachers %}
-                            <option value="{{ t.id }}" {% if sp.teacher_id == t.id %}selected{% endif %}>
-                                {{ t.username }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                
-                <hr>
-                
-                <div class="row g-2">
-                    <div class="col-md-6">
-                        <small class="text-muted">Tipo TDAH detectado:</small><br>
-                        <span class="badge bg-{{ sp.get_confianza_color() }} fs-6">
-                            {{ sp.get_tipo_tdah_display() }}
-                        </span>
-                        {% if sp.tdah_confidence %}
-                        <small class="text-muted ms-2">Confianza: {{ sp.tdah_confidence|round(1) }}%</small>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <small class="text-muted">Última evaluación:</small><br>
-                        {% if sp.last_evaluation_date %}
-                            <strong>{{ sp.last_evaluation_date.strftime('%d/%m/%Y %H:%M') }}</strong>
-                        {% else %}
-                            <span class="text-muted">Sin evaluaciones aún</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- ====== INFO MÉDICA ====== -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="bi bi-heart-pulse-fill me-2"></i>Información Médica</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-12">
-                        <label class="form-label">⚠️ Alergias</label>
-                        <textarea class="form-control" name="allergies" rows="2">{{ sp.allergies or '' }}</textarea>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Condiciones médicas</label>
-                        <textarea class="form-control" name="medical_conditions" rows="2">{{ sp.medical_conditions or '' }}</textarea>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label">Medicamentos actuales</label>
-                        <textarea class="form-control" name="medications" rows="2">{{ sp.medications or '' }}</textarea>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- ====== DIRECCIÓN Y EMERGENCIA ====== -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="bi bi-geo-alt-fill me-2"></i>Dirección y Contacto de Emergencia</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-12">
-                        <label class="form-label">Dirección</label>
-                        <textarea class="form-control" name="address" rows="2">{{ sp.address or '' }}</textarea>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Contacto de emergencia (nombre)</label>
-                        <input type="text" class="form-control" name="emergency_contact_name" 
-                               value="{{ sp.emergency_contact_name or '' }}">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Contacto de emergencia (teléfono)</label>
-                        <input type="text" class="form-control" name="emergency_contact_phone" 
-                               value="{{ sp.emergency_contact_phone or '' }}">
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        {% endif %}
-        {% endif %}
-        
-        {% if user.role == 'parent' %}
-        {% set pp = user.parent_profile.first() %}
-        {% if pp %}
-        <!-- ====== DATOS DEL TUTOR ====== -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Datos del Tutor</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-8">
-                        <label class="form-label">Nombre completo</label>
-                        <input type="text" class="form-control" name="parent_full_name" value="{{ pp.full_name or '' }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Teléfono / WhatsApp</label>
-                        <input type="text" class="form-control" name="parent_phone" value="{{ pp.phone or '' }}">
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-check mt-3">
-                            <input type="checkbox" class="form-check-input" name="parent_whatsapp_enabled" 
-                                   id="wa_check" {% if pp.whatsapp_enabled %}checked{% endif %}>
-                            <label class="form-check-label" for="wa_check">
-                                <i class="bi bi-whatsapp text-success"></i> Recibir notificaciones por WhatsApp
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-check mt-3">
-                            <input type="checkbox" class="form-check-input" name="parent_receive_notifications" 
-                                   id="notif_check" {% if pp.receive_notifications %}checked{% endif %}>
-                            <label class="form-check-label" for="notif_check">
-                                <i class="bi bi-bell"></i> Notificaciones generales (web)
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Hijos vinculados -->
-        {% set children = pp.get_children() %}
-        {% if children %}
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="bi bi-people me-2"></i>Hijos / Estudiantes Vinculados</h5>
-            </div>
-            <div class="card-body">
-                <div class="list-group">
-                    {% for child in children %}
-                    <a href="{{ url_for('admin.edit_user', user_id=child.student.user_id) }}" 
-                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>{{ child.student.full_name or child.student.user.username }}</strong>
-                            <span class="badge bg-secondary ms-2">{{ child.relationship }}</span>
-                            {% if child.student.grade %}
-                                <small class="text-muted ms-2">{{ child.student.grade }}</small>
-                            {% endif %}
-                        </div>
-                        <i class="bi bi-chevron-right"></i>
-                    </a>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
-        {% endif %}
-        {% endif %}
-        
-        <!-- Botones de acción -->
-        <div class="d-flex justify-content-between mb-5">
-            <a href="{{ url_for('admin.users') }}" class="btn btn-secondary btn-lg">
-                <i class="bi bi-arrow-left"></i> Cancelar
-            </a>
-            <button type="submit" class="btn btn-success btn-lg px-5">
-                <i class="bi bi-check-circle-fill"></i> Guardar cambios
-            </button>
-        </div>
-    </form>
-    
-    <!-- ====== TUTORES DEL ALUMNO (solo si es student, fuera del form principal) ====== -->
-    {% if user.role == 'student' %}
-    {% set sp = user.student_profile.first() %}
-    {% if sp %}
-    {% if sp.tutor_full_name %}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-secondary text-white">
-            <h5 class="mb-0"><i class="bi bi-people-fill me-2"></i>Tutores del Alumno</h5>
-        </div>
-        <div class="card-body">
-            <div class="row g-3">
-                <!-- Tutor Principal -->
-                <div class="col-md-6">
-                    <div class="card border-success h-100">
-                        <div class="card-header bg-success bg-opacity-10">
-                            <strong><i class="bi bi-person-fill me-1"></i>Tutor Principal</strong>
-                        </div>
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h6 class="mb-0">{{ sp.tutor_full_name }}</h6>
-                                {% if sp.tutor_relationship %}
-                                <span class="badge bg-success">{{ sp.tutor_relationship }}</span>
-                                {% endif %}
-                            </div>
-                            {% if sp.tutor_email %}
-                            <p class="small text-muted mb-1">
-                                <i class="bi bi-envelope"></i> {{ sp.tutor_email }}
-                            </p>
-                            {% endif %}
-                            {% if sp.tutor_phone %}
-                            <p class="small text-muted mb-1">
-                                <i class="bi bi-phone"></i> {{ sp.tutor_phone }}
-                            </p>
-                            {% endif %}
-                            {% if sp.tutor_national_id %}
-                            <p class="small text-muted mb-1">
-                                <i class="bi bi-card-text"></i> CI: {{ sp.tutor_national_id }}
-                            </p>
-                            {% endif %}
-                            <p class="small text-muted mb-2">
-                                {% if sp.tutor_whatsapp_enabled %}
-                                <i class="bi bi-whatsapp text-success"></i> WhatsApp habilitado
-                                {% else %}
-                                <i class="bi bi-whatsapp text-muted"></i> WhatsApp deshabilitado
-                                {% endif %}
-                            </p>
-                            {% if sp.tutor_phone %}
-                            <div class="d-flex gap-1 flex-wrap">
-                                <a href="tel:{{ sp.tutor_phone }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-telephone-fill"></i> Llamar
-                                </a>
-                                <a href="https://wa.me/{{ sp.tutor_phone|replace('+','')|replace(' ','') }}"
-                                   target="_blank" class="btn btn-sm btn-outline-success">
-                                    <i class="bi bi-whatsapp"></i> WhatsApp
-                                </a>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% if sp.tutor_secondary_name %}
-                <!-- Tutor Secundario -->
-                <div class="col-md-6">
-                    <div class="card border-secondary h-100">
-                        <div class="card-header bg-secondary bg-opacity-10">
-                            <strong><i class="bi bi-person me-1"></i>Tutor Secundario</strong>
-                        </div>
-                        <div class="card-body">
-                            <h6 class="mb-2">{{ sp.tutor_secondary_name }}</h6>
-                            {% if sp.tutor_secondary_phone %}
-                            <p class="small text-muted mb-2">
-                                <i class="bi bi-phone"></i> {{ sp.tutor_secondary_phone }}
-                            </p>
-                            <div class="d-flex gap-1 flex-wrap">
-                                <a href="tel:{{ sp.tutor_secondary_phone }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-telephone-fill"></i> Llamar
-                                </a>
-                                <a href="https://wa.me/{{ sp.tutor_secondary_phone|replace('+','')|replace(' ','') }}"
-                                   target="_blank" class="btn btn-sm btn-outline-success">
-                                    <i class="bi bi-whatsapp"></i> WhatsApp
-                                </a>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    {% else %}
-    <div class="alert alert-warning">
-        <i class="bi bi-exclamation-triangle"></i>
-        Este alumno no tiene tutores registrados.
-        <a href="{{ url_for('admin.inscribir_alumno') }}">Inscribe un nuevo alumno con tutores</a>.
-    </div>
-    {% endif %}
-    {% endif %}
-    {% endif %}
+{% block extra_css %}
+<style>[x-cloak]{display:none!important}</style>
+{% endblock %}
+
+{%- macro field(label, name, type="text", value="", required=false, placeholder="", disabled=false) -%}
+<div>
+  <label class="block text-sm font-medium text-[#1F2937] mb-1">{{ label }}{% if required %} <span class="text-red-500">*</span>{% endif %}</label>
+  <input type="{{ type }}" name="{{ name }}" value="{{ value }}"
+         {% if required %}required{% endif %}
+         {% if disabled %}disabled{% endif %}
+         {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+         class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white
+                focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent
+                {% if disabled %}bg-slate-50 text-[#9CA3AF] cursor-not-allowed{% endif %}">
 </div>
+{%- endmacro -%}
+
+{%- macro textarea_field(label, name, value="", rows=2) -%}
+<div>
+  <label class="block text-sm font-medium text-[#1F2937] mb-1">{{ label }}</label>
+  <textarea name="{{ name }}" rows="{{ rows }}"
+            class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white
+                   focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent resize-y">{{ value }}</textarea>
+</div>
+{%- endmacro -%}
+
+{% block content %}
+{# ── Header ──────────────────────────────────────────────────────────────── #}
+<div class="flex items-start justify-between mb-6 flex-wrap gap-3">
+  <div>
+    <h2 class="text-2xl font-bold text-[#1F2937]">
+      {% if user.role == 'student' and user.student_profile.first() and user.student_profile.first().full_name %}
+        {{ user.student_profile.first().full_name }}
+      {% else %}
+        {{ user.username }}
+      {% endif %}
+    </h2>
+    <p class="text-[#6B7280] text-sm mt-1">
+      <span class="inline-flex items-center px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-full mr-2">
+        {{ user.role }}
+      </span>
+      @{{ user.username }} · {{ user.email }}
+    </p>
+  </div>
+  <div class="flex gap-2">
+    <a href="{{ url_for('admin.users') }}"
+       class="inline-flex items-center gap-1.5 px-4 py-2 border border-slate-300 text-[#6B7280]
+              hover:bg-slate-50 text-sm font-medium rounded-lg transition-colors">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Volver
+    </a>
+    {% if user.id != current_user.id %}
+    <button type="button"
+            onclick="if(confirm('¿Eliminar definitivamente a {{ user.username }}? Esta acción NO se puede deshacer.')) document.getElementById('deleteForm').submit()"
+            class="inline-flex items-center gap-1.5 px-4 py-2 border border-red-300 text-red-600
+                   hover:bg-red-50 text-sm font-medium rounded-lg transition-colors">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+      </svg>
+      Eliminar
+    </button>
+    <form id="deleteForm" method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" class="hidden"></form>
+    {% endif %}
+  </div>
+</div>
+
+<form method="POST" action="{{ url_for('admin.edit_user', user_id=user.id) }}">
+
+  {# ── Datos básicos (todos los roles) ───────────────────────────────────── #}
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm mb-5 overflow-hidden">
+    <div class="bg-indigo-600 px-5 py-3">
+      <h5 class="text-white font-bold text-sm">Datos de la Cuenta</h5>
+    </div>
+    <div class="p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {{ field('Username', 'username_disabled', value=user.username, disabled=true) }}
+      {{ field('Email', 'email', type='email', value=user.email, required=true) }}
+      {{ field('Nueva Contraseña', 'password', type='password', placeholder='Dejar vacío para mantener actual') }}
+    </div>
+  </div>
+
+  {# ── Datos del alumno (role=student) ───────────────────────────────────── #}
+  {% if user.role == 'student' %}
+  {% set sp = user.student_profile.first() %}
+  {% if sp %}
+
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm mb-5 overflow-hidden">
+    <div class="bg-emerald-600 px-5 py-3">
+      <h5 class="text-white font-bold text-sm">Datos del Alumno</h5>
+    </div>
+    <div class="p-5 grid grid-cols-1 sm:grid-cols-6 gap-4">
+      <div class="sm:col-span-3">{{ field('Nombre completo', 'full_name', value=sp.full_name or '') }}</div>
+      <div class="sm:col-span-2">{{ field('Cédula de Identidad', 'national_id', value=sp.national_id or '') }}</div>
+      <div class="sm:col-span-1">{{ field('Edad', 'age', type='number', value=sp.age or '') }}</div>
+      <div class="sm:col-span-2">{{ field('Grado', 'grade', value=sp.grade or '') }}</div>
+      <div class="sm:col-span-1">{{ field('Sección', 'section', value=sp.section or '') }}</div>
+      <div class="sm:col-span-3">
+        <label class="block text-sm font-medium text-[#1F2937] mb-1">Profesor asignado</label>
+        <select name="teacher_id"
+                class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white
+                       focus:outline-none focus:ring-2 focus:ring-indigo-400">
+          <option value="">Sin asignar</option>
+          {% for t in teachers %}
+          <option value="{{ t.id }}" {% if sp.teacher_id == t.id %}selected{% endif %}>{{ t.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="px-5 pb-5 border-t border-slate-100 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <p class="text-xs text-[#9CA3AF] mb-1">Tipo TDAH detectado</p>
+        {%- set cmap = {'success':'bg-emerald-100 text-emerald-700','warning':'bg-amber-100 text-amber-700',
+                        'danger':'bg-red-100 text-red-700','info':'bg-sky-100 text-sky-700',
+                        'secondary':'bg-slate-100 text-slate-600'} -%}
+        <span class="inline-flex items-center px-3 py-1 rounded-full text-base font-bold
+                     {{ cmap.get(sp.get_confianza_color(), 'bg-slate-100 text-slate-600') }}">
+          {{ sp.get_tipo_tdah_display() }}
+        </span>
+        {% if sp.tdah_confidence %}
+        <span class="text-xs text-[#9CA3AF] ml-2">Confianza: {{ sp.tdah_confidence|round(1) }}%</span>
+        {% endif %}
+      </div>
+      <div>
+        <p class="text-xs text-[#9CA3AF] mb-1">Última evaluación</p>
+        {% if sp.last_evaluation_date %}
+          <p class="font-bold text-sm text-[#1F2937]">{{ sp.last_evaluation_date.strftime('%d/%m/%Y %H:%M') }}</p>
+        {% else %}
+          <p class="text-sm text-[#9CA3AF]">Sin evaluaciones aún</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ── Info médica ────────────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm mb-5 overflow-hidden">
+    <div class="bg-amber-500 px-5 py-3">
+      <h5 class="text-white font-bold text-sm">Información Médica</h5>
+    </div>
+    <div class="p-5 space-y-4">
+      {{ textarea_field('⚠️ Alergias', 'allergies', value=sp.allergies or '') }}
+      {{ textarea_field('Condiciones médicas', 'medical_conditions', value=sp.medical_conditions or '') }}
+      {{ textarea_field('Medicamentos actuales', 'medications', value=sp.medications or '') }}
+    </div>
+  </div>
+
+  {# ── Dirección y emergencia ─────────────────────────────────────────────── #}
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm mb-5 overflow-hidden">
+    <div class="bg-sky-500 px-5 py-3">
+      <h5 class="text-white font-bold text-sm">Dirección y Contacto de Emergencia</h5>
+    </div>
+    <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="sm:col-span-2">{{ textarea_field('Dirección', 'address', value=sp.address or '') }}</div>
+      {{ field('Contacto de emergencia (nombre)', 'emergency_contact_name', value=sp.emergency_contact_name or '') }}
+      {{ field('Contacto de emergencia (teléfono)', 'emergency_contact_phone', value=sp.emergency_contact_phone or '') }}
+    </div>
+  </div>
+
+  {% endif %}
+  {% endif %}
+
+  {# ── Datos del tutor (role=parent — dead code, rol eliminado) ──────────── #}
+  {% if user.role == 'parent' %}
+  {% set pp = user.parent_profile.first() %}
+  {% if pp %}
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm mb-5 overflow-hidden">
+    <div class="bg-emerald-600 px-5 py-3">
+      <h5 class="text-white font-bold text-sm">Datos del Tutor</h5>
+    </div>
+    <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="sm:col-span-2">{{ field('Nombre completo', 'parent_full_name', value=pp.full_name or '') }}</div>
+      {{ field('Teléfono / WhatsApp', 'parent_phone', value=pp.phone or '') }}
+      <div class="flex items-center gap-3">
+        <input type="checkbox" name="parent_whatsapp_enabled" id="wa_check"
+               class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400"
+               {% if pp.whatsapp_enabled %}checked{% endif %}>
+        <label for="wa_check" class="text-sm text-[#1F2937]">Recibir notificaciones por WhatsApp</label>
+      </div>
+      <div class="flex items-center gap-3">
+        <input type="checkbox" name="parent_receive_notifications" id="notif_check"
+               class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400"
+               {% if pp.receive_notifications %}checked{% endif %}>
+        <label for="notif_check" class="text-sm text-[#1F2937]">Notificaciones generales (web)</label>
+      </div>
+    </div>
+  </div>
+
+  {% set children = pp.get_children() %}
+  {% if children %}
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm mb-5 overflow-hidden">
+    <div class="bg-sky-500 px-5 py-3">
+      <h5 class="text-white font-bold text-sm">Hijos / Estudiantes Vinculados</h5>
+    </div>
+    <div class="p-5">
+      <div class="divide-y divide-slate-100">
+        {% for child in children %}
+        <a href="{{ url_for('admin.edit_user', user_id=child.student.user_id) }}"
+           class="flex items-center justify-between py-3 hover:bg-slate-50 px-2 rounded-lg transition-colors">
+          <div>
+            <span class="font-semibold text-sm text-[#1F2937]">
+              {{ child.student.full_name or child.student.user.username }}
+            </span>
+            <span class="inline-flex items-center px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-full ml-2">
+              {{ child.relationship }}
+            </span>
+            {% if child.student.grade %}
+            <span class="text-xs text-[#9CA3AF] ml-2">{{ child.student.grade }}</span>
+            {% endif %}
+          </div>
+          <svg class="w-4 h-4 text-[#9CA3AF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+  {% endif %}
+
+  {# ── Botones ───────────────────────────────────────────────────────────── #}
+  <div class="flex items-center justify-between mb-8">
+    <a href="{{ url_for('admin.users') }}"
+       class="inline-flex items-center gap-2 px-5 py-2.5 border border-slate-300 text-[#6B7280]
+              hover:bg-slate-50 text-sm font-medium rounded-xl transition-colors">
+      Cancelar
+    </a>
+    <button type="submit"
+            class="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700
+                   text-white text-sm font-bold rounded-xl transition-colors shadow-sm">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+      </svg>
+      Guardar cambios
+    </button>
+  </div>
+</form>
+
+{# ── Tutores del alumno (fuera del form) ─────────────────────────────────── #}
+{% if user.role == 'student' %}
+{% set sp = user.student_profile.first() %}
+{% if sp %}
+{% if sp.tutor_full_name %}
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm mb-5 overflow-hidden">
+  <div class="bg-slate-600 px-5 py-3">
+    <h5 class="text-white font-bold text-sm">Tutores del Alumno</h5>
+  </div>
+  <div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+    {# Tutor Principal #}
+    <div class="border border-emerald-200 rounded-2xl overflow-hidden">
+      <div class="bg-emerald-50 px-4 py-2">
+        <p class="font-bold text-emerald-800 text-sm">Tutor Principal</p>
+      </div>
+      <div class="p-4 space-y-2">
+        <div class="flex items-center justify-between flex-wrap gap-1">
+          <p class="font-bold text-[#1F2937]">{{ sp.tutor_full_name }}</p>
+          {% if sp.tutor_relationship %}
+          <span class="inline-flex items-center px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">
+            {{ sp.tutor_relationship }}
+          </span>
+          {% endif %}
+        </div>
+        {% if sp.tutor_email %}
+        <p class="text-sm text-[#6B7280]">📧 {{ sp.tutor_email }}</p>
+        {% endif %}
+        {% if sp.tutor_phone %}
+        <p class="text-sm text-[#6B7280]">📱 {{ sp.tutor_phone }}</p>
+        {% endif %}
+        {% if sp.tutor_national_id %}
+        <p class="text-sm text-[#6B7280]">🪪 CI: {{ sp.tutor_national_id }}</p>
+        {% endif %}
+        <p class="text-xs text-[#9CA3AF]">
+          {% if sp.tutor_whatsapp_enabled %}✅ WhatsApp habilitado{% else %}WhatsApp deshabilitado{% endif %}
+        </p>
+        {% if sp.tutor_phone %}
+        <div class="flex gap-2 flex-wrap pt-1">
+          <a href="tel:{{ sp.tutor_phone }}"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-indigo-300 text-indigo-600
+                    hover:bg-indigo-50 text-xs font-medium rounded-lg transition-colors">
+            📞 Llamar
+          </a>
+          <a href="https://wa.me/{{ sp.tutor_phone|replace('+','')|replace(' ','') }}"
+             target="_blank" rel="noopener"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-emerald-300 text-emerald-700
+                    hover:bg-emerald-50 text-xs font-medium rounded-lg transition-colors">
+            💬 WhatsApp
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Tutor Secundario #}
+    {% if sp.tutor_secondary_name %}
+    <div class="border border-slate-200 rounded-2xl overflow-hidden">
+      <div class="bg-slate-50 px-4 py-2">
+        <p class="font-bold text-slate-700 text-sm">Tutor Secundario</p>
+      </div>
+      <div class="p-4 space-y-2">
+        <p class="font-bold text-[#1F2937]">{{ sp.tutor_secondary_name }}</p>
+        {% if sp.tutor_secondary_phone %}
+        <p class="text-sm text-[#6B7280]">📱 {{ sp.tutor_secondary_phone }}</p>
+        <div class="flex gap-2 flex-wrap pt-1">
+          <a href="tel:{{ sp.tutor_secondary_phone }}"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-indigo-300 text-indigo-600
+                    hover:bg-indigo-50 text-xs font-medium rounded-lg transition-colors">
+            📞 Llamar
+          </a>
+          <a href="https://wa.me/{{ sp.tutor_secondary_phone|replace('+','')|replace(' ','') }}"
+             target="_blank" rel="noopener"
+             class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-emerald-300 text-emerald-700
+                    hover:bg-emerald-50 text-xs font-medium rounded-lg transition-colors">
+            💬 WhatsApp
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% else %}
+<div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
+  <p class="text-sm text-amber-800">
+    ⚠️ Este alumno no tiene tutores registrados.
+    <a href="{{ url_for('admin.inscribir_alumno') }}" class="underline font-medium">
+      Inscribe un nuevo alumno con tutores
+    </a>.
+  </p>
+</div>
+{% endif %}
+{% endif %}
+{% endif %}
+
 {% endblock %}
