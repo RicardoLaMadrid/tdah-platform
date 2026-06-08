@@ -1,0 +1,48 @@
+{% macro search_bar(
+    name='q',
+    placeholder='Buscar…',
+    value='',
+    hx_get='',
+    hx_target='',
+    hx_include='',
+    hx_indicator='#search-spinner',
+    x_ref='searchInput',
+    extra_class=''
+) %}
+<div class="relative flex-1 {{ extra_class }}">
+  {# Lupa #}
+  <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF] pointer-events-none"
+       fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <path stroke-linecap="round" stroke-linejoin="round"
+          d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+  </svg>
+
+  {# Spinner HTMX #}
+  <span id="{{ hx_indicator | replace('#','') }}"
+        class="htmx-indicator absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+    <svg class="w-5 h-5 text-[#4F46E5] animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+      <path class="opacity-75" fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+    </svg>
+  </span>
+
+  <input
+    type="search"
+    name="{{ name }}"
+    value="{{ value }}"
+    placeholder="{{ placeholder }}"
+    autocomplete="off"
+    x-ref="{{ x_ref }}"
+    {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}
+    {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
+    {% if hx_include %}hx-include="{{ hx_include }}"{% endif %}
+    hx-trigger="keyup changed delay:300ms"
+    hx-push-url="true"
+    hx-indicator="{{ hx_indicator }}"
+    class="w-full h-12 pl-10 pr-10 bg-white border border-[#E5E7EB] rounded-xl text-base
+           text-[#1F2937] placeholder-[#9CA3AF] focus:outline-none focus:ring-2
+           focus:ring-[#4F46E5] focus:border-transparent transition-shadow"
+  />
+</div>
+{% endmacro %}

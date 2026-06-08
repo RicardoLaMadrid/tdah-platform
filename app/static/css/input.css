@@ -1,0 +1,107 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/typography";
+
+/* ============================================================
+   Paleta personalizada TDAH Platform
+   ============================================================ */
+@theme {
+  /* Tipografía */
+  --font-sans: 'Inter', Arial, sans-serif;
+
+  /* Colores base */
+  --color-primary:    #4F46E5;
+  --color-primary-50: #EEF2FF;
+  --color-primary-100:#E0E7FF;
+  --color-primary-600:#4338CA;
+  --color-primary-700:#3730A3;
+
+  --color-secondary:    #10B981;
+  --color-secondary-50: #ECFDF5;
+  --color-secondary-100:#D1FAE5;
+  --color-secondary-600:#059669;
+
+  --color-accent:    #F59E0B;
+  --color-accent-50: #FFFBEB;
+  --color-accent-100:#FEF3C7;
+
+  --color-danger:    #EF4444;
+  --color-danger-50: #FEF2F2;
+  --color-danger-100:#FEE2E2;
+
+  /* Neutrales UI */
+  --color-bg:     #FAFAF9;
+  --color-text:   #1F2937;
+  --color-muted:  #6B7280;
+  --color-border: #E5E7EB;
+
+  /* Sidebar */
+  --color-sidebar-bg:     #1E1B4B;
+  --color-sidebar-hover:  #312E81;
+  --color-sidebar-text:   #C7D2FE;
+  --color-sidebar-active: #4F46E5;
+}
+
+/* ============================================================
+   Utilidades globales
+   ============================================================ */
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-text);
+    background-color: var(--color-bg);
+  }
+
+  /* Foco visible accesible */
+  *:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Botón primario */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-5 py-3 rounded-lg font-semibold text-white
+           bg-[#4F46E5] hover:bg-[#4338CA] focus-visible:ring-2 focus-visible:ring-[#4F46E5]
+           transition-colors duration-150 cursor-pointer;
+  }
+
+  /* Botón secundario */
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-5 py-3 rounded-lg font-semibold text-white
+           bg-[#10B981] hover:bg-[#059669] focus-visible:ring-2 focus-visible:ring-[#10B981]
+           transition-colors duration-150 cursor-pointer;
+  }
+
+  /* Botón peligro */
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-5 py-3 rounded-lg font-semibold text-white
+           bg-[#EF4444] hover:bg-red-600 focus-visible:ring-2 focus-visible:ring-[#EF4444]
+           transition-colors duration-150 cursor-pointer;
+  }
+
+  /* Botón ghost */
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-5 py-3 rounded-lg font-semibold text-[#4F46E5]
+           bg-transparent hover:bg-[#EEF2FF] border border-[#4F46E5]
+           transition-colors duration-150 cursor-pointer;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-white rounded-xl border border-[#E5E7EB] shadow-sm p-6;
+  }
+
+  /* Badge de rol */
+  .role-badge {
+    @apply inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full;
+  }
+
+  /* Input de formulario */
+  .form-input {
+    @apply block w-full rounded-lg border border-[#E5E7EB] px-3 py-2.5 text-sm
+           focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none
+           bg-white placeholder:text-[#6B7280];
+  }
+}

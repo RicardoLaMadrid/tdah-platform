@@ -1,0 +1,60 @@
+{% from '_components/empty_search_state.html' import empty_search_state %}
+
+{# Contador de resultados #}
+<div class="flex items-center justify-between mb-3">
+  <p class="text-sm text-[#6B7280]">
+    <span class="font-semibold text-[#1F2937]">{{ students | length }}</span>
+    alumno{{ 's' if students | length != 1 else '' }}
+  </p>
+</div>
+
+{% if students %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+  {% for student in students %}
+  <a href="{{ url_for('teacher.student_detail', student_id=student.id) }}"
+     class="bg-white rounded-xl p-5 shadow-sm border border-[#E5E7EB]
+            hover:shadow-md hover:border-[#C7D2FE] transition-all group">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="w-11 h-11 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#818CF8]
+                  text-white flex items-center justify-center text-base font-bold flex-shrink-0"
+           aria-hidden="true">
+        {{ (student.full_name or student.user.username)[0].upper() }}
+      </div>
+      <div class="min-w-0">
+        <p class="text-sm font-semibold text-[#1F2937] truncate
+                  group-hover:text-[#4F46E5] transition-colors">
+          {{ student.full_name or student.user.username }}
+        </p>
+        {% if student.grade %}
+        <p class="text-xs text-[#9CA3AF] truncate">{{ student.grade }}{% if student.section %} · Secc. {{ student.section }}{% endif %}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="flex items-center justify-between">
+      {% if student.tdah_type %}
+      <span class="text-xs px-2 py-0.5 rounded-full font-medium
+        {% if student.tdah_type == 'hiperactivo' %}bg-red-100 text-red-700
+        {% elif student.tdah_type == 'inatento' %}bg-amber-100 text-amber-700
+        {% elif student.tdah_type == 'combinado' %}bg-purple-100 text-purple-700
+        {% else %}bg-emerald-100 text-emerald-700{% endif %}">
+        {{ student.tdah_type }}
+      </span>
+      {% else %}
+      <span class="text-xs bg-[#F3F4F6] text-[#9CA3AF] px-2 py-0.5 rounded-full">Sin diagnóstico</span>
+      {% endif %}
+      {% if student.tdah_confidence %}
+      <span class="text-xs text-[#9CA3AF] tabular-nums">{{ student.tdah_confidence | round(0) | int }}%</span>
+      {% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% else %}
+{{ empty_search_state(
+    title='No encontramos alumnos con esos criterios',
+    subtitle='Prueba con otro nombre o cambia los filtros.',
+    clear_url=url_for('teacher.index')
+) }}
+{% endif %}

@@ -1,144 +1,183 @@
-{% extends 'base.html' %}
-{% block title %}Asignaciones - Admin{% endblock %}
+{% extends '_layouts/admin_layout.html' %}
+{% block title %}Asignaciones — Admin{% endblock %}
+{% block page_title %}Asignaciones{% endblock %}
+
+{% block extra_css %}
+<style>[x-cloak]{display:none!important}</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h1 class="mb-4"><i class="bi bi-link-45deg"></i> Asignaciones Estudiante-Profesor</h1>
-    
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Estudiantes y sus Profesores</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Estudiante</th>
-                                    <th>Edad</th>
-                                    <th>Tipo TDAH</th>
-                                    <th>Profesor Asignado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for student in students %}
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="user-avatar me-2" style="width: 35px; height: 35px;">
-                                                {{ student.user.username[0].upper() }}
-                                            </div>
-                                            {{ student.user.username }}
-                                        </div>
-                                    </td>
-                                    <td>{{ student.age or 'N/A' }}</td>
-                                    <td>
-                                        <span class="badge bg-info">
-                                            {{ student.tdah_type or 'No especificado' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if student.teacher %}
-                                            <span class="badge bg-success">{{ student.teacher.username }}</span>
-                                        {% else %}
-                                            <span class="badge bg-warning">Sin asignar</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-primary" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#assignModal{{ student.id }}">
-                                            <i class="bi bi-pencil"></i> Asignar
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Resumen</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <h6>Total Estudiantes</h6>
-                        <h3>{{ students|length }}</h3>
-                    </div>
-                    <div class="mb-3">
-                        <h6>Estudiantes Asignados</h6>
-                        <h3>{{ students|selectattr('teacher_id')|list|length }}</h3>
-                    </div>
-                    <div class="mb-3">
-                        <h6>Sin Asignar</h6>
-                        <h3 class="text-warning">{{ students|rejectattr('teacher_id')|list|length }}</h3>
-                    </div>
-                    <hr>
-                    <h6>Profesores Disponibles</h6>
-                    <ul class="list-unstyled">
-                        {% for teacher in teachers %}
-                        <li class="mb-2">
-                            <div class="d-flex align-items-center">
-                                <div class="user-avatar me-2" style="width: 30px; height: 30px; font-size: 0.8rem;">
-                                    {{ teacher.username[0].upper() }}
-                                </div>
-                                <div>
-                                    <strong>{{ teacher.username }}</strong><br>
-                                    <small class="text-muted">
-                                        {{ teacher.students_assigned.count() }} estudiante(s)
-                                    </small>
-                                </div>
-                            </div>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="mb-6">
+  <h2 class="text-2xl font-bold text-[#1F2937]">Asignaciones Estudiante-Profesor</h2>
 </div>
 
-<!-- ⭐ MODALES FUERA DE LA TABLA (al final del bloque content) -->
-{% for student in students %}
-<div class="modal fade" id="assignModal{{ student.id }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Asignar Profesor a {{ student.user.username }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="POST" action="{{ url_for('admin.assign_student') }}">
-                <div class="modal-body">
-                    <input type="hidden" name="student_id" value="{{ student.id }}">
-                    <div class="mb-3">
-                        <label class="form-label">Seleccionar Profesor</label>
-                        <select class="form-select" name="teacher_id">
-                            <option value="">Sin asignar</option>
-                            {% for teacher in teachers %}
-                            <option value="{{ teacher.id }}" 
-                                    {% if student.teacher_id == teacher.id %}selected{% endif %}>
-                                {{ teacher.username }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-{% endfor %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6" x-data="{ openModal: null }">
 
+  {# ── Tabla principal ─────────────────────────────────────────────────── #}
+  <div class="lg:col-span-2">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100">
+        <h5 class="font-bold text-[#1F2937]">Estudiantes y sus Profesores</h5>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-[#6B7280] text-xs uppercase tracking-wider">
+            <tr>
+              <th class="px-4 py-3 text-left font-semibold">Estudiante</th>
+              <th class="px-4 py-3 text-left font-semibold">Edad</th>
+              <th class="px-4 py-3 text-left font-semibold">Tipo TDAH</th>
+              <th class="px-4 py-3 text-left font-semibold">Profesor Asignado</th>
+              <th class="px-4 py-3 text-left font-semibold">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for student in students %}
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center
+                              text-sm font-bold text-indigo-600 flex-shrink-0">
+                    {{ student.user.username[0].upper() }}
+                  </div>
+                  <span class="font-medium text-[#1F2937]">{{ student.user.username }}</span>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-[#6B7280]">{{ student.age or 'N/A' }}</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center px-2 py-0.5 bg-sky-100 text-sky-700 text-xs font-bold rounded-full">
+                  {{ student.tdah_type or 'No especificado' }}
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                {% if student.teacher %}
+                  <span class="inline-flex items-center px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">
+                    {{ student.teacher.username }}
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">
+                    Sin asignar
+                  </span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3">
+                <button @click="openModal = {{ student.id }}"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-indigo-300
+                               text-indigo-600 hover:bg-indigo-50 text-xs font-medium rounded-lg transition-colors">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                  </svg>
+                  Asignar
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# ── Resumen lateral ──────────────────────────────────────────────────── #}
+  <div class="space-y-5">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="bg-sky-500 px-5 py-3">
+        <h5 class="text-white font-bold text-sm">Resumen</h5>
+      </div>
+      <div class="p-5 space-y-4">
+        <div>
+          <p class="text-xs text-[#9CA3AF] uppercase tracking-wider">Total Estudiantes</p>
+          <p class="text-3xl font-black text-[#1F2937]">{{ students|length }}</p>
+        </div>
+        <div>
+          <p class="text-xs text-[#9CA3AF] uppercase tracking-wider">Estudiantes Asignados</p>
+          <p class="text-3xl font-black text-emerald-600">
+            {{ students|selectattr('teacher_id')|list|length }}
+          </p>
+        </div>
+        <div>
+          <p class="text-xs text-[#9CA3AF] uppercase tracking-wider">Sin Asignar</p>
+          <p class="text-3xl font-black text-amber-500">
+            {{ students|rejectattr('teacher_id')|list|length }}
+          </p>
+        </div>
+        <hr class="border-slate-100">
+        <div>
+          <p class="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-3">
+            Profesores Disponibles
+          </p>
+          <ul class="space-y-2">
+            {% for teacher in teachers %}
+            <li class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center
+                          text-xs font-bold text-emerald-700 flex-shrink-0">
+                {{ teacher.username[0].upper() }}
+              </div>
+              <div>
+                <p class="font-semibold text-sm text-[#1F2937]">{{ teacher.username }}</p>
+                <p class="text-xs text-[#9CA3AF]">
+                  {{ teacher.students_assigned.count() }} estudiante(s)
+                </p>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Modales de asignación (Alpine.js) ───────────────────────────────── #}
+  {% for student in students %}
+  <div x-show="openModal === {{ student.id }}" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50" @click="openModal = null"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h5 class="font-bold text-[#1F2937]">
+          Asignar Profesor a {{ student.user.username }}
+        </h5>
+        <button @click="openModal = null"
+                class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-[#6B7280]">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form method="POST" action="{{ url_for('admin.assign_student') }}">
+        <div class="p-6">
+          <input type="hidden" name="student_id" value="{{ student.id }}">
+          <label class="block text-sm font-medium text-[#1F2937] mb-2">
+            Seleccionar Profesor
+          </label>
+          <select name="teacher_id"
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none
+                         focus:ring-2 focus:ring-indigo-400 bg-white text-[#1F2937]">
+            <option value="">Sin asignar</option>
+            {% for teacher in teachers %}
+            <option value="{{ teacher.id }}"
+                    {% if student.teacher_id == teacher.id %}selected{% endif %}>
+              {{ teacher.username }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="px-6 pb-5 flex justify-end gap-3">
+          <button type="button" @click="openModal = null"
+                  class="px-4 py-2 border border-slate-300 text-[#6B7280] hover:bg-slate-50
+                         text-sm font-medium rounded-lg transition-colors">
+            Cancelar
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white
+                         text-sm font-bold rounded-lg transition-colors">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
 {% endblock %}

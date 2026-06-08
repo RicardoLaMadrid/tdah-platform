@@ -1,97 +1,127 @@
-{% extends 'base.html' %}
-{% block title %}Test de Stroop - Control Inhibitorio{% endblock %}
+{% extends "_layouts/student_layout.html" %}
+{% block title %}Test de Colores — Plataforma TDAH{% endblock %}
+{% block page_title %}Test de Colores{% endblock %}
+{% set tito_message = "¡Dí el COLOR, no leas la palabra!" %}
+
+{# Oculta sidebar en modo focus #}
+{% block extra_css %}
+<style>
+  aside { display: none !important; }
+  #main-content { padding: 0 !important; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-lg">
-                <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                    <h3 class="mb-0">
-                        <i class="bi bi-palette-fill me-2"></i>
-                        Test de Stroop - Control Inhibitorio
-                    </h3>
-                </div>
-                
-                <div class="card-body p-4">
-                    <!-- Instrucciones -->
-                    <div id="instructions">
-                        <div class="alert alert-info border-start border-4 border-info">
-                            <h5 class="alert-heading">
-                                <i class="bi bi-info-circle-fill me-2"></i>
-                                ¿Cómo funciona este test?
-                            </h5>
-                            <ol class="mb-0">
-                                <li>Verás palabras de COLORES en la pantalla</li>
-                                <li><strong>Tu tarea:</strong> Identifica el COLOR de la tinta, NO leas la palabra</li>
-                                <li>Ejemplo: Si ves <span style="color: blue; font-weight: bold;">ROJO</span>, debes responder "AZUL"</li>
-                                <li>Usa los botones de colores para responder lo más rápido posible</li>
-                                <li>Serán {{ config.total_trials }} palabras</li>
-                                <li>Tienes 3 segundos por cada palabra</li>
-                            </ol>
-                            <div class="mt-3 p-3 bg-warning bg-opacity-10 rounded">
-                                <strong>💡 Consejo:</strong> Ignora lo que dice la palabra, solo mira el color de las letras.
-                            </div>
-                        </div>
-                        
-                        <div class="text-center mt-4">
-                            <button id="startBtn" class="btn btn-lg btn-primary px-5" onclick="startTest()">
-                                <i class="bi bi-play-circle me-2"></i>
-                                Comenzar Test
-                            </button>
-                        </div>
-                    </div>
+<div class="min-h-full flex flex-col items-center justify-start py-6 px-4" x-data="{ phase: 'intro' }">
 
-                    <!-- Área del test -->
-                    <div id="testArea" style="display: none;">
-                        <!-- Contador -->
-                        <div class="d-flex justify-content-between mb-4">
-                            <div>
-                                <h5>Pregunta <span id="currentTrial">1</span> de {{ config.total_trials }}</h5>
-                            </div>
-                            <div>
-                                <h5>Tiempo: <span id="timer">3.0</span>s</h5>
-                            </div>
-                        </div>
+  {# ── Pantalla de instrucciones ──────────────────────────────────────────── #}
+  <div x-show="phase === 'intro'" x-transition class="w-full max-w-xl">
 
-                        <!-- Barra de progreso -->
-                        <div class="progress mb-4" style="height: 20px;">
-                            <div id="progressBar" class="progress-bar bg-success" style="width: 0%"></div>
-                        </div>
-
-                        <!-- Palabra a mostrar -->
-                        <div id="wordDisplay" class="text-center mb-4 p-5 bg-light rounded">
-                            <h1 id="stroopWord" style="font-size: 4rem; font-weight: bold;">ROJO</h1>
-                        </div>
-
-                        <!-- Botones de respuesta -->
-                        <div class="row g-3">
-                            {% for color in config.colors %}
-                            <div class="col-4 col-md-2">
-                                <button class="btn btn-lg w-100 color-btn" 
-                                        style="background-color: {{ config.color_codes[color] }}; color: white; font-weight: bold;"
-                                        onclick="submitAnswer('{{ color }}')">
-                                    {{ color|upper }}
-                                </button>
-                            </div>
-                            {% endfor %}
-                        </div>
-
-                        <!-- Feedback -->
-                        <div id="feedback" class="mt-3 text-center" style="min-height: 30px;">
-                            <!-- Aquí se mostrará si fue correcto o no -->
-                        </div>
-                    </div>
-
-                    <!-- Pantalla de carga -->
-                    <div id="loadingArea" style="display: none;" class="text-center">
-                        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
-                        <p class="mt-3">Analizando tus respuestas...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="text-center mb-6">
+      <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-rose-100 mb-4">
+        <svg class="w-11 h-11 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold text-[#1F2937]">Test de Colores</h2>
+      <p class="text-[#6B7280] text-lg mt-1">¡Dí el color de la tinta, no la palabra!</p>
     </div>
+
+    {# Ejemplo visual #}
+    <div class="bg-white rounded-2xl border-2 border-rose-100 p-5 mb-5">
+      <p class="text-sm font-bold text-[#6B7280] uppercase tracking-wide mb-3">Ejemplo:</p>
+      <div class="flex items-center gap-4 mb-3">
+        <div class="flex-1 text-center bg-[#F9FAFB] rounded-xl py-4">
+          <span class="text-4xl font-black" style="color:#3B82F6;">ROJO</span>
+        </div>
+        <svg class="w-8 h-8 text-[#9CA3AF] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+        </svg>
+        <div class="flex-1 text-center bg-blue-50 border-2 border-blue-200 rounded-xl py-4">
+          <span class="text-lg font-bold text-blue-700">¡Di "AZUL"!</span>
+        </div>
+      </div>
+      <p class="text-base text-[#374151] text-center">
+        La palabra dice <strong>ROJO</strong> pero está escrita en
+        <strong class="text-blue-600">azul</strong> — debes decir el color de las letras.
+      </p>
+    </div>
+
+    {# Pasos #}
+    <div class="space-y-3 mb-6">
+      {% for step, text in [
+        ('1', 'Verás una palabra de colores en pantalla'),
+        ('2', 'Identifica el COLOR de las letras (no lo que dice)'),
+        ('3', 'Toca el botón de ese color lo más rápido que puedas'),
+        ('4', 'Serán ' ~ config.total_trials ~ ' palabras — ¡tú puedes!')
+      ] %}
+      <div class="flex items-start gap-3 bg-white rounded-xl px-4 py-3 border border-[#E5E7EB]">
+        <span class="w-7 h-7 rounded-full bg-[#4F46E5] text-white text-sm font-bold flex items-center justify-center flex-shrink-0">{{ step }}</span>
+        <p class="text-base text-[#374151]">{{ text }}</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <button @click="phase = 'test'; $nextTick(() => startTest())"
+            class="w-full h-16 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xl font-bold
+                   hover:from-rose-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl active:scale-98">
+      ¡Estoy listo! Comenzar
+    </button>
+
+    <a href="{{ url_for('student.tests_index') }}"
+       class="flex items-center justify-center gap-2 mt-3 text-[#6B7280] hover:text-[#374151] text-base">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+      </svg>
+      Volver a tests
+    </a>
+  </div>
+
+  {# ── Área del test (se muestra al hacer clic en "Estoy listo") ──────────── #}
+  <div x-show="phase === 'test'" x-transition class="w-full max-w-xl" style="display:none">
+
+    {# Progreso #}
+    <div class="flex justify-between items-center mb-3">
+      <span class="text-base font-semibold text-[#374151]">
+        Pregunta <span id="currentTrial" class="text-[#4F46E5]">1</span> de {{ config.total_trials }}
+      </span>
+      <span class="text-base font-semibold text-[#374151]">
+        Tiempo: <span id="timer" class="text-rose-500 font-black">3.0</span>s
+      </span>
+    </div>
+    <div class="h-3 bg-[#F3F4F6] rounded-full overflow-hidden mb-6">
+      <div id="progressBar" class="h-full bg-gradient-to-r from-rose-400 to-pink-400 rounded-full transition-all duration-300" style="width:0%"></div>
+    </div>
+
+    {# Palabra #}
+    <div class="bg-white rounded-2xl border-2 border-[#E5E7EB] flex items-center justify-center mb-6"
+         style="min-height: 160px;">
+      <h1 id="stroopWord" class="font-black leading-none select-none" style="font-size: 4.5rem;">ROJO</h1>
+    </div>
+
+    {# Botones de color #}
+    <div class="grid grid-cols-3 gap-3 mb-4" id="colorButtons">
+      {% for color in config.colors %}
+      <button class="h-14 rounded-xl text-white font-bold text-base border-2 border-transparent
+                     hover:scale-105 active:scale-95 transition-transform shadow-sm hover:shadow-md"
+              style="background-color: {{ config.color_codes[color] }};"
+              onclick="submitAnswer('{{ color }}')">
+        {{ color | upper }}
+      </button>
+      {% endfor %}
+    </div>
+
+    {# Feedback #}
+    <div id="feedback" class="min-h-[2.5rem] flex items-center justify-center text-lg font-bold"></div>
+  </div>
+
+  {# ── Cargando ── #}
+  <div x-show="phase === 'loading'" x-transition class="text-center py-16" style="display:none">
+    <div class="inline-block w-14 h-14 border-4 border-[#4F46E5] border-t-transparent rounded-full animate-spin mb-4"></div>
+    <p class="text-lg font-semibold text-[#374151]">Calculando tu resultado...</p>
+    <p class="text-[#6B7280] mt-1">¡Solo un momento, Tito está revisando!</p>
+  </div>
+
 </div>
 
 <script>
@@ -102,100 +132,49 @@ let trials = [];
 let timerInterval = null;
 let trialStartTime = null;
 
-// Generar secuencia de trials
 function generateTrials() {
     const allTrials = [];
     const colors = CONFIG.colors;
-    
-    // 50% congruentes, 50% incongruentes
     const numCongruent = Math.floor(CONFIG.total_trials / 2);
     const numIncongruent = CONFIG.total_trials - numCongruent;
-    
-    // Congruentes (palabra y color coinciden)
     for (let i = 0; i < numCongruent; i++) {
         const color = colors[Math.floor(Math.random() * colors.length)];
-        allTrials.push({
-            palabra: color,
-            color: color,
-            tipo: 'congruente'
-        });
+        allTrials.push({ palabra: color, color: color, tipo: 'congruente' });
     }
-    
-    // Incongruentes (palabra y color NO coinciden)
     for (let i = 0; i < numIncongruent; i++) {
         const palabra = colors[Math.floor(Math.random() * colors.length)];
         let color = colors[Math.floor(Math.random() * colors.length)];
-        
-        // Asegurar que sea diferente
-        while (color === palabra) {
-            color = colors[Math.floor(Math.random() * colors.length)];
-        }
-        
-        allTrials.push({
-            palabra: palabra,
-            color: color,
-            tipo: 'incongruente'
-        });
+        while (color === palabra) { color = colors[Math.floor(Math.random() * colors.length)]; }
+        allTrials.push({ palabra, color, tipo: 'incongruente' });
     }
-    
-    // Mezclar aleatoriamente
     for (let i = allTrials.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [allTrials[i], allTrials[j]] = [allTrials[j], allTrials[i]];
     }
-    
     return allTrials;
 }
 
 async function startTest() {
     try {
-        const response = await fetch('/stroop/start_test', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'}
-        });
-        
-        const data = await response.json();
-        if (!data.success) {
-            alert('Error al iniciar test');
-            return;
-        }
-        
+        const resp = await fetch('/stroop/start_test', { method: 'POST', headers: {'Content-Type': 'application/json'} });
+        const data = await resp.json();
+        if (!data.success) { alert('Error al iniciar test'); return; }
         sessionId = data.session_id;
         trials = generateTrials();
         currentTrial = 0;
-        
-        document.getElementById('instructions').style.display = 'none';
-        document.getElementById('testArea').style.display = 'block';
-        
         showNextTrial();
-        
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error al iniciar test');
-    }
+    } catch(e) { console.error(e); alert('Error al iniciar test'); }
 }
 
 function showNextTrial() {
-    if (currentTrial >= trials.length) {
-        finishTest();
-        return;
-    }
-    
+    if (currentTrial >= trials.length) { finishTest(); return; }
     const trial = trials[currentTrial];
-    
-    // Actualizar UI
     document.getElementById('currentTrial').textContent = currentTrial + 1;
     document.getElementById('progressBar').style.width = ((currentTrial / trials.length) * 100) + '%';
-    
-    // Mostrar palabra con color
-    const wordElement = document.getElementById('stroopWord');
-    wordElement.textContent = trial.palabra.toUpperCase();
-    wordElement.style.color = CONFIG.color_codes[trial.color];
-    
-    // Limpiar feedback
+    const word = document.getElementById('stroopWord');
+    word.textContent = trial.palabra.toUpperCase();
+    word.style.color = CONFIG.color_codes[trial.color];
     document.getElementById('feedback').innerHTML = '';
-    
-    // Iniciar timer
     trialStartTime = Date.now();
     startTimer();
 }
@@ -203,98 +182,51 @@ function showNextTrial() {
 function startTimer() {
     let timeLeft = 3.0;
     document.getElementById('timer').textContent = timeLeft.toFixed(1);
-    
     if (timerInterval) clearInterval(timerInterval);
-    
     timerInterval = setInterval(() => {
         timeLeft -= 0.1;
         document.getElementById('timer').textContent = timeLeft.toFixed(1);
-        
-        if (timeLeft <= 0) {
-            clearInterval(timerInterval);
-            submitAnswer(null);  // Tiempo agotado
-        }
+        if (timeLeft <= 0) { clearInterval(timerInterval); submitAnswer(null); }
     }, 100);
 }
 
 async function submitAnswer(respuesta) {
     clearInterval(timerInterval);
-    
     const trial = trials[currentTrial];
     const tiempoReaccion = Date.now() - trialStartTime;
     const correcto = respuesta === trial.color;
-    
-    // Mostrar feedback visual
-    const feedback = document.getElementById('feedback');
+    const fb = document.getElementById('feedback');
     if (respuesta === null) {
-        feedback.innerHTML = '<span class="badge bg-secondary fs-5">⏱️ Tiempo agotado</span>';
+        fb.innerHTML = '<span class="text-gray-500">⏱️ Tiempo agotado</span>';
     } else if (correcto) {
-        feedback.innerHTML = '<span class="badge bg-success fs-5">✓ Correcto</span>';
+        fb.innerHTML = '<span class="text-emerald-600">✓ ¡Correcto!</span>';
     } else {
-        feedback.innerHTML = '<span class="badge bg-danger fs-5">✗ Incorrecto</span>';
+        fb.innerHTML = '<span class="text-rose-500">✗ Casi...</span>';
     }
-    
-    // Guardar resultado
     try {
         await fetch('/stroop/submit_trial', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                session_id: sessionId,
-                palabra: trial.palabra,
-                color: trial.color,
-                respuesta: respuesta,
-                correcto: correcto,
-                tiempo_reaccion: tiempoReaccion,
-                tipo: trial.tipo
-            })
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ session_id: sessionId, palabra: trial.palabra, color: trial.color,
+                                   respuesta, correcto, tiempo_reaccion: tiempoReaccion, tipo: trial.tipo })
         });
-    } catch (error) {
-        console.error('Error guardando trial:', error);
-    }
-    
-    // Siguiente trial después de 500ms
+    } catch(e) { console.error(e); }
     currentTrial++;
     setTimeout(showNextTrial, 500);
 }
 
 async function finishTest() {
-    document.getElementById('testArea').style.display = 'none';
-    document.getElementById('loadingArea').style.display = 'block';
-    
+    Alpine.store && Alpine.store('phase', 'loading');
+    document.querySelector('[x-show="phase === \'test\'"]').style.display = 'none';
+    document.querySelector('[x-show="phase === \'loading\'"]').style.display = 'block';
     try {
-        const response = await fetch('/stroop/finish_test', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({session_id: sessionId})
+        const resp = await fetch('/stroop/finish_test', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ session_id: sessionId })
         });
-        
-        const data = await response.json();
-        if (data.success) {
-            window.location.href = data.redirect_url;
-        } else {
-            alert('Error: ' + data.message);
-            location.reload();
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error al finalizar test');
-        location.reload();
-    }
+        const data = await resp.json();
+        if (data.success) { window.location.href = data.redirect_url; }
+        else { alert('Error: ' + data.message); location.reload(); }
+    } catch(e) { console.error(e); alert('Error al finalizar test'); location.reload(); }
 }
 </script>
-
-<style>
-.color-btn {
-    border: 3px solid #333;
-    transition: transform 0.1s;
-}
-.color-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-.color-btn:active {
-    transform: scale(0.95);
-}
-</style>
 {% endblock %}

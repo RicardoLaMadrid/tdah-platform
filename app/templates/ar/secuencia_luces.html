@@ -1,159 +1,186 @@
 {% extends 'base.html' %}
+{% block page_mode %}ar{% endblock %}
 {% block title %}Secuencia de Luces AR{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ar.css') }}">
 <style>
     body { margin: 0; overflow: hidden; background: #000; }
-    #game-container {
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        color: white;
-    }
-    #sequence-display {
-        display: flex;
-        gap: 20px;
-        margin: 40px 0;
-    }
-    .light-orb {
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-        border: 3px solid #444;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-    .light-orb.active {
-        box-shadow: 0 0 30px currentColor;
-        transform: scale(1.2);
-    }
-    .light-orb.red { background: #FF0000; }
-    .light-orb.blue { background: #0000FF; }
-    .light-orb.green { background: #00FF00; }
-    .light-orb.yellow { background: #FFFF00; }
-    .light-orb.purple { background: #9932CC; }
-    .light-orb.inactive {
-        opacity: 0.3;
-        cursor: not-allowed;
-    }
-    #instructions-panel {
-        background: rgba(255,255,255,0.1);
-        padding: 30px;
-        border-radius: 15px;
+    #level-display  { font-size: 2rem; font-weight: 800; color: #a78bfa; }
+    #score-display  { font-size: 2rem; font-weight: 800; color: #4ade80; }
+    #errors-display { font-size: 2rem; font-weight: 800; color: #f87171; }
+    #message-display {
         text-align: center;
-        max-width: 600px;
-    }
-    #status-bar {
-        background: rgba(0,0,0,0.7);
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        display: flex;
-        gap: 30px;
-        justify-content: center;
+        margin-top: 0.5rem;
+        font-size: 1rem;
+        min-height: 1.5rem;
+        opacity: 0.9;
+        font-weight: 600;
     }
 </style>
+<script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 {% endblock %}
 
 {% block content %}
-<div id="game-container">
-    <!-- Status Bar -->
-    <div id="status-bar">
-        <div>
-            <small>Nivel</small>
-            <h3 id="level-display">1</h3>
-        </div>
-        <div>
-            <small>Puntos</small>
-            <h3 id="score-display">0</h3>
-        </div>
-        <div>
-            <small>Errores</small>
-            <h3 id="errors-display" style="color:#ff6b6b;">0</h3>
-        </div>
-    </div>
-    
-    <!-- Instructions -->
-    <div id="instructions-panel">
-        <h2>💡 Secuencia de Luces</h2>
-        <p class="lead">Memoriza y repite la secuencia</p>
-        <ul class="text-start">
-            <li>Observa la secuencia de luces</li>
-            <li>Repite la secuencia en el mismo orden</li>
-            <li>Cada nivel agrega una luz más</li>
+
+{# ── Cámara como fondo ────────────────────────────────────────────────── #}
+<video id="bg-camera" autoplay playsinline muted></video>
+
+{# ── Instrucciones iniciales ──────────────────────────────────────────── #}
+<div id="instructions" class="ar-instructions-overlay">
+    <div class="ar-instructions-card">
+        <h2>💡 Secuencia de Luces AR</h2>
+        <p>Memoriza y repite la secuencia de esferas 3D</p>
+        <ul>
+            <li>Observá qué esferas se iluminan y en qué orden</li>
+            <li>Tocá las esferas repitiendo la misma secuencia</li>
+            <li>Cada nivel agrega una esfera más a la secuencia</li>
             <li>3 errores y termina el juego</li>
         </ul>
-        <button class="btn btn-primary btn-lg mt-3" onclick="startSequenceGame()">
-            🎮 Comenzar
-        </button>
+        <button class="ar-btn ar-btn-primary" onclick="startSequenceGame()">🎮 Comenzar</button>
+        <br><br>
+        <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
     </div>
-    
-    <!-- Sequence Display -->
-    <div id="sequence-display" style="display:none;">
-        <div class="light-orb red inactive" data-color="red"></div>
-        <div class="light-orb blue inactive" data-color="blue"></div>
-        <div class="light-orb green inactive" data-color="green"></div>
-        <div class="light-orb yellow inactive" data-color="yellow"></div>
-        <div class="light-orb purple inactive" data-color="purple"></div>
-    </div>
-    
-    <!-- Message Display -->
-    <div id="message-display" style="font-size: 1.5rem; min-height: 50px;"></div>
 </div>
 
-<!-- Results Modal -->
-<div id="results-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000;">
-    <div style="background:white; color:black; padding:40px; border-radius:20px; max-width:600px; margin:100px auto; text-align:center;">
-        <h2>🎉 Juego Terminado</h2>
-        <div class="display-1 text-primary my-4" id="final-level">0</div>
-        <p class="lead">Nivel Alcanzado</p>
-        <div class="row text-center my-4">
-            <div class="col-6">
-                <h3 id="final-score">0</h3>
-                <small>Puntos</small>
+{# ── HUD durante el juego ─────────────────────────────────────────────── #}
+<div id="ui-overlay" class="ar-overlay" style="display:none; top:16px; left:16px; right:16px;">
+    <div class="ar-card">
+        <div style="display:flex; justify-content:center; gap:2.5rem; text-align:center;">
+            <div>
+                <div class="ar-stat-label">Nivel</div>
+                <div id="level-display">1</div>
             </div>
-            <div class="col-6">
-                <h3 id="final-errors" class="text-danger">0</h3>
-                <small>Errores</small>
+            <div>
+                <div class="ar-stat-label">Puntos</div>
+                <div id="score-display">0</div>
+            </div>
+            <div>
+                <div class="ar-stat-label">Errores</div>
+                <div id="errors-display">0</div>
             </div>
         </div>
-        <button class="btn btn-primary btn-lg me-2" onclick="location.reload()">
-            🔄 Jugar de Nuevo
-        </button>
-        <a href="{{ url_for('ar.index') }}" class="btn btn-secondary btn-lg">
-            🏠 Menú Principal
-        </a>
+        <div id="message-display"></div>
     </div>
 </div>
 
+{# ── Escena A-Frame: 4 esferas en grid 2×2 frente al usuario ─────────── #}
+<a-scene embedded
+         vr-mode-ui="enabled: false"
+         xr-mode-ui="enabled: false"
+         renderer="alpha: true; antialias: true"
+         background="color: transparent">
+
+    <a-camera position="0 1.7 0"
+              look-controls="enabled: false"
+              wasd-controls="enabled: false">
+    </a-camera>
+
+    <a-entity id="ar-cursor"
+              cursor="rayOrigin: mouse; mouseEnabled: true; fuse: false"
+              raycaster="objects: .clickable; far: 100">
+    </a-entity>
+
+    <a-light type="ambient"     color="#ffffff" intensity="1.3"></a-light>
+    <a-light type="directional" color="#ffffff" intensity="0.6" position="0 3 1"></a-light>
+
+    {# Roja — arriba izquierda #}
+    <a-sphere id="orb-red"
+              position="-0.8 2.3 -2.5"
+              radius="0.38"
+              color="#880000"
+              class="clickable"
+              data-color="red"
+              opacity="0.85"
+              metalness="0.1" roughness="0.5"></a-sphere>
+
+    {# Azul — arriba derecha #}
+    <a-sphere id="orb-blue"
+              position="0.8 2.3 -2.5"
+              radius="0.38"
+              color="#003399"
+              class="clickable"
+              data-color="blue"
+              opacity="0.85"
+              metalness="0.1" roughness="0.5"></a-sphere>
+
+    {# Verde — abajo izquierda #}
+    <a-sphere id="orb-green"
+              position="-0.8 1.3 -2.5"
+              radius="0.38"
+              color="#006600"
+              class="clickable"
+              data-color="green"
+              opacity="0.85"
+              metalness="0.1" roughness="0.5"></a-sphere>
+
+    {# Amarilla — abajo derecha #}
+    <a-sphere id="orb-yellow"
+              position="0.8 1.3 -2.5"
+              radius="0.38"
+              color="#AA8800"
+              class="clickable"
+              data-color="yellow"
+              opacity="0.85"
+              metalness="0.1" roughness="0.5"></a-sphere>
+
+</a-scene>
+
+{# ── Modal de resultados ──────────────────────────────────────────────── #}
+<div id="results-modal" class="ar-results-overlay">
+    <div class="ar-results-card">
+        <h2>🎉 Juego Terminado</h2>
+        <div id="final-level" class="ar-result-score">0</div>
+        <p style="color:#6b7280; margin:-0.5rem 0 1rem;">Nivel Alcanzado</p>
+        <div class="ar-result-stats">
+            <div><h3 id="final-score">0</h3><small>Puntos</small></div>
+            <div><h3 id="final-errors" style="color:#dc2626;">0</h3><small>Errores</small></div>
+        </div>
+        <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Jugar de Nuevo</button>
+        <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
 <script>
 const STUDENT_ID = {{ student.id }};
-const COLORS = ['red', 'blue', 'green', 'yellow', 'purple'];
+
+// Cámara web como fondo
+navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+    .then(stream => { document.getElementById('bg-camera').srcObject = stream; })
+    .catch(err => console.warn('Cámara no disponible:', err.message));
+
+// Colores de cada esfera: apagado vs iluminado
+const ORB = {
+    red:    { dim: '#880000', bright: '#FF2222' },
+    blue:   { dim: '#003399', bright: '#3388FF' },
+    green:  { dim: '#006600', bright: '#00EE00' },
+    yellow: { dim: '#AA8800', bright: '#FFEE00' },
+};
+const COLORS = ['red', 'blue', 'green', 'yellow'];
+
 let gameState = {
     sequence: [],
     playerSequence: [],
-    level: 1,
+    level: 0,       // se incrementa a 1 en el primer nextLevel()
     score: 0,
     errors: 0,
-    isPlaying: false,
     isPlayerTurn: false,
     startTime: null
 };
 
 function startSequenceGame() {
-    document.getElementById('instructions-panel').style.display = 'none';
-    document.getElementById('sequence-display').style.display = 'flex';
-    
+    document.getElementById('instructions').style.display = 'none';
+    document.getElementById('ui-overlay').style.display = 'block';
     gameState.startTime = Date.now();
-    
-    // Agregar event listeners a las luces
-    document.querySelectorAll('.light-orb').forEach(orb => {
-        orb.addEventListener('click', () => handleOrbClick(orb.dataset.color));
+
+    COLORS.forEach(color => {
+        document.getElementById(`orb-${color}`)
+            .addEventListener('click', () => handleOrbClick(color));
     });
-    
+
     nextLevel();
 }
 
@@ -161,64 +188,57 @@ function nextLevel() {
     gameState.level++;
     gameState.playerSequence = [];
     gameState.isPlayerTurn = false;
-    
-    // Agregar nueva luz a la secuencia
-    const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-    gameState.sequence.push(randomColor);
-    
+    setClickable(false);
+
+    const next = COLORS[Math.floor(Math.random() * COLORS.length)];
+    gameState.sequence.push(next);
+
     updateUI();
-    showMessage(`Nivel ${gameState.level} - Observa la secuencia`);
-    
-    setTimeout(() => {
-        playSequence();
-    }, 1500);
+    showMessage(`Nivel ${gameState.level} — Observá la secuencia...`);
+    setTimeout(playSequence, 1200);
 }
 
 function playSequence() {
-    disableOrbs();
-    let index = 0;
-    
+    setClickable(false);
+    let idx = 0;
     const interval = setInterval(() => {
-        if (index < gameState.sequence.length) {
-            const color = gameState.sequence[index];
-            flashOrb(color);
-            index++;
+        if (idx < gameState.sequence.length) {
+            flashOrb(gameState.sequence[idx]);
+            idx++;
         } else {
             clearInterval(interval);
-            enablePlayerTurn();
+            setTimeout(enablePlayerTurn, 600);
         }
-    }, 800);
+    }, 900);
 }
 
 function flashOrb(color) {
-    const orb = document.querySelector(`[data-color="${color}"]`);
-    orb.classList.add('active');
-    
+    const orb = document.getElementById(`orb-${color}`);
+    orb.setAttribute('color', ORB[color].bright);
+    orb.setAttribute('scale', '1.45 1.45 1.45');
+    orb.setAttribute('opacity', '1');
     setTimeout(() => {
-        orb.classList.remove('active');
-    }, 400);
+        orb.setAttribute('color', ORB[color].dim);
+        orb.setAttribute('scale', '1 1 1');
+        orb.setAttribute('opacity', '0.85');
+    }, 420);
 }
 
 function enablePlayerTurn() {
     gameState.isPlayerTurn = true;
-    enableOrbs();
-    showMessage('¡Tu turno! Repite la secuencia');
+    setClickable(true);
+    showMessage('¡Tu turno! Repetí la secuencia');
 }
 
 function handleOrbClick(color) {
     if (!gameState.isPlayerTurn) return;
-    
     flashOrb(color);
     gameState.playerSequence.push(color);
-    
-    // Verificar si es correcto
-    const currentIndex = gameState.playerSequence.length - 1;
-    
-    if (gameState.playerSequence[currentIndex] !== gameState.sequence[currentIndex]) {
-        // Error
+
+    const idx = gameState.playerSequence.length - 1;
+    if (gameState.playerSequence[idx] !== gameState.sequence[idx]) {
         handleError();
     } else if (gameState.playerSequence.length === gameState.sequence.length) {
-        // Secuencia completa correcta
         handleSuccess();
     }
 }
@@ -226,30 +246,26 @@ function handleOrbClick(color) {
 function handleSuccess() {
     gameState.score += gameState.level * 10;
     gameState.isPlayerTurn = false;
-    disableOrbs();
-    
-    showMessage('✅ ¡Correcto!', 'success');
+    setClickable(false);
+    showMessage('✅ ¡Correcto!');
     updateUI();
-    
-    setTimeout(() => {
-        if (gameState.level < 10) {
-            nextLevel();
-        } else {
-            endGame('¡Ganaste! Completaste todos los niveles');
-        }
-    }, 1500);
+
+    if (gameState.level >= 10) {
+        setTimeout(() => endGame(), 1200);
+    } else {
+        setTimeout(nextLevel, 1500);
+    }
 }
 
 function handleError() {
     gameState.errors++;
     gameState.isPlayerTurn = false;
-    disableOrbs();
-    
-    showMessage('❌ Error - Intenta de nuevo', 'error');
+    setClickable(false);
+    showMessage('❌ Error — repitiendo secuencia...');
     updateUI();
-    
+
     if (gameState.errors >= 3) {
-        setTimeout(() => endGame('Juego terminado'), 1500);
+        setTimeout(() => endGame(), 1200);
     } else {
         setTimeout(() => {
             gameState.playerSequence = [];
@@ -258,22 +274,15 @@ function handleError() {
     }
 }
 
-function disableOrbs() {
-    document.querySelectorAll('.light-orb').forEach(orb => {
-        orb.classList.add('inactive');
+function setClickable(enabled) {
+    COLORS.forEach(color => {
+        document.getElementById(`orb-${color}`)
+            .setAttribute('class', enabled ? 'clickable' : '');
     });
 }
 
-function enableOrbs() {
-    document.querySelectorAll('.light-orb').forEach(orb => {
-        orb.classList.remove('inactive');
-    });
-}
-
-function showMessage(msg, type = '') {
-    const msgDiv = document.getElementById('message-display');
-    msgDiv.textContent = msg;
-    msgDiv.style.color = type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : 'white';
+function showMessage(msg) {
+    document.getElementById('message-display').textContent = msg;
 }
 
 function updateUI() {
@@ -282,38 +291,27 @@ function updateUI() {
     document.getElementById('errors-display').textContent = gameState.errors;
 }
 
-function endGame(message) {
+function endGame() {
     const duration = Math.round((Date.now() - gameState.startTime) / 1000);
-    
     document.getElementById('final-level').textContent = gameState.level;
     document.getElementById('final-score').textContent = gameState.score;
     document.getElementById('final-errors').textContent = gameState.errors;
-    document.getElementById('results-modal').style.display = 'block';
-    
-    // Guardar resultados
-    saveSequenceResults(duration);
-}
+    document.getElementById('results-modal').style.display = 'flex';
 
-function saveSequenceResults(duration) {
-    const results = {
-        activity_type: 'ar_secuencia',
-        results: {
-            score: gameState.score,
-            level: gameState.level,
-            errors: gameState.errors,
-            time: duration,
-            sequence_length: gameState.sequence.length
-        }
-    };
-    
     fetch('{{ url_for("ar.save_result") }}', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(results)
-    })
-    .then(response => response.json())
-    .then(data => console.log('Guardado:', data))
-    .catch(error => console.error('Error:', error));
+        body: JSON.stringify({
+            activity_type: 'ar_secuencia',
+            results: {
+                score: gameState.score,
+                level: gameState.level,
+                errors: gameState.errors,
+                time: duration,
+                sequence_length: gameState.sequence.length
+            }
+        })
+    }).then(r => r.json()).then(d => console.log('Guardado:', d)).catch(e => console.error(e));
 }
 </script>
 {% endblock %}

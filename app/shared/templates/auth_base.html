@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Plataforma TDAH{% endblock %}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+
+<body class="min-h-full bg-[#FAFAF9] text-[#1F2937] font-[Inter,Arial,sans-serif]"
+      x-data="{}">
+
+  <!-- Notificaciones flash en esquina -->
+  <div class="fixed top-4 right-4 space-y-2 z-50 w-80" aria-live="polite">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        {% set c = {'success':'green','danger':'red','error':'red','warning':'yellow'}.get(category,'blue') %}
+        <div x-data="{ show: true }" x-show="show" x-transition
+             class="p-4 rounded-lg shadow-md text-sm
+               {% if c=='green' %}bg-green-100 text-green-800 border border-green-200
+               {% elif c=='red' %}bg-red-100 text-red-800 border border-red-200
+               {% elif c=='yellow' %}bg-yellow-100 text-yellow-800 border border-yellow-200
+               {% else %}bg-blue-100 text-blue-800 border border-blue-200{% endif %}"
+             role="alert">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+  </div>
+
+  <main class="{% block main_class %}min-h-screen flex items-center justify-center p-6{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script defer src="{{ url_for('static', filename='js/alpine.min.js') }}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

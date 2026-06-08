@@ -25,6 +25,7 @@ opencv-python==4.10.0.84
 opencv-contrib-python==4.10.0.84
 numpy==1.26.4
 Pillow==10.2.0
+matplotlib==3.10.7
 
 # Audio — test de lectura
 SpeechRecognition==3.14.4
@@ -37,3 +38,5 @@ openai==1.12.0
 python-dotenv==1.0.0
 requests==2.31.0
 Werkzeug==3.0.1
+Faker==37.3.0
+reportlab==4.4.1

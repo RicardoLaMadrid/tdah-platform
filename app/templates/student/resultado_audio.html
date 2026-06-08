@@ -1,134 +1,150 @@
-{% extends 'base.html' %}
-{% block title %}Resultados del Test de Audio{% endblock %}
+{% extends "_layouts/student_layout.html" %}
+{% block title %}¡Resultado Test Escucha!{% endblock %}
+{% block page_title %}Resultado{% endblock %}
+{% set tito_message = "¡Excelente! Mira cuánto lograste." %}
+
+{% block extra_css %}
+<style>
+@keyframes confetti-fall {
+  0%   { transform: translateY(-100px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+.confetti-piece { position: fixed; top: -10px; pointer-events: none; z-index: 100; animation: confetti-fall linear forwards; border-radius: 2px; }
+@keyframes score-pop { 0% { transform: scale(0.3); opacity: 0; } 70% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+.score-animate { animation: score-pop 0.6s ease-out forwards; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="card shadow-lg">
-                <div class="card-header bg-success text-white">
-                    <h3 class="mb-0">
-                        <i class="bi bi-check-circle-fill me-2"></i>
-                        Resultados del Test de Lectura
-                    </h3>
-                </div>
-                
-                <div class="card-body p-4">
-                    <!-- Resultado principal -->
-                    <div class="alert alert-info border-start border-4 border-info mb-4">
-                        <h4 class="alert-heading">Tipo de TDAH Detectado</h4>
-                        <h2 class="mb-0">
-                            <span class="badge bg-primary fs-3">{{ tipo_tdah|upper }}</span>
-                        </h2>
-                        <p class="mb-0 mt-2">Nivel de confianza: <strong>{{ confianza }}%</strong></p>
-                    </div>
+<div id="confetti-container" aria-hidden="true"></div>
+<div class="max-w-xl mx-auto">
 
-                    <!-- Métricas -->
-                    <div class="row mb-4">
-                        <div class="col-md-4">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h5 class="text-muted">Precisión</h5>
-                                    <h2 class="{% if metricas.precision >= 75 %}text-success{% elif metricas.precision >= 50 %}text-warning{% else %}text-danger{% endif %}">
-                                        {{ metricas.precision|round(1) }}%
-                                    </h2>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h5 class="text-muted">Fluidez</h5>
-                                    <h2 class="{% if metricas.fluidez >= 70 %}text-success{% elif metricas.fluidez >= 50 %}text-warning{% else %}text-danger{% endif %}">
-                                        {{ metricas.fluidez|round(1) }}%
-                                    </h2>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card text-center">
-                                <div class="card-body">
-                                    <h5 class="text-muted">Velocidad</h5>
-                                    <h2>{{ metricas.velocidad_lectura|round(0)|int }} ppm</h2>
-                                    <small class="text-muted">palabras por minuto</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Transcripción -->
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">Tu Lectura Transcrita</h5>
-                        </div>
-                        <div class="card-body" style="background: #f8f9fa;">
-                            <p class="mb-0" style="line-height: 1.8;">{{ transcripcion }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Detalles adicionales -->
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">Detalles del Análisis</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <strong>Duración de la grabación:</strong>
-                                    <span class="float-end">{{ metricas.duracion_grabacion|round(1) }} segundos</span>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <strong>Palabras correctas:</strong>
-                                    <span class="float-end">{{ metricas.palabras_correctas }} / {{ metricas.palabras_totales }}</span>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <strong>Repeticiones detectadas:</strong>
-                                    <span class="float-end">{{ metricas.repeticiones }}</span>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <strong>Pausas anormales:</strong>
-                                    <span class="float-end">{{ metricas.pausas_detectadas }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Recomendaciones -->
-                    <div class="alert alert-light border-start border-4 border-primary">
-                        <h5 class="alert-heading">
-                            <i class="bi bi-lightbulb-fill me-2"></i>
-                            Recomendaciones
-                        </h5>
-                        <ul class="mb-0">
-                            {% if metricas.precision < 60 %}
-                            <li>Intenta concentrarte más en el texto antes de comenzar a leer</li>
-                            {% endif %}
-                            {% if metricas.velocidad_lectura > 200 %}
-                            <li>Intenta leer más despacio para mejorar la comprensión</li>
-                            {% elif metricas.velocidad_lectura < 80 %}
-                            <li>Practica la lectura regularmente para mejorar tu velocidad</li>
-                            {% endif %}
-                            {% if metricas.repeticiones > 3 %}
-                            <li>Toma pequeñas pausas antes de hablar para organizar tus ideas</li>
-                            {% endif %}
-                            <li>Continúa practicando con las actividades personalizadas de la plataforma</li>
-                        </ul>
-                    </div>
-
-                    <!-- Botones -->
-                    <div class="text-center mt-4">
-                        <a href="{{ url_for('student.index') }}" class="btn btn-primary btn-lg px-5">
-                            <i class="bi bi-house-door me-2"></i>
-                            Volver al Dashboard
-                        </a>
-                        <a href="{{ url_for('audio.index') }}" class="btn btn-outline-secondary btn-lg px-5 ms-2">
-                            <i class="bi bi-arrow-repeat me-2"></i>
-                            Realizar Nuevo Test
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
+  {# ── Resultado principal ──────────────────────────────────────────────── #}
+  <div class="bg-white rounded-2xl border-2 border-emerald-100 shadow-sm p-6 mb-4 text-center">
+    <div class="text-5xl mb-3 score-animate">
+      {% if metricas.precision >= 80 %}🏆{% elif metricas.precision >= 60 %}⭐{% else %}💪{% endif %}
     </div>
+    <h2 class="text-2xl font-bold text-[#1F2937] mb-1">
+      {% if metricas.precision >= 80 %}¡Lectura excelente!
+      {% elif metricas.precision >= 60 %}¡Buena lectura!
+      {% else %}¡Sigue practicando!{% endif %}
+    </h2>
+
+    <div class="relative inline-flex items-center justify-center w-32 h-32 my-4">
+      <svg class="absolute w-full h-full -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="52" fill="none" stroke="#E5E7EB" stroke-width="10"/>
+        <circle cx="60" cy="60" r="52" fill="none"
+                stroke="{% if metricas.precision >= 80 %}#10B981{% elif metricas.precision >= 60 %}#6366F1{% else %}#F59E0B{% endif %}"
+                stroke-width="10" stroke-linecap="round"
+                stroke-dasharray="{{ (metricas.precision / 100 * 326.7) | round(1) }} 326.7"/>
+      </svg>
+      <div class="score-animate text-center">
+        <p class="text-3xl font-black text-[#1F2937] leading-none">{{ metricas.precision | round(0) | int }}%</p>
+        <p class="text-xs text-[#6B7280] font-medium">precisión</p>
+      </div>
+    </div>
+
+    {% if tipo_tdah %}
+    <div class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-full">
+      <span class="text-sm text-[#6B7280]">Patrón detectado:</span>
+      <span class="text-sm font-bold text-emerald-700">
+        {{ {'typical': 'Típico', 'inatento': 'Inatento', 'hiperactivo': 'Hiperactivo', 'combinado': 'Combinado'}.get(tipo_tdah, tipo_tdah) }}
+      </span>
+      <span class="text-xs text-[#9CA3AF]">({{ confianza }}% confianza)</span>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Métricas ─────────────────────────────────────────────────────────── #}
+  <div class="grid grid-cols-2 gap-3 mb-4">
+    <div class="bg-white rounded-xl border border-[#E5E7EB] p-4 text-center">
+      <p class="text-2xl font-black {% if metricas.fluidez >= 70 %}text-emerald-600{% else %}text-amber-500{% endif %}">
+        {{ metricas.fluidez | round(0) | int }}%
+      </p>
+      <p class="text-sm text-[#6B7280] mt-0.5">Fluidez</p>
+    </div>
+    <div class="bg-white rounded-xl border border-[#E5E7EB] p-4 text-center">
+      <p class="text-2xl font-black text-[#374151]">{{ metricas.velocidad_lectura | round(0) | int }} <span class="text-base font-normal">ppm</span></p>
+      <p class="text-sm text-[#6B7280] mt-0.5">Velocidad</p>
+    </div>
+    <div class="bg-white rounded-xl border border-[#E5E7EB] p-4 text-center">
+      <p class="text-2xl font-black text-[#374151]">{{ metricas.palabras_correctas }}/{{ metricas.palabras_totales }}</p>
+      <p class="text-sm text-[#6B7280] mt-0.5">Palabras correctas</p>
+    </div>
+    <div class="bg-white rounded-xl border border-[#E5E7EB] p-4 text-center">
+      <p class="text-2xl font-black {% if metricas.pausas_detectadas <= 2 %}text-emerald-600{% elif metricas.pausas_detectadas <= 5 %}text-amber-500{% else %}text-rose-500{% endif %}">
+        {{ metricas.pausas_detectadas }}
+      </p>
+      <p class="text-sm text-[#6B7280] mt-0.5">Pausas detectadas</p>
+    </div>
+  </div>
+
+  {# ── Transcripción ────────────────────────────────────────────────────── #}
+  {% if transcripcion %}
+  <div class="bg-white rounded-2xl border border-[#E5E7EB] p-5 mb-4">
+    <h3 class="text-lg font-bold text-[#1F2937] mb-2">Lo que dijiste</h3>
+    <p class="text-base text-[#374151] leading-relaxed italic bg-[#F9FAFB] rounded-xl p-3">
+      "{{ transcripcion }}"
+    </p>
+  </div>
+  {% endif %}
+
+  {# ── Análisis por tipo ─────────────────────────────────────────────────── #}
+  {% if scores_detallados %}
+  <div class="bg-white rounded-2xl border border-[#E5E7EB] p-5 mb-4">
+    <h3 class="text-lg font-bold text-[#1F2937] mb-3">Análisis comparativo</h3>
+    <div class="space-y-3">
+      {% for tipo_s, datos in scores_detallados.items() %}
+      {% set labels = {'typical': 'Típico', 'inatento': 'Inatento', 'hiperactivo': 'Hiperactivo', 'combinado': 'Combinado'} %}
+      <div>
+        <div class="flex justify-between mb-1">
+          <span class="text-sm font-semibold {% if tipo_s == tipo_tdah %}text-emerald-700{% else %}text-[#374151]{% endif %}">
+            {{ labels.get(tipo_s, tipo_s) }}
+            {% if tipo_s == tipo_tdah %}<span class="ml-1 text-xs text-emerald-500">(tu resultado)</span>{% endif %}
+          </span>
+          <span class="text-sm font-bold {% if tipo_s == tipo_tdah %}text-emerald-700{% else %}text-[#6B7280]{% endif %}">{{ datos.probabilidad }}%</span>
+        </div>
+        <div class="h-2.5 bg-[#F3F4F6] rounded-full overflow-hidden">
+          <div class="h-full rounded-full transition-all duration-700"
+               style="width: {{ datos.probabilidad }}%; background: {% if tipo_s == tipo_tdah %}#10B981{% else %}#D1D5DB{% endif %};"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-5 text-sm text-emerald-800">
+    <strong>Recuerda:</strong> Este resultado es orientativo.
+    Para un diagnóstico formal, tu docente o un especialista puede ayudarte mejor.
+  </div>
+
+  <div class="flex gap-3">
+    <a href="{{ url_for('student.index') }}"
+       class="flex-1 flex items-center justify-center gap-2 py-4 bg-[#4F46E5] text-white font-bold rounded-xl
+              text-base hover:bg-[#4338CA] transition-colors shadow-sm">
+      Ir al inicio
+    </a>
+    <a href="{{ url_for('audio.index') }}"
+       class="flex-1 flex items-center justify-center gap-2 py-4 border-2 border-[#E5E7EB] text-[#374151]
+              font-bold rounded-xl text-base hover:bg-[#F9FAFB] transition-colors">
+      Repetir test
+    </a>
+  </div>
+
 </div>
+
+<script>
+if ({{ metricas.precision | round(0) | int }} >= 60) {
+  const colors = ['#10B981','#4F46E5','#3B82F6','#F59E0B','#8B5CF6'];
+  const c = document.getElementById('confetti-container');
+  for (let i = 0; i < 35; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.cssText = `left:${Math.random()*100}vw;background:${colors[Math.floor(Math.random()*colors.length)]};animation-duration:${1.5+Math.random()*2}s;animation-delay:${Math.random()*0.8}s;width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;border-radius:${Math.random()>.5?'50%':'2px'};`;
+    c.appendChild(p);
+  }
+  setTimeout(() => c.innerHTML = '', 4000);
+}
+</script>
 {% endblock %}

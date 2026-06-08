@@ -1,156 +1,147 @@
-{% extends 'base.html' %}
-{% block title %}Reportes y Estadísticas - Admin{% endblock %}
+{% extends '_layouts/admin_layout.html' %}
+{% block title %}Estadísticas — Admin{% endblock %}
+{% block page_title %}Estadísticas{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h1 class="mb-4"><i class="bi bi-file-earmark-bar-graph"></i> Reportes y Estadísticas</h1>
-    
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stat-card primary">
-                <h3>{{ avg_sessions }}</h3>
-                <p class="text-muted">Sesiones por Estudiante</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card success">
-                <h3>{{ tdah_stats|length }}</h3>
-                <p class="text-muted">Tipos de TDAH</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card warning">
-                <h3>{{ popular_activities|length }}</h3>
-                <p class="text-muted">Actividades Populares</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card info">
-                <h3>100%</h3>
-                <p class="text-muted">Cobertura</p>
-            </div>
-        </div>
+<div class="mb-6">
+  <h2 class="text-2xl font-bold text-[#1F2937]">Reportes y Estadísticas</h2>
+</div>
+
+{# ── Stats ────────────────────────────────────────────────────────────────── #}
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+  <div class="bg-indigo-600 rounded-2xl p-5 text-white shadow-sm">
+    <p class="text-3xl font-black">{{ avg_sessions }}</p>
+    <p class="text-sm text-indigo-200 mt-1">Sesiones por Estudiante</p>
+  </div>
+  <div class="bg-emerald-500 rounded-2xl p-5 text-white shadow-sm">
+    <p class="text-3xl font-black">{{ tdah_stats|length }}</p>
+    <p class="text-sm text-emerald-100 mt-1">Tipos de TDAH</p>
+  </div>
+  <div class="bg-amber-500 rounded-2xl p-5 text-white shadow-sm">
+    <p class="text-3xl font-black">{{ popular_activities|length }}</p>
+    <p class="text-sm text-amber-100 mt-1">Actividades Populares</p>
+  </div>
+  <div class="bg-sky-500 rounded-2xl p-5 text-white shadow-sm">
+    <p class="text-3xl font-black">100%</p>
+    <p class="text-sm text-sky-100 mt-1">Cobertura</p>
+  </div>
+</div>
+
+{# ── Gráfica + tabla actividades ──────────────────────────────────────────── #}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100">
+      <h5 class="font-bold text-[#1F2937] text-sm">Distribución por Tipo de TDAH</h5>
     </div>
-    
-    <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Distribución por Tipo de TDAH</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="tdahChart" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Actividades Más Usadas</h5>
-                </div>
-                <div class="card-body">
-                    {% if popular_activities %}
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Actividad</th>
-                                        <th>Tipo</th>
-                                        <th>Usos</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for activity in popular_activities %}
-                                    <tr>
-                                        <td>{{ activity[0] }}</td>
-                                        <td><span class="badge bg-info">{{ activity[1] }}</span></td>
-                                        <td><strong>{{ activity[2] }}</strong></td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <p class="text-muted">No hay datos disponibles</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+    <div class="p-5">
+      <div style="position: relative; height: 250px;">
+        <canvas id="tdahChart"></canvas>
+      </div>
     </div>
-    
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Estadísticas Detalladas</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Tipo TDAH</th>
-                                    <th>Cantidad</th>
-                                    <th>Porcentaje</th>
-                                    <th>Gráfico</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% set total = tdah_stats|sum(attribute=1) %}
-                                {% for type, count in tdah_stats %}
-                                <tr>
-                                    <td><span class="badge bg-info">{{ type or 'No especificado' }}</span></td>
-                                    <td>{{ count }}</td>
-                                    <td>{{ ((count / total * 100)|round(1)) if total > 0 else 0 }}%</td>
-                                    <td>
-                                        <div class="progress" style="height: 20px; width: 200px;">
-                                            <div class="progress-bar" style="width: {{ (count / total * 100) if total > 0 else 0 }}%">
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100">
+      <h5 class="font-bold text-[#1F2937] text-sm">Actividades Más Usadas</h5>
     </div>
+    <div class="p-5">
+      {% if popular_activities %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="text-[#9CA3AF] text-xs uppercase tracking-wider">
+              <tr>
+                <th class="pb-2 text-left font-semibold">Actividad</th>
+                <th class="pb-2 text-left font-semibold">Tipo</th>
+                <th class="pb-2 text-left font-semibold">Usos</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for activity in popular_activities %}
+              <tr>
+                <td class="py-2 text-[#1F2937]">{{ activity[0] }}</td>
+                <td class="py-2">
+                  <span class="inline-flex items-center px-2 py-0.5 bg-sky-100 text-sky-700 text-xs font-bold rounded-full">
+                    {{ activity[1] }}
+                  </span>
+                </td>
+                <td class="py-2 font-bold text-[#1F2937]">{{ activity[2] }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-[#9CA3AF] text-sm">No hay datos disponibles</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{# ── Estadísticas detalladas ──────────────────────────────────────────────── #}
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+  <div class="px-5 py-4 border-b border-slate-100">
+    <h5 class="font-bold text-[#1F2937] text-sm">Estadísticas Detalladas</h5>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-[#9CA3AF] text-xs uppercase tracking-wider">
+        <tr>
+          <th class="px-5 py-3 text-left font-semibold">Tipo TDAH</th>
+          <th class="px-5 py-3 text-left font-semibold">Cantidad</th>
+          <th class="px-5 py-3 text-left font-semibold">Porcentaje</th>
+          <th class="px-5 py-3 text-left font-semibold">Gráfico</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% set total = tdah_stats|sum(attribute=1) %}
+        {% for type, count in tdah_stats %}
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-5 py-3">
+            <span class="inline-flex items-center px-2 py-0.5 bg-sky-100 text-sky-700 text-xs font-bold rounded-full">
+              {{ type or 'No especificado' }}
+            </span>
+          </td>
+          <td class="px-5 py-3 font-bold text-[#1F2937]">{{ count }}</td>
+          <td class="px-5 py-3 text-[#6B7280]">
+            {{ ((count / total * 100)|round(1)) if total > 0 else 0 }}%
+          </td>
+          <td class="px-5 py-3">
+            <div class="h-4 w-48 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-500 rounded-full"
+                   style="width: {{ (count / total * 100) if total > 0 else 0 }}%">
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const tdahData = {{ tdah_stats|tojson }};
-    
-    const ctx = document.getElementById('tdahChart');
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: tdahData.map(d => d[0] || 'No especificado'),
-            datasets: [{
-                data: tdahData.map(d => d[1]),
-                backgroundColor: [
-                    '#667eea',
-                    '#48bb78',
-                    '#ed8936',
-                    '#4299e1',
-                    '#9f7aea'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
+const tdahData = {{ tdah_stats|tojson }};
+
+const ctx = document.getElementById('tdahChart');
+new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+        labels: tdahData.map(d => d[0] || 'No especificado'),
+        datasets: [{
+            data: tdahData.map(d => d[1]),
+            backgroundColor: ['#667eea', '#48bb78', '#ed8936', '#4299e1', '#9f7aea']
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } }
+    }
+});
 </script>
 {% endblock %}

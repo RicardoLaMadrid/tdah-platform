@@ -1,221 +1,170 @@
-{% extends 'base.html' %}
-{% block title %}Vínculos Padre-Hijo - Admin{% endblock %}
+{% extends '_layouts/admin_layout.html' %}
+{% block title %}Vínculos Padre-Hijo — Admin{% endblock %}
+{% block page_title %}Vínculos Padre-Hijo{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2>
-                <i class="bi bi-link-45deg me-2"></i>
-                Gestión de Vínculos Padre-Hijo
-            </h2>
-            <p class="text-muted">Vincula cuentas de padres con sus hijos estudiantes</p>
-        </div>
-    </div>
-    
-    <!-- Formulario para crear vínculo -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">
-                        <i class="bi bi-plus-circle me-2"></i>
-                        Crear Nuevo Vínculo
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('admin.create_parent_link') }}">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label">
-                                    <i class="bi bi-person-fill me-1"></i>
-                                    Padre/Madre/Tutor *
-                                </label>
-                                <select name="parent_id" class="form-select" required>
-                                    <option value="">Seleccionar padre...</option>
-                                    {% for parent in parents %}
-                                    <option value="{{ parent.id }}">
-                                        {{ parent.user.username }} 
-                                        ({{ parent.user.email }})
-                                        {% if parent.phone %} - {{ parent.phone }}{% endif %}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                                {% if not parents %}
-                                <small class="text-warning">
-                                    <i class="bi bi-exclamation-triangle me-1"></i>
-                                    No hay padres registrados. <a href="{{ url_for('admin.create_user') }}">Crear padre</a>
-                                </small>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-4">
-                                <label class="form-label">
-                                    <i class="bi bi-person-badge me-1"></i>
-                                    Estudiante (Hijo/a) *
-                                </label>
-                                <select name="student_id" class="form-select" required>
-                                    <option value="">Seleccionar estudiante...</option>
-                                    {% for student in students %}
-                                    <option value="{{ student.id }}">
-                                        {{ student.user.username }}
-                                        {% if student.grade %}({{ student.grade }}{% if student.section %} - {{ student.section }}{% endif %}){% endif %}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                                {% if not students %}
-                                <small class="text-warning">
-                                    <i class="bi bi-exclamation-triangle me-1"></i>
-                                    No hay estudiantes registrados. <a href="{{ url_for('admin.create_user') }}">Crear estudiante</a>
-                                </small>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-3">
-                                <label class="form-label">
-                                    <i class="bi bi-heart me-1"></i>
-                                    Relación
-                                </label>
-                                <select name="relationship" class="form-select">
-                                    <option value="padre/madre">Padre/Madre</option>
-                                    <option value="padre">Padre</option>
-                                    <option value="madre">Madre</option>
-                                    <option value="tutor">Tutor Legal</option>
-                                    <option value="abuelo/abuela">Abuelo/Abuela</option>
-                                    <option value="tío/tía">Tío/Tía</option>
-                                    <option value="otro">Otro</option>
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-1 d-flex align-items-end">
-                                <button type="submit" class="btn btn-success w-100" {% if not parents or not students %}disabled{% endif %}>
-                                    <i class="bi bi-plus-circle"></i>
-                                    <span class="d-none d-lg-inline">Vincular</span>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Lista de vínculos existentes -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header bg-info text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="bi bi-list-ul me-2"></i>
-                            Vínculos Existentes
-                        </h5>
-                        <span class="badge bg-light text-dark">{{ links|length }} vínculos</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    {% if links %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th><i class="bi bi-person-fill me-1"></i>Padre/Madre</th>
-                                    <th><i class="bi bi-envelope me-1"></i>Email</th>
-                                    <th><i class="bi bi-telephone me-1"></i>Teléfono</th>
-                                    <th><i class="bi bi-person-badge me-1"></i>Estudiante (Hijo/a)</th>
-                                    <th><i class="bi bi-book me-1"></i>Grado</th>
-                                    <th><i class="bi bi-heart me-1"></i>Relación</th>
-                                    <th><i class="bi bi-calendar me-1"></i>Fecha</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for link in links %}
-                                <tr>
-                                    <td>
-                                        <i class="bi bi-person-circle text-primary me-1"></i>
-                                        <strong>{{ link.parent.user.username }}</strong>
-                                    </td>
-                                    <td>{{ link.parent.user.email }}</td>
-                                    <td>
-                                        {% if link.parent.phone %}
-                                            <i class="bi bi-phone me-1"></i>{{ link.parent.phone }}
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <i class="bi bi-person-badge text-success me-1"></i>
-                                        <strong>{{ link.student.user.username }}</strong>
-                                    </td>
-                                    <td>
-                                        {% if link.student.grade %}
-                                            {{ link.student.grade }}{% if link.student.section %} - {{ link.student.section }}{% endif %}
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ link.relationship }}</span>
-                                    </td>
-                                    <td>
-                                        <small>{{ link.created_at.strftime('%d/%m/%Y') }}</small>
-                                    </td>
-                                    <td>
-                                        <form method="POST" action="{{ url_for('admin.delete_parent_link', link_id=link.id) }}" 
-                                              style="display: inline;"
-                                              onsubmit="return confirm('¿Estás seguro de eliminar este vínculo?\n\nPadre: {{ link.parent.user.username }}\nHijo/a: {{ link.student.user.username }}');">
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="text-center py-5">
-                        <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
-                        <p class="text-muted mt-3 mb-2">No hay vínculos creados</p>
-                        <p class="small text-muted">
-                            Crea vínculos entre padres y estudiantes usando el formulario de arriba
-                        </p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Instrucciones -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="alert alert-info">
-                <h5 class="alert-heading">
-                    <i class="bi bi-info-circle me-2"></i>
-                    ¿Cómo funciona?
-                </h5>
-                <ol class="mb-0">
-                    <li><strong>Crear usuarios:</strong> Primero crea un usuario con rol "Padre/Madre" y otro con rol "Estudiante"</li>
-                    <li><strong>Vincular:</strong> Usa el formulario de arriba para conectar el padre con su hijo/a</li>
-                    <li><strong>Acceso:</strong> El padre podrá ver el progreso, reportes y notificaciones de su hijo/a</li>
-                    <li><strong>Múltiples vínculos:</strong> Un padre puede tener varios hijos, y un hijo puede tener varios padres/tutores</li>
-                </ol>
-            </div>
-        </div>
-    </div>
+<div class="mb-6">
+  <h2 class="text-2xl font-bold text-[#1F2937]">Gestión de Vínculos Padre-Hijo</h2>
+  <p class="text-[#6B7280] text-sm mt-1">Vincula cuentas de padres con sus hijos estudiantes</p>
 </div>
 
-<style>
-.table th {
-    background-color: #f8f9fa;
-    font-weight: 600;
-}
-.table tbody tr:hover {
-    background-color: #f8f9fa;
-}
-</style>
-{% endblock %}
+{# ── Formulario crear vínculo ─────────────────────────────────────────────── #}
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+  <div class="bg-indigo-600 px-5 py-3">
+    <h5 class="text-white font-bold text-sm">Crear Nuevo Vínculo</h5>
+  </div>
+  <div class="p-5">
+    <form method="POST" action="{{ url_for('admin.create_parent_link') }}">
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+        <div>
+          <label class="block text-sm font-medium text-[#1F2937] mb-1">
+            Padre / Madre / Tutor <span class="text-red-500">*</span>
+          </label>
+          <select name="parent_id" required
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white
+                         focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <option value="">Seleccionar padre...</option>
+            {% for parent in parents %}
+            <option value="{{ parent.id }}">
+              {{ parent.user.username }} ({{ parent.user.email }}){% if parent.phone %} - {{ parent.phone }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+          {% if not parents %}
+          <p class="text-xs text-amber-600 mt-1">
+            ⚠️ No hay padres registrados.
+            <a href="{{ url_for('admin.create_user') }}" class="underline">Crear padre</a>
+          </p>
+          {% endif %}
+        </div>
 
+        <div>
+          <label class="block text-sm font-medium text-[#1F2937] mb-1">
+            Estudiante (Hijo/a) <span class="text-red-500">*</span>
+          </label>
+          <select name="student_id" required
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white
+                         focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <option value="">Seleccionar estudiante...</option>
+            {% for student in students %}
+            <option value="{{ student.id }}">
+              {{ student.user.username }}{% if student.grade %} ({{ student.grade }}{% if student.section %} - {{ student.section }}{% endif %}){% endif %}
+            </option>
+            {% endfor %}
+          </select>
+          {% if not students %}
+          <p class="text-xs text-amber-600 mt-1">
+            ⚠️ No hay estudiantes registrados.
+            <a href="{{ url_for('admin.create_user') }}" class="underline">Crear estudiante</a>
+          </p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-[#1F2937] mb-1">Relación</label>
+          <select name="relationship"
+                  class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white
+                         focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <option value="padre/madre">Padre/Madre</option>
+            <option value="padre">Padre</option>
+            <option value="madre">Madre</option>
+            <option value="tutor">Tutor Legal</option>
+            <option value="abuelo/abuela">Abuelo/Abuela</option>
+            <option value="tío/tía">Tío/Tía</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+
+        <div>
+          <button type="submit"
+                  {% if not parents or not students %}disabled{% endif %}
+                  class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold
+                         rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            Vincular
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── Tabla de vínculos ────────────────────────────────────────────────────── #}
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+  <div class="bg-sky-500 px-5 py-3 flex items-center justify-between">
+    <h5 class="text-white font-bold text-sm">Vínculos Existentes</h5>
+    <span class="inline-flex items-center px-2.5 py-1 bg-white/20 text-white text-xs font-bold rounded-full">
+      {{ links|length }} vínculos
+    </span>
+  </div>
+
+  {% if links %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-[#9CA3AF] text-xs uppercase tracking-wider">
+        <tr>
+          <th class="px-4 py-3 text-left font-semibold">Padre/Madre</th>
+          <th class="px-4 py-3 text-left font-semibold">Email</th>
+          <th class="px-4 py-3 text-left font-semibold">Teléfono</th>
+          <th class="px-4 py-3 text-left font-semibold">Estudiante</th>
+          <th class="px-4 py-3 text-left font-semibold">Grado</th>
+          <th class="px-4 py-3 text-left font-semibold">Relación</th>
+          <th class="px-4 py-3 text-left font-semibold">Fecha</th>
+          <th class="px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for link in links %}
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-4 py-3 font-medium text-[#1F2937]">{{ link.parent.user.username }}</td>
+          <td class="px-4 py-3 text-[#6B7280]">{{ link.parent.user.email }}</td>
+          <td class="px-4 py-3 text-[#6B7280]">{{ link.parent.phone or '—' }}</td>
+          <td class="px-4 py-3 font-medium text-[#1F2937]">{{ link.student.user.username }}</td>
+          <td class="px-4 py-3 text-[#6B7280]">
+            {% if link.student.grade %}
+              {{ link.student.grade }}{% if link.student.section %} - {{ link.student.section }}{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <span class="inline-flex items-center px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-full">
+              {{ link.relationship }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-xs text-[#9CA3AF]">{{ link.created_at.strftime('%d/%m/%Y') }}</td>
+          <td class="px-4 py-3">
+            <form method="POST" action="{{ url_for('admin.delete_parent_link', link_id=link.id) }}" style="display:inline;"
+                  onsubmit="return confirm('¿Eliminar vínculo?\n\nPadre: {{ link.parent.user.username }}\nHijo/a: {{ link.student.user.username }}')">
+              <button type="submit"
+                      class="inline-flex items-center p-1.5 border border-red-200 text-red-500 hover:bg-red-50
+                             text-xs rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-16 px-4">
+    <p class="text-6xl opacity-30 mb-4" aria-hidden="true">📭</p>
+    <p class="text-[#6B7280] text-sm font-medium mb-1">No hay vínculos creados</p>
+    <p class="text-xs text-[#9CA3AF]">Crea vínculos entre padres y estudiantes usando el formulario de arriba</p>
+  </div>
+  {% endif %}
+</div>
+
+{# ── Instrucciones ────────────────────────────────────────────────────────── #}
+<div class="bg-blue-50 border border-blue-200 rounded-2xl p-5">
+  <h5 class="font-bold text-blue-800 text-sm mb-3">ℹ️ ¿Cómo funciona?</h5>
+  <ol class="space-y-1.5 text-sm text-blue-700 list-decimal list-inside">
+    <li><strong>Crear usuarios:</strong> Primero crea un usuario con rol "Padre/Madre" y otro con rol "Estudiante"</li>
+    <li><strong>Vincular:</strong> Usa el formulario de arriba para conectar el padre con su hijo/a</li>
+    <li><strong>Acceso:</strong> El padre podrá ver el progreso, reportes y notificaciones de su hijo/a</li>
+    <li><strong>Múltiples vínculos:</strong> Un padre puede tener varios hijos, y un hijo puede tener varios padres/tutores</li>
+  </ol>
+</div>
+{% endblock %}

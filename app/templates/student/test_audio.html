@@ -1,119 +1,173 @@
-{% extends 'base.html' %}
-{% block title %}Test de Audio - TDAH{% endblock %}
+{% extends "_layouts/student_layout.html" %}
+{% block title %}Test de Escucha — Plataforma TDAH{% endblock %}
+{% block page_title %}Test de Escucha{% endblock %}
+{% set tito_message = "¡Lee en voz alta y con calma!" %}
+
+{% block extra_css %}
+<style>
+#visualizerCanvas {
+  background: #f1f5f9;
+  border-radius: 0.75rem;
+  display: block;
+  width: 100%;
+  height: 80px;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="card shadow-lg border-0">
-                <div class="card-header text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                    <h3 class="mb-0">
-                        <i class="bi bi-mic-fill me-2"></i>
-                        Test de Lectura en Voz Alta
-                    </h3>
-                </div>
-                
-                <div class="card-body p-4">
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }} alert-dismissible fade show">
-                                    {{ message }}
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
+<div class="max-w-2xl mx-auto py-2">
 
-                    <!-- Instrucciones -->
-                    <div id="instructions" class="mb-4">
-                        <div class="alert alert-info border-start border-4 border-info">
-                            <h5 class="alert-heading">
-                                <i class="bi bi-info-circle-fill me-2"></i>
-                                Instrucciones
-                            </h5>
-                            <ol class="mb-0">
-                                <li>Lee el texto en voz alta con claridad</li>
-                                <li>Habla a un volumen normal</li>
-                                <li>Intenta mantener un ritmo constante</li>
-                                <li>No te preocupes por los errores</li>
-                                <li>Duración máxima: 2 minutos</li>
-                            </ol>
-                        </div>
-                    </div>
+  {# ── INSTRUCCIONES (JS oculta cuando empieza a grabar) ─────────── #}
+  <div id="instructions">
 
-                    <!-- Texto para leer -->
-                    <div class="card mb-4 border-primary">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">
-                                <i class="bi bi-book me-2"></i>
-                                Texto para Leer
-                            </h5>
-                        </div>
-                        <div class="card-body" style="background: #f8f9fa;">
-                            <p class="lead" style="line-height: 2; font-size: 1.1rem;">
-                                {{ texto_para_leer }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Estado -->
-                    <div id="micStatus" class="alert alert-warning" style="display: none;">
-                        <i class="bi bi-mic-mute me-2"></i>
-                        <span id="micStatusText">Preparando...</span>
-                    </div>
-
-                    <!-- Visualizador -->
-                    <div id="audioVisualizer" class="text-center mb-4" style="display: none;">
-                        <canvas id="visualizerCanvas" width="600" height="100" class="rounded border"></canvas>
-                        <div class="mt-2">
-                            <span class="badge bg-danger fs-6">
-                                <i class="bi bi-record-circle-fill me-2"></i>
-                                Grabando... <span id="recordTime">0:00</span>
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Formulario -->
-                    <form id="uploadForm" method="POST" action="{{ url_for('audio.upload_audio') }}" enctype="multipart/form-data">
-                        <input type="hidden" name="session_id" id="sessionId">
-                        <input type="hidden" name="nivel" value="{{ nivel }}">
-                        <input type="file" id="audioFile" name="audio" accept="audio/*" style="display: none;">
-                        
-                        <div class="d-grid gap-3">
-                            <button type="button" id="recordBtn" class="btn btn-lg btn-primary" disabled>
-                                <i class="bi bi-mic-fill me-2"></i>
-                                Iniciar Grabación
-                            </button>
-                            <button type="button" id="stopBtn" class="btn btn-lg btn-danger" style="display: none;">
-                                <i class="bi bi-stop-circle-fill me-2"></i>
-                                Detener Grabación
-                            </button>
-                            <button type="submit" id="uploadBtn" class="btn btn-lg btn-success" style="display: none;">
-                                <i class="bi bi-cloud-upload-fill me-2"></i>
-                                Enviar para Análisis
-                            </button>
-                        </div>
-                    </form>
-
-                    <!-- Subir archivo -->
-                    <div class="text-center mt-4">
-                        <p class="text-muted">¿Ya tienes una grabación?</p>
-                        <label for="fileInput" class="btn btn-outline-secondary">
-                            <i class="bi bi-folder2-open me-2"></i>
-                            Subir Archivo
-                        </label>
-                        <input type="file" id="fileInput" accept="audio/*" style="display: none;">
-                    </div>
-                </div>
-            </div>
-        </div>
+    {# Hero #}
+    <div class="flex flex-col items-center text-center mb-8">
+      <div class="w-20 h-20 rounded-2xl bg-emerald-100 flex items-center justify-center mb-4 shadow-sm">
+        <svg class="w-11 h-11 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+        </svg>
+      </div>
+      <h1 class="text-3xl font-bold text-slate-900 mb-2">Test de Escucha</h1>
+      <p class="text-slate-500 text-base max-w-sm">
+        Lee el texto en voz alta frente al micrófono.
+        Habla con claridad y ritmo normal. Duración máxima:
+        <strong class="text-slate-700">2 minutos</strong>.
+      </p>
     </div>
+
+    {# Pasos #}
+    <div class="space-y-3 mb-6">
+      {% for num, titulo, desc in [
+        ('1', 'Permite el micrófono', 'El navegador pedirá acceso al micrófono. Necesario para grabar tu voz.'),
+        ('2', 'Lee el texto',          'Cuando veas el texto aquí abajo, léelo en voz alta, despacio y claro.'),
+        ('3', 'Envía la grabación',    'Cuando termines, pulsa "Detener" y luego "Enviar para análisis".'),
+      ] %}
+      <div class="flex items-start gap-4 bg-white rounded-xl border border-slate-200 px-5 py-4 shadow-sm">
+        <span class="w-8 h-8 rounded-full bg-emerald-600 text-white text-sm font-bold
+                     flex items-center justify-center flex-shrink-0 mt-0.5">{{ num }}</span>
+        <div>
+          <p class="text-sm font-semibold text-slate-800">{{ titulo }}</p>
+          <p class="text-sm text-slate-500 mt-0.5">{{ desc }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {# Texto a leer — card grande y legible #}
+    <div class="bg-white rounded-2xl border-2 border-emerald-200 shadow-sm mb-6 overflow-hidden">
+      <div class="flex items-center gap-2 px-5 py-3 bg-emerald-50 border-b border-emerald-200">
+        <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+        </svg>
+        <span class="text-sm font-semibold text-emerald-700">Texto para leer</span>
+        <span class="ml-auto text-xs text-emerald-500 bg-emerald-100 px-2 py-0.5 rounded-full">
+          Nivel {{ nivel | capitalize }}
+        </span>
+      </div>
+      <div class="px-6 py-5">
+        <p class="text-base leading-relaxed text-slate-700" style="line-height: 1.9;">
+          {{ texto_para_leer }}
+        </p>
+      </div>
+    </div>
+
+  </div>{# /instructions #}
+
+  {# ── Estado del micrófono (JS controla display) ─────────────── #}
+  <div id="micStatus"
+       class="mb-4 px-4 py-3 rounded-xl border text-sm font-medium flex items-center gap-2"
+       style="display:none; border-color:#FCD34D; background:#FFFBEB; color:#92400E;">
+    <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+    </svg>
+    <span id="micStatusText">Preparando...</span>
+  </div>
+
+  {# ── Visualizador de audio (JS controla display) ─────────────── #}
+  <div id="audioVisualizer" class="mb-5" style="display:none;">
+    <div class="flex items-center justify-between mb-2">
+      <span class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600">
+        <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+        Grabando...
+        <span id="recordTime" class="tabular-nums">0:00</span>
+      </span>
+      <span class="text-xs text-slate-400">Máx. 2 min</span>
+    </div>
+    <canvas id="visualizerCanvas" width="600" height="80"></canvas>
+  </div>
+
+  {# ── Formulario (IDs todos preservados) ─────────────────────── #}
+  <form id="uploadForm" method="POST" action="{{ url_for('audio.upload_audio') }}" enctype="multipart/form-data">
+    <input type="hidden" name="session_id" id="sessionId">
+    <input type="hidden" name="nivel" value="{{ nivel }}">
+    <input type="file" id="audioFile" name="audio" accept="audio/*" style="display:none;">
+
+    <div class="space-y-3">
+      {# Iniciar grabación #}
+      <button type="button" id="recordBtn" disabled
+              class="w-full h-14 rounded-xl bg-emerald-600 text-white text-base font-bold
+                     hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2
+                     disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+        </svg>
+        Iniciar grabación
+      </button>
+
+      {# Detener grabación #}
+      <button type="button" id="stopBtn"
+              style="display:none;"
+              class="w-full h-14 rounded-xl bg-red-600 text-white text-base font-bold
+                     hover:bg-red-700 transition-colors flex items-center justify-center gap-2 shadow-sm">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="5" y="5" width="14" height="14" rx="2"/>
+        </svg>
+        Detener grabación
+      </button>
+
+      {# Enviar para análisis #}
+      <button type="submit" id="uploadBtn"
+              style="display:none;"
+              class="w-full h-14 rounded-xl bg-indigo-600 text-white text-base font-bold
+                     hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-sm">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+        </svg>
+        Enviar para análisis
+      </button>
+    </div>
+  </form>
+
+  {# Subir archivo existente #}
+  <div class="mt-5 text-center">
+    <p class="text-sm text-slate-400 mb-2">¿Ya tienes una grabación guardada?</p>
+    <label for="fileInput"
+           class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-slate-600
+                  border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300
+                  transition-colors cursor-pointer">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+      </svg>
+      Subir archivo de audio
+    </label>
+    <input type="file" id="fileInput" accept="audio/*" style="display:none;">
+  </div>
+
+  <a href="{{ url_for('student.tests_index') }}"
+     class="flex items-center justify-center gap-1.5 mt-6 text-sm text-slate-400 hover:text-slate-600 transition-colors">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+    </svg>
+    Volver a mis tests
+  </a>
+
 </div>
 
-<!-- RecordRTC Library -->
+{# RecordRTC CDN #}
 <script src="https://cdn.webrtc-experiment.com/RecordRTC.js"></script>
 
+{# ── SCRIPT: copiado íntegramente del original ──────────────── #}
 <script>
 let recorder = null;
 let sessionId = null;
@@ -121,10 +175,6 @@ let recordingStartTime;
 let timerInterval;
 let audioStream = null;
 
-console.log('🚀 Inicializando...');
-console.log('RecordRTC disponible:', typeof RecordRTC !== 'undefined');
-
-// Inicializar sesión
 async function initSession() {
     try {
         const response = await fetch('/audio/start_test', {
@@ -135,61 +185,45 @@ async function initSession() {
         if (data.success) {
             sessionId = data.session_id;
             document.getElementById('sessionId').value = sessionId;
-            console.log('✅ Sesión:', sessionId);
         }
     } catch (error) {
-        console.error('❌ Error sesión:', error);
+        console.error('Error sesión:', error);
     }
 }
 
-// Inicializar micrófono
 async function initMicrophone() {
     const micStatus = document.getElementById('micStatus');
     const micStatusText = document.getElementById('micStatusText');
     const recordBtn = document.getElementById('recordBtn');
-    
+
     try {
-        micStatus.style.display = 'block';
+        micStatus.style.display = 'flex';
         micStatusText.textContent = 'Solicitando acceso...';
-        
+
         if (!navigator.mediaDevices?.getUserMedia) {
             throw new Error('Tu navegador no soporta grabación de audio');
         }
-        
-        console.log('📞 Solicitando micrófono...');
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-            audio: true
-        });
-        
-        console.log('✅ Micrófono OK');
+
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         audioStream = stream;
-        
-        micStatus.classList.remove('alert-warning');
-        micStatus.classList.add('alert-success');
-        micStatusText.textContent = '¡Listo! Puedes iniciar.';
+
+        micStatus.style.cssText = 'display:flex; border-color:#6EE7B7; background:#ECFDF5; color:#065F46;';
+        micStatusText.textContent = '¡Listo! Puedes iniciar la grabación.';
         recordBtn.disabled = false;
-        
-        setTimeout(() => {
-            micStatus.style.display = 'none';
-        }, 2000);
-        
+
+        setTimeout(() => { micStatus.style.display = 'none'; }, 2500);
+
     } catch (error) {
-        console.error('❌ Error:', error);
-        micStatus.classList.remove('alert-warning');
-        micStatus.classList.add('alert-danger');
-        micStatusText.innerHTML = `<strong>Error:</strong> ${error.message}`;
+        console.error('Error micrófono:', error);
+        micStatus.style.cssText = 'display:flex; border-color:#FCA5A5; background:#FEF2F2; color:#7F1D1D;';
+        micStatusText.innerHTML = '<strong>Error:</strong> ' + error.message;
     }
 }
 
 async function startRecording() {
-    console.log('🎙️ Iniciando...');
-    
     try {
-        if (!audioStream) {
-            throw new Error('Micrófono no disponible');
-        }
-        
-        // Usar RecordRTC
+        if (!audioStream) { throw new Error('Micrófono no disponible'); }
+
         recorder = new RecordRTC(audioStream, {
             type: 'audio',
             mimeType: 'audio/wav',
@@ -197,132 +231,80 @@ async function startRecording() {
             numberOfAudioChannels: 1,
             desiredSampRate: 16000
         });
-        
-        console.log('✅ Recorder creado');
-        
+
         recorder.startRecording();
-        console.log('✅ Grabación iniciada');
-        
         recordingStartTime = Date.now();
-        
-        // UI
+
         document.getElementById('recordBtn').style.display = 'none';
-        document.getElementById('stopBtn').style.display = 'block';
+        document.getElementById('stopBtn').style.display = 'flex';
         document.getElementById('instructions').style.display = 'none';
         document.getElementById('audioVisualizer').style.display = 'block';
-        
+
         startTimer();
-        
+
     } catch (error) {
-        console.error('💥 Error:', error);
+        console.error('Error grabación:', error);
         alert('Error: ' + error.message);
     }
 }
 
 function stopRecording() {
-    console.log('🛑 Deteniendo...');
-    
-    if (!recorder) {
-        console.error('❌ No hay recorder');
-        return;
-    }
-    
+    if (!recorder) { console.error('No hay recorder'); return; }
+
     recorder.stopRecording(function() {
-        console.log('⏹️ Detenido');
-        
         const blob = recorder.getBlob();
-        console.log('💾 Blob:', blob.size, 'bytes');
-        
-        if (blob.size === 0) {
-            alert('No se grabó audio. Intenta de nuevo.');
-            resetUI();
-            return;
-        }
-        
-        const timestamp = Date.now();
-        const audioFile = new File([blob], `audio_${timestamp}.wav`, {
-            type: 'audio/wav'
-        });
-        
-        console.log('✅ Archivo:', audioFile.name, audioFile.size);
-        
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(audioFile);
-        document.getElementById('audioFile').files = dataTransfer.files;
-        
-        document.getElementById('uploadBtn').style.display = 'block';
-        
+
+        if (blob.size === 0) { alert('No se grabó audio. Intenta de nuevo.'); resetUI(); return; }
+
+        const audioFile = new File([blob], `audio_${Date.now()}.wav`, { type: 'audio/wav' });
+        const dt = new DataTransfer();
+        dt.items.add(audioFile);
+        document.getElementById('audioFile').files = dt.files;
+
+        document.getElementById('uploadBtn').style.display = 'flex';
         cleanup();
         resetUI();
     });
 }
 
 function resetUI() {
-    document.getElementById('recordBtn').style.display = 'block';
+    document.getElementById('recordBtn').style.display = 'flex';
     document.getElementById('stopBtn').style.display = 'none';
     document.getElementById('audioVisualizer').style.display = 'none';
 }
 
 function cleanup() {
-    if (timerInterval) {
-        clearInterval(timerInterval);
-    }
+    if (timerInterval) { clearInterval(timerInterval); }
 }
 
 function startTimer() {
     timerInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
-        const minutes = Math.floor(elapsed / 60);
-        const seconds = elapsed % 60;
-        document.getElementById('recordTime').textContent = 
-            `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        
-        if (elapsed >= 120) {
-            console.log('⏰ Tiempo máximo');
-            stopRecording();
-        }
+        const m = Math.floor(elapsed / 60);
+        const s = elapsed % 60;
+        document.getElementById('recordTime').textContent = `${m}:${s.toString().padStart(2, '0')}`;
+        if (elapsed >= 120) { stopRecording(); }
     }, 1000);
 }
 
 function handleFileUpload() {
     const input = document.getElementById('fileInput');
     if (input.files && input.files[0]) {
-        const file = input.files[0];
-        console.log('📁 Archivo:', file.name);
-        
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        document.getElementById('audioFile').files = dataTransfer.files;
-        
-        document.getElementById('uploadBtn').style.display = 'block';
+        const dt = new DataTransfer();
+        dt.items.add(input.files[0]);
+        document.getElementById('audioFile').files = dt.files;
+        document.getElementById('uploadBtn').style.display = 'flex';
         document.getElementById('recordBtn').style.display = 'none';
     }
 }
 
-// Events
 document.getElementById('recordBtn').addEventListener('click', startRecording);
 document.getElementById('stopBtn').addEventListener('click', stopRecording);
 document.getElementById('fileInput').addEventListener('change', handleFileUpload);
 
-// Init
 window.addEventListener('load', async () => {
-    console.log('🔧 Cargando...');
     await initSession();
     await initMicrophone();
 });
 </script>
-
-<style>
-.btn-lg {
-    padding: 15px 30px;
-    font-size: 1.1rem;
-    border-radius: 10px;
-    font-weight: 600;
-}
-
-#visualizerCanvas {
-    background: #f0f0f0;
-    border: 2px solid #dee2e6;
-}
-</style>
 {% endblock %}

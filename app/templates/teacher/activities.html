@@ -1,95 +1,211 @@
-{% extends 'base.html' %}
-{% block title %}Mis Actividades{% endblock %}
+{% extends '_layouts/teacher_layout.html' %}
+{% block title %}Actividades — Profesor{% endblock %}
+{% block page_title %}Actividades{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('teacher.create_activity') }}"
+   class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white
+          bg-[#4F46E5] hover:bg-[#4338CA] rounded-lg transition-colors">
+  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+  </svg>
+  Nueva actividad
+</a>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1><i class="bi bi-clipboard-check"></i> Mis Actividades</h1>
+{% set type_meta = {
+  'ar_caza':         ('Caza AR',       'bg-violet-100 text-violet-700', '🎯'),
+  'ar_secuencia':    ('Secuencia AR',   'bg-violet-100 text-violet-700', '🔮'),
+  'ar_respiracion':  ('Respiración AR', 'bg-teal-100  text-teal-700',   '🌬️'),
+  'ar_trail_making': ('Trail Making',   'bg-violet-100 text-violet-700', '🗺️'),
+  'stroop':          ('Stroop',         'bg-rose-100  text-rose-700',   '🎨'),
+  'gonogo':          ('Go/No-Go',       'bg-amber-100 text-amber-700',  '⚡'),
+  'atencion':        ('Atención',       'bg-blue-100  text-blue-700',   '👁️'),
+  'memoria':         ('Memoria',        'bg-emerald-100 text-emerald-700','🧠'),
+} %}
+
+<div x-data="{
+  filter: 'all',
+  matches(type) {
+    if (this.filter === 'all') return true;
+    if (this.filter === 'ar') return type && type.startsWith('ar_');
+    return type === this.filter;
+  }
+}">
+
+  {# ── Filtros ───────────────────────────────────────────────────────── #}
+  {% if activities %}
+  <div class="flex flex-wrap gap-2 mb-6">
+    {% for val, label in [('all','Todas'), ('ar','Realidad Aumentada'), ('atencion','Atención'), ('memoria','Memoria'), ('stroop','Stroop'), ('gonogo','Go/No-Go')] %}
+    <button @click="filter = '{{ val }}'"
+            :class="filter === '{{ val }}'
+              ? 'bg-[#4F46E5] text-white border-transparent shadow-sm'
+              : 'bg-white text-[#374151] border-[#E5E7EB] hover:border-[#C7D2FE] hover:text-[#4F46E5]'"
+            class="px-4 py-2 text-sm font-medium rounded-full border transition-all duration-150">
+      {{ label }}
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Grid de actividades ───────────────────────────────────────────── #}
+  {% if activities %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for activity in activities %}
+    {% set atype  = activity.activity_type or '' %}
+    {% set meta   = type_meta.get(atype, ('Actividad', 'bg-slate-100 text-slate-600', '📋')) %}
+
+    <div x-show="matches('{{ atype }}')"
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         class="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm hover:shadow-md
+                hover:border-indigo-200 transition-all duration-200 flex flex-col">
+
+      {# Card header coloreado #}
+      <div class="px-5 pt-5 pb-4 flex items-start gap-4">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0
+                    {{ 'bg-violet-100' if atype.startswith('ar_') else 'bg-indigo-50' }}">
+          {{ meta[2] }}
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('teacher.create_activity') }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Nueva Actividad
-            </a>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-start justify-between gap-2">
+            <h3 class="text-base font-semibold text-[#1F2937] leading-tight truncate">
+              {{ activity.title }}
+            </h3>
+            {% if activity.ar_content and activity.ar_content.get('enabled') %}
+            <span class="flex-shrink-0 text-xs font-bold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full">
+              AR
+            </span>
+            {% endif %}
+          </div>
+          {% if activity.description %}
+          <p class="text-xs text-[#9CA3AF] mt-1 line-clamp-2">{{ activity.description }}</p>
+          {% endif %}
         </div>
+      </div>
+
+      {# Badges y metadatos #}
+      <div class="px-5 py-3 border-t border-[#F3F4F6] flex items-center flex-wrap gap-2">
+        <span class="text-xs font-semibold px-2.5 py-1 rounded-full {{ meta[1] }}">
+          {{ meta[0] }}
+        </span>
+        <span class="text-xs font-medium text-[#6B7280] bg-[#F3F4F6] px-2.5 py-1 rounded-full">
+          Nivel {{ activity.difficulty_level or '—' }}
+        </span>
+        {% set session_count = activity.sessions.count() %}
+        {% if session_count > 0 %}
+        <span class="text-xs font-medium text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
+          {{ session_count }} sesión{{ 'es' if session_count != 1 else '' }}
+        </span>
+        {% endif %}
+      </div>
+
+      {# Alumno + fecha #}
+      <div class="px-5 py-3 border-t border-[#F3F4F6] flex items-center justify-between text-xs text-[#9CA3AF]">
+        <span class="truncate max-w-[60%]">
+          <svg class="w-3.5 h-3.5 inline mr-1 -mt-0.5 text-[#C7D2FE]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+          {{ activity.student.full_name or activity.student.user.username }}
+        </span>
+        <span class="tabular-nums flex-shrink-0">
+          {{ activity.created_at.strftime('%d/%m/%Y') }}
+        </span>
+      </div>
+
+      {# Acción ─ dropdown simple con Alpine #}
+      <div class="px-5 pb-5 pt-3" x-data="{ open: false }">
+        <div class="relative">
+          <button @click="open = !open" @keydown.escape.window="open = false"
+                  class="w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-xl
+                         border border-[#E5E7EB] text-sm text-[#374151] font-medium
+                         hover:bg-[#F9FAFB] hover:border-[#C7D2FE] transition-colors">
+            <span>Acciones</span>
+            <svg class="w-4 h-4 text-[#9CA3AF] transition-transform" :class="open ? 'rotate-180' : ''"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+
+          <div x-show="open" @click.away="open = false" x-transition
+               class="absolute bottom-full left-0 right-0 mb-1 bg-white rounded-xl
+                      border border-[#E5E7EB] shadow-lg py-1 z-10">
+
+            {# Ver instrucciones #}
+            {% if activity.instructions %}
+            <button @click="open=false" type="button"
+                    onclick="document.getElementById('inst-{{ activity.id }}').showModal()"
+                    class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#374151]
+                           hover:bg-[#F9FAFB] transition-colors text-left">
+              <svg class="w-4 h-4 text-[#6B7280]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              Ver instrucciones
+            </button>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+
+      {# Modal instrucciones #}
+      {% if activity.instructions %}
+      <dialog id="inst-{{ activity.id }}"
+              class="rounded-2xl shadow-xl border border-[#E5E7EB] p-0 max-w-lg w-full backdrop:bg-black/40">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
+          <h3 class="font-semibold text-[#1F2937]">{{ activity.title }}</h3>
+          <button onclick="document.getElementById('inst-{{ activity.id }}').close()"
+                  class="text-[#9CA3AF] hover:text-[#374151] transition-colors">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="px-6 py-4 text-sm text-[#374151] whitespace-pre-line leading-relaxed max-h-80 overflow-y-auto">
+          {{ activity.instructions }}
+        </div>
+        <div class="px-6 pb-4 flex justify-end">
+          <button onclick="document.getElementById('inst-{{ activity.id }}').close()"
+                  class="px-4 py-2 text-sm font-medium text-[#374151] bg-[#F3F4F6]
+                         hover:bg-[#E5E7EB] rounded-lg transition-colors">
+            Cerrar
+          </button>
+        </div>
+      </dialog>
+      {% endif %}
     </div>
-    
-    {% if activities %}
-        <div class="row">
-            {% for activity in activities %}
-            <div class="col-md-4 mb-4">
-                <div class="activity-card card h-100">
-                    {% if activity.ar_content and activity.ar_content.enabled %}
-                    <span class="ar-badge"><i class="bi bi-badge-ar"></i> AR</span>
-                    {% endif %}
-                    
-                    <div class="card-body">
-                        <h5 class="card-title">{{ activity.title }}</h5>
-                        <p class="card-text text-muted small">{{ activity.description }}</p>
-                        
-                        <div class="mb-3">
-                            <span class="badge bg-info">{{ activity.activity_type }}</span>
-                            <span class="badge bg-secondary">Nivel {{ activity.difficulty_level }}</span>
-                        </div>
-                        
-                        <p class="small mb-1">
-                            <strong>Estudiante:</strong> {{ activity.student.user.username }}
-                        </p>
-                        <p class="small text-muted">
-                            <i class="bi bi-calendar"></i> {{ activity.created_at.strftime('%d/%m/%Y') }}
-                        </p>
-                        
-                        <hr>
-                        
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" 
-                                    data-bs-target="#activityModal{{ activity.id }}">
-                                <i class="bi bi-eye"></i> Ver Detalles
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Modal de detalles -->
-            <div class="modal fade" id="activityModal{{ activity.id }}" tabindex="-1">
-                <div class="modal-dialog modal-lg">
-                    <div class="modal-content">
-                        <div class="modal-header bg-primary text-white">
-                            <h5 class="modal-title">{{ activity.title }}</h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <h6>Descripción</h6>
-                            <p>{{ activity.description }}</p>
-                            
-                            <h6>Instrucciones</h6>
-                            <pre style="white-space: pre-line;">{{ activity.instructions }}</pre>
-                            
-                            <h6>Detalles</h6>
-                            <ul>
-                                <li><strong>Tipo:</strong> {{ activity.activity_type }}</li>
-                                <li><strong>Nivel:</strong> {{ activity.difficulty_level }}</li>
-                                <li><strong>Estudiante:</strong> {{ activity.student.user.username }}</li>
-                                <li><strong>AR:</strong> {{ 'Habilitado' if activity.ar_content and activity.ar_content.enabled else 'No' }}</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="card">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
-                <h4 class="mt-3 text-muted">No has creado actividades aún</h4>
-                <p class="text-muted">Crea tu primera actividad para tus estudiantes</p>
-                <a href="{{ url_for('teacher.create_activity') }}" class="btn btn-primary mt-3">
-                    <i class="bi bi-plus-circle"></i> Crear Primera Actividad
-                </a>
-            </div>
-        </div>
-    {% endif %}
+    {% endfor %}
+  </div>
+
+  {# Mensaje si el filtro activo no tiene resultados #}
+  <div x-show="filter !== 'all' && !{{ activities | length }}" x-cloak
+       class="text-center py-12 text-[#9CA3AF] text-sm">
+    No hay actividades de este tipo.
+  </div>
+
+  {% else %}
+  {# ── Empty state ───────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-2xl border border-dashed border-[#D1D5DB] py-16 flex flex-col items-center">
+    <svg class="w-16 h-16 text-[#E5E7EB] mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+    </svg>
+    <p class="text-base font-semibold text-[#374151] mb-1">Sin actividades aún</p>
+    <p class="text-sm text-[#9CA3AF] mb-6 text-center max-w-xs">
+      Crea actividades personalizadas para tus alumnos y asígnalas desde aquí.
+    </p>
+    <a href="{{ url_for('teacher.create_activity') }}"
+       class="flex items-center gap-2 px-5 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA]
+              text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+      </svg>
+      Crear primera actividad
+    </a>
+  </div>
+  {% endif %}
+
 </div>
 {% endblock %}

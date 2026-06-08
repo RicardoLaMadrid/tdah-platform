@@ -1,348 +1,406 @@
-{% extends 'base.html' %}
+{% extends '_layouts/teacher_layout.html' %}
 
-{% block title %}{{ student.user.username }} - Detalle{% endblock %}
+{% block title %}{{ student.full_name or student.user.username }} - Detalle{% endblock %}
+{% block page_title %}Detalle del Alumno{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('teacher.students') }}"
+   class="flex items-center gap-1.5 text-sm text-[#6B7280] hover:text-[#1F2937] transition-colors">
+  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+  </svg>
+  Mis Alumnos
+</a>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>
-                <i class="bi bi-person-badge"></i> {{ student.user.username }}
-            </h1>
+<div x-data="{ tab: 'sessions' }">
+
+  <!-- ── Header: avatar + info + badge ── -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-6 mb-6">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+      <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#4F46E5] to-[#818CF8] text-white flex items-center justify-center text-3xl font-bold flex-shrink-0" aria-hidden="true">
+        {{ (student.full_name or student.user.username)[0].upper() }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <h1 class="text-xl font-bold text-[#1F2937] truncate">{{ student.full_name or student.user.username }}</h1>
+        <p class="text-sm text-[#6B7280] mt-0.5">@{{ student.user.username }} &bull; {{ student.user.email }}</p>
+        <div class="flex flex-wrap items-center gap-2 mt-2">
+          {% if student.age %}<span class="text-xs bg-[#F3F4F6] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{{ student.age }} años</span>{% endif %}
+          {% if student.grade %}<span class="text-xs bg-[#F3F4F6] text-[#6B7280] px-2 py-0.5 rounded-full font-medium">{{ student.grade }}{% if student.section %} - {{ student.section }}{% endif %}</span>{% endif %}
+          {% if student.tdah_type %}
+          <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold
+            {% if 'hiperactivo' in (student.tdah_type or '')|lower %}bg-red-100 text-red-700
+            {% elif 'inatento' in (student.tdah_type or '')|lower %}bg-amber-100 text-amber-700
+            {% else %}bg-indigo-100 text-indigo-700{% endif %}">
+            TDAH: {{ student.tdah_type }}
+          </span>
+          {% else %}
+          <span class="text-xs bg-[#F3F4F6] text-[#9CA3AF] px-2.5 py-0.5 rounded-full">Sin diagnóstico</span>
+          {% endif %}
         </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('teacher.students') }}" class="btn btn-secondary">
-                <i class="bi bi-arrow-left"></i> Volver
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Layout 2 columnas ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+    <!-- ─ Columna izquierda: info del alumno ─ -->
+    <div class="lg:col-span-1 space-y-4">
+
+      <!-- Datos académicos -->
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-5">
+        <h3 class="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-3">Datos Académicos</h3>
+        <dl class="space-y-2 text-sm">
+          {% if student.national_id %}
+          <div class="flex justify-between"><dt class="text-[#6B7280]">C.I.</dt><dd class="font-medium text-[#1F2937]">{{ student.national_id }}</dd></div>
+          {% endif %}
+          {% if student.grade %}<div class="flex justify-between"><dt class="text-[#6B7280]">Grado</dt><dd class="font-medium text-[#1F2937]">{{ student.grade }}{% if student.section %} - {{ student.section }}{% endif %}</dd></div>{% endif %}
+          {% if student.age %}<div class="flex justify-between"><dt class="text-[#6B7280]">Edad</dt><dd class="font-medium text-[#1F2937]">{{ student.age }} años</dd></div>{% endif %}
+        </dl>
+      </div>
+
+      <!-- Info médica (warning si tiene alergias) -->
+      {% if student.allergies or student.medical_conditions or student.medications %}
+      <div class="bg-amber-50 rounded-xl border border-amber-200 p-5">
+        <h3 class="flex items-center gap-1.5 text-xs font-semibold text-amber-700 uppercase tracking-wider mb-3">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          Info Médica
+        </h3>
+        <div class="space-y-2 text-sm text-amber-800">
+          {% if student.allergies %}<div><span class="font-semibold">Alergias:</span> {{ student.allergies }}</div>{% endif %}
+          {% if student.medical_conditions %}<div><span class="font-semibold">Condiciones:</span> {{ student.medical_conditions }}</div>{% endif %}
+          {% if student.medications %}<div><span class="font-semibold">Medicación:</span> {{ student.medications }}</div>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Tutor principal -->
+      {% if student.tutor_full_name %}
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-5">
+        <h3 class="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-3">Tutor Principal</h3>
+        <div class="text-sm">
+          <p class="font-semibold text-[#1F2937]">{{ student.tutor_full_name }}</p>
+          {% if student.tutor_relationship %}<p class="text-[#6B7280] text-xs mb-2">{{ student.tutor_relationship }}</p>{% endif %}
+          {% if student.tutor_email %}<p class="text-[#6B7280] text-xs mb-3 truncate">{{ student.tutor_email }}</p>{% endif %}
+          {% if student.tutor_phone %}
+          <div class="flex gap-2">
+            <a href="tel:{{ student.tutor_phone }}"
+               class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              Llamar
             </a>
+            <a href="https://wa.me/{{ student.tutor_phone|replace('+','')|replace(' ','') }}" target="_blank" rel="noopener noreferrer"
+               class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              WhatsApp
+            </a>
+          </div>
+          {% endif %}
         </div>
+        {% if student.tutor_secondary_name %}
+        <div class="border-t border-[#F3F4F6] mt-4 pt-4">
+          <p class="text-xs font-semibold text-[#6B7280] mb-1">Tutor secundario</p>
+          <p class="text-sm font-medium text-[#1F2937]">{{ student.tutor_secondary_name }}</p>
+          {% if student.tutor_secondary_phone %}
+          <div class="flex gap-2 mt-2">
+            <a href="tel:{{ student.tutor_secondary_phone }}"
+               class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+              </svg>
+              Llamar
+            </a>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Contacto de emergencia (rojo) -->
+      {% if student.emergency_contact_name or student.emergency_contact_phone %}
+      <div class="bg-red-50 rounded-xl border border-red-200 p-5">
+        <h3 class="flex items-center gap-1.5 text-xs font-semibold text-red-700 uppercase tracking-wider mb-3">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+          Emergencia
+        </h3>
+        <p class="text-sm font-semibold text-red-800">{{ student.emergency_contact_name or 'No especificado' }}</p>
+        {% if student.emergency_contact_phone %}
+        <a href="tel:{{ student.emergency_contact_phone }}"
+           class="mt-2 flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors w-fit">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+          </svg>
+          {{ student.emergency_contact_phone }}
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Dirección -->
+      {% if student.address %}
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-5">
+        <h3 class="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-2">Dirección</h3>
+        <p class="text-sm text-[#374151]">{{ student.address }}</p>
+      </div>
+      {% endif %}
     </div>
-    
-    <!-- Información del estudiante -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-    <div class="card mb-3">
-        <div class="card-body text-center">
-            <div class="user-avatar mx-auto mb-3" style="width: 100px; height: 100px; font-size: 3rem;">
-                {{ (student.full_name or student.user.username)[0].upper() }}
-            </div>
-            <h4>{{ student.full_name or student.user.username }}</h4>
-            <p class="text-muted small">@{{ student.user.username }}</p>
-            <p class="text-muted">{{ student.user.email }}</p>
-            
-            <hr>
-            
-            <div class="text-start">
-                <p><strong>Edad:</strong> {{ student.age or 'N/A' }} años</p>
-                {% if student.grade %}
-                <p><strong>Grado:</strong> {{ student.grade }}{% if student.section %} - {{ student.section }}{% endif %}</p>
-                {% endif %}
-                {% if student.national_id %}
-                <p><strong>CI:</strong> {{ student.national_id }}</p>
-                {% endif %}
-                <p><strong>Tipo TDAH:</strong> 
-                    <span class="badge bg-info">{{ student.tdah_type or 'No especificado' }}</span>
-                </p>
-            </div>
+
+    <!-- ─ Columna derecha: estadísticas + gráfico ─ -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <!-- Stat cards -->
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-[#E5E7EB] text-center">
+          <p class="text-2xl font-bold text-[#4F46E5]">{{ stats.total_sessions }}</p>
+          <p class="text-xs text-[#6B7280] mt-1">Sesiones</p>
         </div>
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-[#E5E7EB] text-center">
+          <p class="text-2xl font-bold text-emerald-600">{{ stats.avg_attention }}%</p>
+          <p class="text-xs text-[#6B7280] mt-1">Atención promedio</p>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-[#E5E7EB] text-center">
+          <p class="text-2xl font-bold text-amber-600">{{ stats.avg_completion_time }}</p>
+          <p class="text-xs text-[#6B7280] mt-1">Tiempo prom (min)</p>
+        </div>
+      </div>
+
+      <!-- Gráfico Chart.js -->
+      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-5">
+        <h3 class="text-sm font-semibold text-[#1F2937] mb-4">Progreso de Atención</h3>
+        {% if sessions %}
+        <canvas id="attentionChart" height="70"></canvas>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-8 text-[#9CA3AF]">
+          <svg class="w-8 h-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+          <p class="text-sm">Sin datos de sesiones todavía</p>
+        </div>
+        {% endif %}
+      </div>
     </div>
-    
-    <!-- ⭐ NUEVA: Información Médica -->
-    {% if student.allergies or student.medical_conditions or student.medications %}
-    <div class="card mb-3 border-warning">
-        <div class="card-header bg-warning text-dark">
-            <h6 class="mb-0"><i class="bi bi-heart-pulse-fill"></i> Información Médica</h6>
-        </div>
-        <div class="card-body small">
-            {% if student.allergies %}
-            <p><strong>⚠️ Alergias:</strong><br>{{ student.allergies }}</p>
-            {% endif %}
-            {% if student.medical_conditions %}
-            <p><strong>Condiciones:</strong><br>{{ student.medical_conditions }}</p>
-            {% endif %}
-            {% if student.medications %}
-            <p class="mb-0"><strong>Medicación:</strong><br>{{ student.medications }}</p>
-            {% endif %}
-        </div>
+  </div>
+
+  <!-- ── Tabs: Sesiones / Actividades / Reportes ── -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+
+    <!-- Tab nav -->
+    <div class="flex border-b border-[#E5E7EB]" role="tablist">
+      <button @click="tab = 'sessions'" role="tab" :aria-selected="tab === 'sessions'"
+              class="flex items-center gap-2 px-6 py-3.5 text-sm font-medium transition-colors border-b-2 -mb-px"
+              :class="tab === 'sessions' ? 'border-[#4F46E5] text-[#4F46E5] bg-indigo-50/50' : 'border-transparent text-[#6B7280] hover:text-[#1F2937]'">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        Sesiones ({{ sessions|length }})
+      </button>
+      <button @click="tab = 'activities'" role="tab" :aria-selected="tab === 'activities'"
+              class="flex items-center gap-2 px-6 py-3.5 text-sm font-medium transition-colors border-b-2 -mb-px"
+              :class="tab === 'activities' ? 'border-[#4F46E5] text-[#4F46E5] bg-indigo-50/50' : 'border-transparent text-[#6B7280] hover:text-[#1F2937]'">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+        </svg>
+        Actividades ({{ activities|length }})
+      </button>
+      <button @click="tab = 'reports'" role="tab" :aria-selected="tab === 'reports'"
+              class="flex items-center gap-2 px-6 py-3.5 text-sm font-medium transition-colors border-b-2 -mb-px"
+              :class="tab === 'reports' ? 'border-[#4F46E5] text-[#4F46E5] bg-indigo-50/50' : 'border-transparent text-[#6B7280] hover:text-[#1F2937]'">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        Reportes ({{ reports|length }})
+      </button>
     </div>
-    {% endif %}
-    
-    <!-- ⭐ NUEVA: Tutores y contactos -->
-    {% set parents_info = student.get_parents() %}
-    {% if parents_info %}
-    <div class="card mb-3 border-success">
-        <div class="card-header bg-success text-white">
-            <h6 class="mb-0"><i class="bi bi-people-fill"></i> Tutores</h6>
-        </div>
-        <div class="card-body small">
-            {% for p in parents_info %}
-            <div class="mb-3 {% if not loop.last %}pb-3 border-bottom{% endif %}">
-                <strong>{{ p.name }}</strong> 
-                <span class="badge bg-secondary">{{ p.relationship }}</span><br>
-                <small class="text-muted">{{ p.email }}</small><br>
-                {% if p.phone %}
-                <div class="mt-2 d-flex gap-1 flex-wrap">
-                    <a href="tel:{{ p.phone }}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-telephone-fill"></i> Llamar
-                    </a>
-                    <a href="https://wa.me/{{ p.phone|replace('+','')|replace(' ','') }}" 
-                       target="_blank" class="btn btn-sm btn-outline-success">
-                        <i class="bi bi-whatsapp"></i> WhatsApp
-                    </a>
+
+    <!-- Tab: Sesiones -->
+    <div x-show="tab === 'sessions'" x-transition role="tabpanel">
+      {% if sessions %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-[#F9FAFB] border-b border-[#E5E7EB]">
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Fecha</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Actividad</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Atención</th>
+              <th class="text-left px-6 py-3 text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Tiempo</th>
+              <th class="px-6 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#F3F4F6]">
+            {% for session in sessions %}
+            <tr class="hover:bg-[#F9FAFB] transition-colors">
+              <td class="px-6 py-3 text-[#6B7280] tabular-nums whitespace-nowrap">{{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
+              <td class="px-6 py-3 text-[#1F2937]">{{ session.activity.title if session.activity else 'Actividad libre' }}</td>
+              <td class="px-6 py-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-20 h-1.5 bg-[#F3F4F6] rounded-full overflow-hidden">
+                    <div class="h-full rounded-full
+                      {% if (session.attention_score or 0) >= 70 %}bg-emerald-500
+                      {% elif (session.attention_score or 0) >= 50 %}bg-amber-500
+                      {% else %}bg-red-500{% endif %}"
+                      style="width: {{ session.attention_score|default(0)|int }}%"></div>
+                  </div>
+                  <span class="text-xs font-medium tabular-nums">{{ session.attention_score or 0 }}%</span>
                 </div>
-                {% endif %}
-            </div>
+              </td>
+              <td class="px-6 py-3 text-[#6B7280] tabular-nums">{{ (session.completion_time // 60) if session.completion_time else 0 }} min</td>
+              <td class="px-6 py-3 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <a href="{{ url_for('teacher.session_detail', session_id=session.id) }}"
+                     class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors">
+                    Ver
+                  </a>
+                  <a href="{{ url_for('teacher.create_report', session_id=session.id) }}"
+                     class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors">
+                    Reporte
+                  </a>
+                </div>
+              </td>
+            </tr>
             {% endfor %}
-        </div>
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="flex flex-col items-center justify-center py-12 text-[#9CA3AF]">
+        <svg class="w-10 h-10 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        <p class="text-sm">No hay sesiones registradas todavía</p>
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
-    
-    <!-- ⭐ NUEVA: Contacto de emergencia -->
-    {% if student.emergency_contact_name or student.emergency_contact_phone %}
-    <div class="card mb-3 border-danger">
-        <div class="card-header bg-danger text-white">
-            <h6 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Contacto de Emergencia</h6>
-        </div>
-        <div class="card-body small">
-            <strong>{{ student.emergency_contact_name or 'No especificado' }}</strong><br>
-            {% if student.emergency_contact_phone %}
-            <a href="tel:{{ student.emergency_contact_phone }}" class="btn btn-sm btn-danger mt-2">
-                <i class="bi bi-telephone-fill"></i> {{ student.emergency_contact_phone }}
-            </a>
+
+    <!-- Tab: Actividades -->
+    <div x-show="tab === 'activities'" x-transition role="tabpanel">
+      {% if activities %}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
+        {% for activity in activities %}
+        <div class="rounded-xl border border-[#E5E7EB] p-4 hover:shadow-sm transition-shadow">
+          <div class="flex items-start justify-between mb-2">
+            <h4 class="text-sm font-semibold text-[#1F2937] leading-tight">{{ activity.title }}</h4>
+            {% if activity.ar_content and activity.ar_content.enabled %}
+            <span class="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full font-medium flex-shrink-0 ml-2">AR</span>
             {% endif %}
+          </div>
+          <p class="text-xs text-[#6B7280] mb-3 line-clamp-2">{{ activity.description }}</p>
+          <div class="flex gap-2">
+            <span class="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">{{ activity.activity_type }}</span>
+            <span class="text-xs px-2 py-0.5 bg-[#F3F4F6] text-[#6B7280] rounded-full">Nivel {{ activity.difficulty_level }}</span>
+          </div>
         </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="flex flex-col items-center justify-center py-12 text-[#9CA3AF]">
+        <svg class="w-10 h-10 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+        </svg>
+        <p class="text-sm mb-3">No hay actividades asignadas</p>
+        <a href="{{ url_for('teacher.create_activity') }}"
+           class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-lg transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Crear Actividad
+        </a>
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
-    
-    {% if student.address %}
-    <div class="card mb-3">
-        <div class="card-header">
-            <h6 class="mb-0"><i class="bi bi-geo-alt-fill"></i> Dirección</h6>
+
+    <!-- Tab: Reportes -->
+    <div x-show="tab === 'reports'" x-transition role="tabpanel">
+      {% if reports %}
+      <div class="divide-y divide-[#F3F4F6]">
+        {% for report in reports %}
+        <div class="p-6">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <p class="text-sm font-semibold text-[#1F2937]">{{ report.created_at.strftime('%d/%m/%Y') }}</p>
+            </div>
+            <span class="text-xs px-2.5 py-0.5 rounded-full font-medium
+              {{ 'bg-emerald-100 text-emerald-700' if report.sent_to_parents else 'bg-amber-100 text-amber-700' }}">
+              {{ 'Enviado a tutores' if report.sent_to_parents else 'Pendiente de envío' }}
+            </span>
+          </div>
+          <p class="text-sm text-[#374151] mb-2">{{ report.content }}</p>
+          {% if report.recommendations %}
+          <p class="text-xs text-[#6B7280]"><span class="font-medium">Recomendaciones:</span> {{ report.recommendations }}</p>
+          {% endif %}
         </div>
-        <div class="card-body small">
-            {{ student.address }}
-        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="flex flex-col items-center justify-center py-12 text-[#9CA3AF]">
+        <svg class="w-10 h-10 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <p class="text-sm">No hay reportes creados</p>
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
+
+  </div>
+
 </div>
-        
-        <div class="col-md-8">
-            <!-- Estadísticas -->
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <div class="stat-card primary">
-                        <h3>{{ stats.total_sessions }}</h3>
-                        <p class="text-muted">Sesiones Completadas</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="stat-card success">
-                        <h3>{{ stats.avg_attention }}%</h3>
-                        <p class="text-muted">Atención Promedio</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="stat-card warning">
-                        <h3>{{ stats.avg_completion_time }}</h3>
-                        <p class="text-muted">Tiempo Promedio (min)</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Progreso -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="bi bi-graph-up"></i> Progreso de Atención
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="attentionChart" height="80"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Tabs de información -->
-    <ul class="nav nav-tabs mb-4" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#sessions-tab">
-                <i class="bi bi-activity"></i> Sesiones ({{ sessions|length }})
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#activities-tab">
-                <i class="bi bi-clipboard-check"></i> Actividades ({{ activities|length }})
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#reports-tab">
-                <i class="bi bi-file-text"></i> Reportes ({{ reports|length }})
-            </button>
-        </li>
-    </ul>
-    
-    <div class="tab-content">
-        <!-- Sesiones -->
-        <div class="tab-pane fade show active" id="sessions-tab">
-            <div class="card">
-                <div class="card-body">
-                    {% if sessions %}
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th>Actividad</th>
-                                        <th>Atención</th>
-                                        <th>Tiempo</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for session in sessions %}
-                                    <tr>
-                                        <td>{{ session.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
-                                        <td>{{ session.activity.title if session.activity else 'Actividad libre' }}</td>
-                                        <td>
-                                            <div class="progress" style="width: 100px; height: 20px;">
-                                                <div class="progress-bar bg-{{ 'success' if session.attention_score >= 70 else 'warning' if session.attention_score >= 50 else 'danger' }}" 
-                                                     style="width: {{ session.attention_score or 0 }}%">
-                                                    {{ session.attention_score or 0 }}%
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>{{ (session.completion_time // 60) if session.completion_time else 0 }} min</td>
-                                        <td>
-                                            <a href="{{ url_for('teacher.session_detail', session_id=session.id) }}" 
-                                               class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-eye"></i> Ver
-                                            </a>
-                                            <a href="{{ url_for('teacher.create_report', session_id=session.id) }}" 
-                                               class="btn btn-sm btn-outline-success">
-                                                <i class="bi bi-file-text"></i> Reporte
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <div class="text-center py-5">
-                            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                            <p class="text-muted mt-3">No hay sesiones registradas</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <!-- Actividades -->
-        <div class="tab-pane fade" id="activities-tab">
-            <div class="card">
-                <div class="card-body">
-                    {% if activities %}
-                        <div class="row">
-                            {% for activity in activities %}
-                            <div class="col-md-4 mb-3">
-                                <div class="activity-card card h-100">
-                                    {% if activity.ar_content and activity.ar_content.enabled %}
-                                    <span class="ar-badge"><i class="bi bi-badge-ar"></i> AR</span>
-                                    {% endif %}
-                                    
-                                    <div class="card-body">
-                                        <h5 class="card-title">{{ activity.title }}</h5>
-                                        <p class="card-text small text-muted">{{ activity.description }}</p>
-                                        <span class="badge bg-info">{{ activity.activity_type }}</span>
-                                        <span class="badge bg-secondary">Nivel {{ activity.difficulty_level }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="text-center py-5">
-                            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                            <p class="text-muted mt-3">No hay actividades asignadas</p>
-                            <a href="{{ url_for('teacher.create_activity') }}" class="btn btn-primary">
-                                <i class="bi bi-plus-circle"></i> Crear Actividad
-                            </a>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <!-- Reportes -->
-        <div class="tab-pane fade" id="reports-tab">
-            <div class="card">
-                <div class="card-body">
-                    {% if reports %}
-                        {% for report in reports %}
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6>{{ report.created_at.strftime('%d/%m/%Y') }}</h6>
-                                        <p class="mb-2">{{ report.content }}</p>
-                                        <p class="text-muted small"><strong>Recomendaciones:</strong> {{ report.recommendations }}</p>
-                                    </div>
-                                    <span class="badge bg-{{ 'success' if report.sent_to_parents else 'warning' }}">
-                                        {{ 'Enviado' if report.sent_to_parents else 'Pendiente' }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="text-center py-5">
-                            <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                            <p class="text-muted mt-3">No hay reportes creados</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
+
+<!-- ── FAB: Crear Reporte ── -->
+{% if sessions %}
+<div class="fixed bottom-6 right-6 z-40">
+  <a href="{{ url_for('teacher.create_report', session_id=sessions[0].id) }}"
+     class="flex items-center gap-2 px-5 py-3 bg-[#4F46E5] hover:bg-[#4338CA] text-white font-semibold rounded-xl shadow-lg transition-all hover:shadow-xl">
+    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    Crear Reporte
+  </a>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const ctx = document.getElementById('attentionChart');
-    
+  const ctx = document.getElementById('attentionChart');
+  if (ctx) {
     const dates = {{ sessions|map(attribute='created_at')|map('string')|list|tojson }};
     const scores = {{ sessions|map(attribute='attention_score')|list|tojson }};
-    
     new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: dates.map(d => new Date(d).toLocaleDateString('es-ES', {day: '2-digit', month: '2-digit'})),
-            datasets: [{
-                label: 'Puntuación de Atención',
-                data: scores,
-                borderColor: '#667eea',
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    display: true
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
-            }
+      type: 'line',
+      data: {
+        labels: dates.map(d => new Date(d).toLocaleDateString('es-ES', {day:'2-digit', month:'2-digit'})),
+        datasets: [{
+          label: 'Puntuación de Atención',
+          data: scores,
+          borderColor: '#4F46E5',
+          backgroundColor: 'rgba(79, 70, 229, 0.08)',
+          tension: 0.4,
+          fill: true,
+          pointBackgroundColor: '#4F46E5',
+          pointRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, max: 100, grid: { color: '#F3F4F6' } },
+          x: { grid: { display: false } }
         }
+      }
     });
+  }
 </script>
 {% endblock %}

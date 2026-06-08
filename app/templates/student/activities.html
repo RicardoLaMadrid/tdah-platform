@@ -1,74 +1,97 @@
 {% extends 'base.html' %}
-
-{% block title %}Mis Actividades - Estudiante{% endblock %}
+{% block title %}Mis Actividades — Plataforma TDAH{% endblock %}
+{% block page_title %}Mis Actividades{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h1 class="mb-4"><i class="bi bi-controller"></i> Mis Actividades</h1>
-    
-    {% if activities_data %}
-        <div class="row">
-            {% for data in activities_data %}
-            <div class="col-md-4 mb-4">
-                <div class="activity-card card h-100">
-                    {% if data.activity.ar_content and data.activity.ar_content.enabled %}
-                    <span class="ar-badge"><i class="bi bi-badge-ar"></i> AR</span>
-                    {% endif %}
-                    
-                    <div class="card-body">
-                        <h5 class="card-title">{{ data.activity.title }}</h5>
-                        <p class="card-text text-muted">{{ data.activity.description }}</p>
-                        
-                        <div class="mb-3">
-                            <span class="badge bg-info">{{ data.activity.activity_type }}</span>
-                            <span class="badge bg-secondary">Nivel {{ data.activity.difficulty_level }}</span>
-                        </div>
-                        
-                        <hr>
-                        
-                        <div class="mb-2">
-                            <small class="text-muted">Veces Completada:</small>
-                            <strong class="ms-2">{{ data.sessions_count }}</strong>
-                        </div>
-                        
-                        {% if data.last_session %}
-                        <div class="mb-2">
-                            <small class="text-muted">Última vez:</small>
-                            <p class="mb-0 small">{{ data.last_session.created_at.strftime('%d/%m/%Y') }}</p>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-{{ 'success' if data.last_session.attention_score >= 70 else 'warning' if data.last_session.attention_score >= 50 else 'danger' }}" 
-                                     style="width: {{ data.last_session.attention_score or 0 }}%">
-                                </div>
-                            </div>
-                            <small class="text-muted">{{ data.last_session.attention_score or 0 }}% atención</small>
-                        </div>
-                        {% endif %}
-                        
-                        <hr>
-                        
-                        <div class="d-grid gap-2">
-                            <a href="{{ url_for('student.activity_detail', activity_id=data.activity.id) }}" 
-                               class="btn btn-outline-primary btn-sm">
-                                <i class="bi bi-info-circle"></i> Ver Detalles
-                            </a>
-                            <a href="{{ url_for('student.start_activity', activity_id=data.activity.id) }}" 
-                               class="btn btn-primary">
-                                <i class="bi bi-play-circle"></i> Comenzar Actividad
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="card">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
-                <h4 class="mt-3 text-muted">No tienes actividades asignadas</h4>
-                <p class="text-muted">Tu profesor te asignará actividades pronto</p>
-            </div>
-        </div>
-    {% endif %}
+<div class="mb-6">
+  <h2 class="text-2xl font-bold text-[#1F2937]">Mis Actividades</h2>
+  <p class="text-[#6B7280] mt-1">Actividades asignadas por tu profesor</p>
 </div>
+
+{% if activities_data %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    {% for data in activities_data %}
+    <div class="relative bg-white rounded-2xl border border-slate-200 shadow-sm
+                hover:shadow-md hover:-translate-y-1 transition-all duration-200 flex flex-col overflow-hidden">
+
+      {% if data.activity.ar_content and data.activity.ar_content.enabled %}
+      <span class="absolute top-3 right-3 inline-flex items-center px-2.5 py-1 bg-violet-600 text-white text-xs font-bold rounded-full z-10">
+        AR
+      </span>
+      {% endif %}
+
+      <div class="p-5 flex flex-col flex-1">
+        <h5 class="font-bold text-[#1F2937] text-base mb-1.5 pr-12">{{ data.activity.title }}</h5>
+        <p class="text-sm text-[#6B7280] mb-4 leading-relaxed">{{ data.activity.description }}</p>
+
+        <div class="flex gap-2 mb-4">
+          <span class="inline-flex items-center px-2.5 py-1 bg-sky-100 text-sky-700 text-xs font-bold rounded-full">
+            {{ data.activity.activity_type }}
+          </span>
+          <span class="inline-flex items-center px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full">
+            Nivel {{ data.activity.difficulty_level }}
+          </span>
+        </div>
+
+        <hr class="border-slate-100 mb-4">
+
+        <div class="text-sm mb-3 flex-1">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-[#9CA3AF] text-xs">Veces completada:</span>
+            <strong class="text-[#1F2937]">{{ data.sessions_count }}</strong>
+          </div>
+
+          {% if data.last_session %}
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[#9CA3AF] text-xs">Última vez: {{ data.last_session.created_at.strftime('%d/%m/%Y') }}</span>
+              <span class="text-xs font-medium {{ 'text-emerald-600' if (data.last_session.attention_score or 0) >= 70
+                                                  else 'text-amber-500' if (data.last_session.attention_score or 0) >= 50
+                                                  else 'text-red-500' }}">
+                {{ data.last_session.attention_score or 0 }}%
+              </span>
+            </div>
+            <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full rounded-full
+                          {{ 'bg-emerald-500' if (data.last_session.attention_score or 0) >= 70
+                             else 'bg-amber-400' if (data.last_session.attention_score or 0) >= 50
+                             else 'bg-red-400' }}"
+                   style="width: {{ data.last_session.attention_score or 0 }}%">
+              </div>
+            </div>
+            <p class="text-xs text-[#9CA3AF] mt-1">atención</p>
+          </div>
+          {% endif %}
+        </div>
+
+        <hr class="border-slate-100 mb-4">
+
+        <div class="flex flex-col gap-2">
+          <a href="{{ url_for('student.activity_detail', activity_id=data.activity.id) }}"
+             class="flex items-center justify-center gap-2 w-full py-2 border border-indigo-300 text-indigo-600
+                    hover:bg-indigo-50 text-sm font-medium rounded-xl transition-colors">
+            Ver Detalles
+          </a>
+          <a href="{{ url_for('student.start_activity', activity_id=data.activity.id) }}"
+             class="flex items-center justify-center gap-2 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700
+                    text-white text-sm font-bold rounded-xl transition-colors shadow-sm">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+            </svg>
+            Comenzar Actividad
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+{% else %}
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-16 text-center">
+    <p class="text-6xl opacity-30 mb-4" aria-hidden="true">📭</p>
+    <h4 class="text-lg font-bold text-[#1F2937] mb-2">No tienes actividades asignadas</h4>
+    <p class="text-[#6B7280] text-sm">Tu profesor te asignará actividades pronto</p>
+  </div>
+{% endif %}
 {% endblock %}
