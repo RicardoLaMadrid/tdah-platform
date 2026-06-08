@@ -27,16 +27,17 @@ def index():
     
     student = Student.query.filter_by(user_id=current_user.id).first()
     
-    ar_types = ['ar_caza', 'ar_secuencia', 'ar_respiracion']
+    ar_types = ['ar_caza', 'ar_secuencia', 'ar_respiracion', 'ar_trail_making']
     ar_reports = Report.query.filter_by(student_id=student.id).filter(
-        Report.report_type.in_(ar_types)  # ✅ report_type, no test_type
+        Report.report_type.in_(ar_types)
     ).all()
-    
+
     stats = {
         'total_ar_activities': len(ar_reports),
         'caza_completed': len([r for r in ar_reports if r.report_type == 'ar_caza']),
         'secuencia_completed': len([r for r in ar_reports if r.report_type == 'ar_secuencia']),
         'respiracion_completed': len([r for r in ar_reports if r.report_type == 'ar_respiracion']),
+        'trail_completed': len([r for r in ar_reports if r.report_type == 'ar_trail_making']),
     }
     
     return render_template('ar/index.html', student=student, stats=stats)
@@ -64,6 +65,14 @@ def respiracion():
     from app.models.student import Student
     student = Student.query.filter_by(user_id=current_user.id).first()
     return render_template('ar/respiracion.html', student=student)
+
+
+@ar_bp.route('/trail-making')
+@student_required
+def trail_making():
+    from app.models.student import Student
+    student = Student.query.filter_by(user_id=current_user.id).first()
+    return render_template('ar/trail_making.html', student=student)
 
 
 @ar_bp.route('/save-result', methods=['POST'])
@@ -145,4 +154,14 @@ def _analizar_resultado_ar(results, activity_type):
         return 'inatento' if score < 50 else 'typical'
     elif activity_type == 'ar_respiracion':
         return 'hiperactivo' if score < 60 else 'typical'
+    elif activity_type == 'ar_trail_making':
+        total_time = results.get('total_time', 60)
+        completed = results.get('completed', False)
+        if not completed:
+            return 'inatento'
+        elif errors > 2:
+            return 'hiperactivo'  # clicks impulsivos
+        elif total_time > 45:
+            return 'inatento'     # procesamiento lento
+        return 'typical'
     return 'sin_determinar'
