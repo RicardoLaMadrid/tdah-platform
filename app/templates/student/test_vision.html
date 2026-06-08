@@ -240,6 +240,15 @@ async function initCamera() {
     }
 }
 
+function _hideSidebar() {
+    const aside = document.querySelector('aside');
+    if (aside) aside.style.display = 'none';
+}
+function _showSidebar() {
+    const aside = document.querySelector('aside');
+    if (aside) aside.style.display = '';
+}
+
 async function startTest() {
     const startBtn = document.getElementById('startBtn');
     const cancelBtn = document.getElementById('cancelBtn');
@@ -268,6 +277,7 @@ async function startTest() {
         instructions.style.display = 'none';
         progressContainer.style.display = 'block';
         targetOverlay.style.display = 'block';
+        _hideSidebar(); // ── modo focus: oculta sidebar durante el test
 
         currentPointIndex = 0;
         showTargetPoint(pointSequence[currentPointIndex]);
