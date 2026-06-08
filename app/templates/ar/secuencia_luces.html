@@ -1,158 +1,86 @@
-{% extends 'base.html' %}
-{% block page_mode %}ar{% endblock %}
+{% extends '_layouts/ar_layout.html' %}
 {% block title %}Secuencia de Luces AR{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/ar.css') }}">
+{% block extra_head %}
 <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    #level-display  { font-size: 2rem; font-weight: 800; color: #a78bfa; }
-    #score-display  { font-size: 2rem; font-weight: 800; color: #4ade80; }
-    #errors-display { font-size: 2rem; font-weight: 800; color: #f87171; }
-    #message-display {
-        text-align: center;
-        margin-top: 0.5rem;
-        font-size: 1rem;
-        min-height: 1.5rem;
-        opacity: 0.9;
-        font-weight: 600;
+    #level-val  { font-size: 2rem; font-weight: 800; color: #a78bfa; }
+    #score-val  { font-size: 2rem; font-weight: 800; color: #4ade80; }
+    #errors-val { font-size: 2rem; font-weight: 800; color: #f87171; }
+    #msg-display {
+        text-align: center; margin-top: 0.5rem;
+        font-size: 1rem; min-height: 1.5rem;
+        opacity: 0.9; font-weight: 600;
     }
 </style>
-<script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 {% endblock %}
 
-{% block content %}
+{# ── 4 esferas fijas en grid 2×2 ──────────────────────────────── #}
+{% block ar_scene_content %}
+<a-sphere id="orb-red"    position="-0.8 2.3 -2.5" radius="0.38"
+          color="#880000" class="clickable" data-color="red"
+          opacity="0.85" metalness="0.1" roughness="0.5"></a-sphere>
 
-{# ── Cámara como fondo ────────────────────────────────────────────────── #}
-<video id="bg-camera" autoplay playsinline muted></video>
+<a-sphere id="orb-blue"   position="0.8 2.3 -2.5"  radius="0.38"
+          color="#003399" class="clickable" data-color="blue"
+          opacity="0.85" metalness="0.1" roughness="0.5"></a-sphere>
 
-{# ── Instrucciones iniciales ──────────────────────────────────────────── #}
-<div id="instructions" class="ar-instructions-overlay">
-    <div class="ar-instructions-card">
-        <h2>💡 Secuencia de Luces AR</h2>
-        <p>Memoriza y repite la secuencia de esferas 3D</p>
-        <ul>
-            <li>Observá qué esferas se iluminan y en qué orden</li>
-            <li>Tocá las esferas repitiendo la misma secuencia</li>
-            <li>Cada nivel agrega una esfera más a la secuencia</li>
-            <li>3 errores y termina el juego</li>
-        </ul>
-        <button class="ar-btn ar-btn-primary" onclick="startSequenceGame()">🎮 Comenzar</button>
-        <br><br>
-        <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
-    </div>
-</div>
+<a-sphere id="orb-green"  position="-0.8 1.3 -2.5" radius="0.38"
+          color="#006600" class="clickable" data-color="green"
+          opacity="0.85" metalness="0.1" roughness="0.5"></a-sphere>
 
-{# ── HUD durante el juego ─────────────────────────────────────────────── #}
-<div id="ui-overlay" class="ar-overlay" style="display:none; top:16px; left:16px; right:16px;">
-    <div class="ar-card">
-        <div style="display:flex; justify-content:center; gap:2.5rem; text-align:center;">
-            <div>
-                <div class="ar-stat-label">Nivel</div>
-                <div id="level-display">1</div>
-            </div>
-            <div>
-                <div class="ar-stat-label">Puntos</div>
-                <div id="score-display">0</div>
-            </div>
-            <div>
-                <div class="ar-stat-label">Errores</div>
-                <div id="errors-display">0</div>
-            </div>
-        </div>
-        <div id="message-display"></div>
-    </div>
-</div>
-
-{# ── Escena A-Frame: 4 esferas en grid 2×2 frente al usuario ─────────── #}
-<a-scene embedded
-         vr-mode-ui="enabled: false"
-         xr-mode-ui="enabled: false"
-         renderer="alpha: true; antialias: true"
-         background="color: transparent">
-
-    <a-camera position="0 1.7 0"
-              look-controls="enabled: false"
-              wasd-controls="enabled: false">
-    </a-camera>
-
-    <a-entity id="ar-cursor"
-              cursor="rayOrigin: mouse; mouseEnabled: true; fuse: false"
-              raycaster="objects: .clickable; far: 100">
-    </a-entity>
-
-    <a-light type="ambient"     color="#ffffff" intensity="1.3"></a-light>
-    <a-light type="directional" color="#ffffff" intensity="0.6" position="0 3 1"></a-light>
-
-    {# Roja — arriba izquierda #}
-    <a-sphere id="orb-red"
-              position="-0.8 2.3 -2.5"
-              radius="0.38"
-              color="#880000"
-              class="clickable"
-              data-color="red"
-              opacity="0.85"
-              metalness="0.1" roughness="0.5"></a-sphere>
-
-    {# Azul — arriba derecha #}
-    <a-sphere id="orb-blue"
-              position="0.8 2.3 -2.5"
-              radius="0.38"
-              color="#003399"
-              class="clickable"
-              data-color="blue"
-              opacity="0.85"
-              metalness="0.1" roughness="0.5"></a-sphere>
-
-    {# Verde — abajo izquierda #}
-    <a-sphere id="orb-green"
-              position="-0.8 1.3 -2.5"
-              radius="0.38"
-              color="#006600"
-              class="clickable"
-              data-color="green"
-              opacity="0.85"
-              metalness="0.1" roughness="0.5"></a-sphere>
-
-    {# Amarilla — abajo derecha #}
-    <a-sphere id="orb-yellow"
-              position="0.8 1.3 -2.5"
-              radius="0.38"
-              color="#AA8800"
-              class="clickable"
-              data-color="yellow"
-              opacity="0.85"
-              metalness="0.1" roughness="0.5"></a-sphere>
-
-</a-scene>
-
-{# ── Modal de resultados ──────────────────────────────────────────────── #}
-<div id="results-modal" class="ar-results-overlay">
-    <div class="ar-results-card">
-        <h2>🎉 Juego Terminado</h2>
-        <div id="final-level" class="ar-result-score">0</div>
-        <p style="color:#6b7280; margin:-0.5rem 0 1rem;">Nivel Alcanzado</p>
-        <div class="ar-result-stats">
-            <div><h3 id="final-score">0</h3><small>Puntos</small></div>
-            <div><h3 id="final-errors" style="color:#dc2626;">0</h3><small>Errores</small></div>
-        </div>
-        <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Jugar de Nuevo</button>
-        <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
-    </div>
-</div>
-
+<a-sphere id="orb-yellow" position="0.8 1.3 -2.5"  radius="0.38"
+          color="#AA8800" class="clickable" data-color="yellow"
+          opacity="0.85" metalness="0.1" roughness="0.5"></a-sphere>
 {% endblock %}
 
-{% block extra_js %}
+{# ── HUD stats ────────────────────────────────────────────────── #}
+{% block ar_hud %}
+<div class="ar-card">
+    <div style="display:flex; justify-content:center; gap:2.5rem; text-align:center;">
+        <div><div class="ar-stat-label">Nivel</div><div id="level-val">1</div></div>
+        <div><div class="ar-stat-label">Puntos</div><div id="score-val">0</div></div>
+        <div><div class="ar-stat-label">Errores</div><div id="errors-val">0</div></div>
+    </div>
+    <div id="msg-display"></div>
+</div>
+{% endblock %}
+
+{# ── Instrucciones iniciales ──────────────────────────────────── #}
+{% block ar_instructions %}
+<div class="ar-modal ar-modal--dark">
+    <h2>💡 Secuencia de Luces AR</h2>
+    <p>Memoriza y repite la secuencia de esferas 3D</p>
+    <ul>
+        <li>Observá qué esferas se iluminan y en qué orden</li>
+        <li>Tocá las esferas repitiendo la misma secuencia</li>
+        <li>Cada nivel agrega una esfera más a la secuencia</li>
+        <li>3 errores y termina el juego</li>
+    </ul>
+    <button class="ar-btn ar-btn-primary" onclick="startSequenceGame()">🎮 Comenzar</button>
+    <br><br>
+    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
+</div>
+{% endblock %}
+
+{# ── Resultados ───────────────────────────────────────────────── #}
+{% block ar_results %}
+<div class="ar-modal ar-modal--light">
+    <h2>🎉 Juego Terminado</h2>
+    <div id="final-level" class="ar-result-score">0</div>
+    <p style="color:#6b7280; margin:-0.5rem 0 1rem;">Nivel Alcanzado</p>
+    <div class="ar-result-stats">
+        <div><h3 id="final-score">0</h3><small>Puntos</small></div>
+        <div><h3 id="final-errors" style="color:#dc2626;">0</h3><small>Errores</small></div>
+    </div>
+    <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Jugar de Nuevo</button>
+    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
 const STUDENT_ID = {{ student.id }};
 
-// Cámara web como fondo
-navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-    .then(stream => { document.getElementById('bg-camera').srcObject = stream; })
-    .catch(err => console.warn('Cámara no disponible:', err.message));
-
-// Colores de cada esfera: apagado vs iluminado
 const ORB = {
     red:    { dim: '#880000', bright: '#FF2222' },
     blue:   { dim: '#003399', bright: '#3388FF' },
@@ -162,25 +90,20 @@ const ORB = {
 const COLORS = ['red', 'blue', 'green', 'yellow'];
 
 let gameState = {
-    sequence: [],
-    playerSequence: [],
-    level: 0,       // se incrementa a 1 en el primer nextLevel()
-    score: 0,
-    errors: 0,
-    isPlayerTurn: false,
-    startTime: null
+    sequence: [], playerSequence: [],
+    level: 0, score: 0, errors: 0,
+    isPlayerTurn: false, startTime: null
 };
 
 function startSequenceGame() {
-    document.getElementById('instructions').style.display = 'none';
-    document.getElementById('ui-overlay').style.display = 'block';
+    document.getElementById('ar-instructions').style.display = 'none';
+    document.getElementById('ar-hud').style.display = 'block';
     gameState.startTime = Date.now();
 
     COLORS.forEach(color => {
         document.getElementById(`orb-${color}`)
             .addEventListener('click', () => handleOrbClick(color));
     });
-
     nextLevel();
 }
 
@@ -189,12 +112,9 @@ function nextLevel() {
     gameState.playerSequence = [];
     gameState.isPlayerTurn = false;
     setClickable(false);
-
-    const next = COLORS[Math.floor(Math.random() * COLORS.length)];
-    gameState.sequence.push(next);
-
+    gameState.sequence.push(COLORS[Math.floor(Math.random() * COLORS.length)]);
     updateUI();
-    showMessage(`Nivel ${gameState.level} — Observá la secuencia...`);
+    showMsg(`Nivel ${gameState.level} — Observá la secuencia...`);
     setTimeout(playSequence, 1200);
 }
 
@@ -203,8 +123,7 @@ function playSequence() {
     let idx = 0;
     const interval = setInterval(() => {
         if (idx < gameState.sequence.length) {
-            flashOrb(gameState.sequence[idx]);
-            idx++;
+            flashOrb(gameState.sequence[idx++]);
         } else {
             clearInterval(interval);
             setTimeout(enablePlayerTurn, 600);
@@ -227,14 +146,13 @@ function flashOrb(color) {
 function enablePlayerTurn() {
     gameState.isPlayerTurn = true;
     setClickable(true);
-    showMessage('¡Tu turno! Repetí la secuencia');
+    showMsg('¡Tu turno! Repetí la secuencia');
 }
 
 function handleOrbClick(color) {
     if (!gameState.isPlayerTurn) return;
     flashOrb(color);
     gameState.playerSequence.push(color);
-
     const idx = gameState.playerSequence.length - 1;
     if (gameState.playerSequence[idx] !== gameState.sequence[idx]) {
         handleError();
@@ -247,31 +165,20 @@ function handleSuccess() {
     gameState.score += gameState.level * 10;
     gameState.isPlayerTurn = false;
     setClickable(false);
-    showMessage('✅ ¡Correcto!');
+    showMsg('✅ ¡Correcto!');
     updateUI();
-
-    if (gameState.level >= 10) {
-        setTimeout(() => endGame(), 1200);
-    } else {
-        setTimeout(nextLevel, 1500);
-    }
+    if (gameState.level >= 10) setTimeout(endGame, 1200);
+    else setTimeout(nextLevel, 1500);
 }
 
 function handleError() {
     gameState.errors++;
     gameState.isPlayerTurn = false;
     setClickable(false);
-    showMessage('❌ Error — repitiendo secuencia...');
+    showMsg('❌ Error — repitiendo secuencia...');
     updateUI();
-
-    if (gameState.errors >= 3) {
-        setTimeout(() => endGame(), 1200);
-    } else {
-        setTimeout(() => {
-            gameState.playerSequence = [];
-            playSequence();
-        }, 2000);
-    }
+    if (gameState.errors >= 3) setTimeout(endGame, 1200);
+    else setTimeout(() => { gameState.playerSequence = []; playSequence(); }, 2000);
 }
 
 function setClickable(enabled) {
@@ -281,22 +188,21 @@ function setClickable(enabled) {
     });
 }
 
-function showMessage(msg) {
-    document.getElementById('message-display').textContent = msg;
-}
+function showMsg(msg) { document.getElementById('msg-display').textContent = msg; }
 
 function updateUI() {
-    document.getElementById('level-display').textContent = gameState.level;
-    document.getElementById('score-display').textContent = gameState.score;
-    document.getElementById('errors-display').textContent = gameState.errors;
+    document.getElementById('level-val').textContent  = gameState.level;
+    document.getElementById('score-val').textContent  = gameState.score;
+    document.getElementById('errors-val').textContent = gameState.errors;
 }
 
 function endGame() {
     const duration = Math.round((Date.now() - gameState.startTime) / 1000);
-    document.getElementById('final-level').textContent = gameState.level;
-    document.getElementById('final-score').textContent = gameState.score;
+    document.getElementById('ar-hud').style.display = 'none';
+    document.getElementById('final-level').textContent  = gameState.level;
+    document.getElementById('final-score').textContent  = gameState.score;
     document.getElementById('final-errors').textContent = gameState.errors;
-    document.getElementById('results-modal').style.display = 'flex';
+    document.getElementById('ar-results').style.display = 'flex';
 
     fetch('{{ url_for("ar.save_result") }}', {
         method: 'POST',
@@ -304,14 +210,12 @@ function endGame() {
         body: JSON.stringify({
             activity_type: 'ar_secuencia',
             results: {
-                score: gameState.score,
-                level: gameState.level,
-                errors: gameState.errors,
-                time: duration,
+                score: gameState.score, level: gameState.level,
+                errors: gameState.errors, time: duration,
                 sequence_length: gameState.sequence.length
             }
         })
-    }).then(r => r.json()).then(d => console.log('Guardado:', d)).catch(e => console.error(e));
+    }).catch(e => console.error('Error guardando:', e));
 }
 </script>
 {% endblock %}

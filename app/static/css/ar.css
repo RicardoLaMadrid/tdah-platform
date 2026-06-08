@@ -1,18 +1,20 @@
 /* ================================================================
-   AR Magic Window — estilos compartidos por las 4 actividades AR
+   AR Magic Window — estilos compartidos por las 4 actividades
+   NO AR.js, NO marcadores. Cámara getUserMedia + A-Frame encima.
    ================================================================ */
 
-/* Cámara web como fondo de pantalla completa */
-#bg-camera {
+/* ── 1. Capa de cámara (z-index: 0) ──────────────────────────── */
+#ar-camera-bg {
     position: fixed;
     top: 0; left: 0;
     width: 100vw; height: 100vh;
     object-fit: cover;
     z-index: 0;
     pointer-events: none;
+    background: #000;
 }
 
-/* Canvas A-Frame: sobre la cámara, fondo transparente */
+/* ── 2. Canvas A-Frame (z-index: 1, fondo transparente) ──────── */
 a-scene {
     position: fixed !important;
     top: 0 !important; left: 0 !important;
@@ -22,20 +24,58 @@ a-scene {
     background: transparent !important;
 }
 
-/* Ocultar botón "Enter VR" residual de A-Frame */
+/* Ocultar botón VR/AR residual de A-Frame */
 .a-enter-vr,
 .a-enter-ar { display: none !important; }
 
-/* Overlay genérico: flota sobre el canvas, pointer-events desactivado
-   en el contenedor para que los clicks lleguen a A-Frame */
-.ar-overlay {
+/* ── 3. Wrappers ──────────────────────────────────────────────── */
+.ar-container {
     position: fixed;
-    z-index: 10;
+    inset: 0;
+    overflow: hidden;
+}
+
+.ar-scene-wrapper {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
     pointer-events: none;
 }
-.ar-overlay > * { pointer-events: auto; }
 
-/* Card semi-transparente legible sobre cualquier fondo de cámara */
+/* ── 4. HUD — barra de stats (z-index: 10) ───────────────────── */
+.ar-hud {
+    position: fixed;
+    top: 16px; left: 16px; right: 60px;
+    z-index: 10;
+    pointer-events: none;
+    display: none;
+}
+.ar-hud > * { pointer-events: auto; }
+
+/* ── 5. Botón de salida (z-index: 20) ────────────────────────── */
+.ar-exit-btn {
+    position: fixed;
+    top: 12px; right: 12px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.5rem 0.9rem;
+    background: rgba(0, 0, 0, 0.65);
+    color: white;
+    border-radius: 0.65rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.25);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.ar-exit-btn:hover { background: rgba(220,38,38,0.75); }
+
+/* ── 6. Card semi-transparente (HUD + overlays) ──────────────── */
 .ar-card {
     background: rgba(0, 0, 0, 0.72);
     backdrop-filter: blur(10px);
@@ -46,7 +86,6 @@ a-scene {
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
 }
 
-/* Etiquetas de estadísticas (pequeñas, semi-opacas) */
 .ar-stat-label {
     font-size: 0.7rem;
     text-transform: uppercase;
@@ -55,30 +94,8 @@ a-scene {
     margin-bottom: 2px;
 }
 
-/* Botones AR */
-.ar-btn {
-    display: inline-block;
-    padding: 0.65rem 1.75rem;
-    border-radius: 0.75rem;
-    font-size: 1rem;
-    font-weight: 700;
-    cursor: pointer;
-    border: none;
-    text-decoration: none;
-    transition: opacity 0.2s;
-    line-height: 1.4;
-}
-.ar-btn:hover { opacity: 0.85; }
-.ar-btn-primary  { background: #6366f1; color: white; }
-.ar-btn-success  { background: #10b981; color: white; }
-.ar-btn-secondary {
-    background: rgba(255, 255, 255, 0.18);
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-}
-
-/* Modal de instrucciones al inicio */
-.ar-instructions-overlay {
+/* ── 7. Instrucciones iniciales (z-index: 20) ────────────────── */
+.ar-instructions {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.55);
@@ -87,10 +104,9 @@ a-scene {
     align-items: center;
     justify-content: center;
 }
-.ar-instructions-card {
-    background: rgba(10, 10, 20, 0.88);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+
+/* ── 8. Modal genérico (instrucciones + resultados) ──────────── */
+.ar-modal {
     color: white;
     border-radius: 1.5rem;
     padding: 2.25rem 2.5rem;
@@ -99,17 +115,27 @@ a-scene {
     width: 92%;
     text-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
-.ar-instructions-card h2 { font-size: 1.75rem; margin: 0 0 0.75rem; }
-.ar-instructions-card p  { font-size: 1.05rem; margin: 0 0 1rem; }
-.ar-instructions-card ul {
+.ar-modal--dark {
+    background: rgba(10, 10, 20, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+.ar-modal--light {
+    background: white;
+    color: #1f2937;
+    text-shadow: none;
+}
+.ar-modal h2 { font-size: 1.75rem; margin: 0 0 0.75rem; }
+.ar-modal p  { font-size: 1.05rem; margin: 0 0 1rem; }
+.ar-modal ul {
     text-align: left;
     line-height: 2;
     margin: 0 0 1.5rem;
     padding-left: 1.25rem;
 }
 
-/* Modal de resultados al final */
-.ar-results-overlay {
+/* ── 9. Resultados (z-index: 30) ──────────────────────────────── */
+.ar-results {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.85);
@@ -118,16 +144,7 @@ a-scene {
     align-items: center;
     justify-content: center;
 }
-.ar-results-card {
-    background: white;
-    color: #1f2937;
-    border-radius: 1.5rem;
-    padding: 2.25rem 2.5rem;
-    max-width: 560px;
-    width: 92%;
-    text-align: center;
-}
-.ar-results-card h2 { font-size: 1.5rem; margin: 0 0 1rem; }
+
 .ar-result-score {
     font-size: 3.5rem;
     font-weight: 800;
@@ -149,4 +166,43 @@ a-scene {
     font-size: 0.875rem;
     color: #1e40af;
     margin-bottom: 1.25rem;
+}
+
+/* ── 10. Botones ──────────────────────────────────────────────── */
+.ar-btn {
+    display: inline-block;
+    padding: 0.65rem 1.75rem;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+    transition: opacity 0.2s;
+    line-height: 1.4;
+}
+.ar-btn:hover { opacity: 0.85; }
+.ar-btn-primary   { background: #6366f1; color: white; }
+.ar-btn-success   { background: #10b981; color: white; }
+.ar-btn-secondary {
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+/* ── 11. Error de cámara ──────────────────────────────────────── */
+.ar-error {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    background: rgba(220,38,38,0.9);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    max-width: 90vw;
+    text-align: center;
+    display: none;
 }

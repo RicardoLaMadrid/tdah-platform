@@ -1,138 +1,87 @@
-{% extends 'base.html' %}
-{% block page_mode %}ar{% endblock %}
+{% extends '_layouts/ar_layout.html' %}
 {% block title %}Trail Making AR{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/ar.css') }}">
+{% block extra_head %}
 <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    #time-display    { font-size: 1.75rem; font-weight: 800; color: #fbbf24; }
-    #correct-display { font-size: 1.75rem; font-weight: 800; color: #4ade80; }
-    #errors-display  { font-size: 1.75rem; font-weight: 800; color: #f87171; }
-    #next-num-value  { font-size: 2.5rem;  font-weight: 900; color: #fde68a; margin-left: 0.6rem; }
+    #time-val    { font-size: 1.75rem; font-weight: 800; color: #fbbf24; }
+    #correct-val { font-size: 1.75rem; font-weight: 800; color: #4ade80; }
+    #errors-val  { font-size: 1.75rem; font-weight: 800; color: #f87171; }
+    #next-num    { font-size: 2.5rem;  font-weight: 900; color: #fde68a; margin-left: 0.6rem; }
 </style>
-<script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 {% endblock %}
 
-{% block content %}
-
-{# ── Cámara como fondo ────────────────────────────────────────────────── #}
-<video id="bg-camera" autoplay playsinline muted></video>
-
-{# ── Instrucciones iniciales ──────────────────────────────────────────── #}
-<div id="start-overlay" class="ar-instructions-overlay">
-    <div class="ar-instructions-card">
-        <h2>🎯 Trail Making AR</h2>
-        <p>Tocá los números del <strong>1 al 10</strong> en orden</p>
-        <ul>
-            <li>✅ Acierto: el número desaparece del espacio 3D</li>
-            <li>❌ Error: el número parpadea en rojo y sigue en pantalla</li>
-            <li>⏱️ Tiempo límite: 60 segundos</li>
-            <li>🧠 Mide: atención visual y función ejecutiva</li>
-        </ul>
-        <button class="ar-btn ar-btn-primary" onclick="startGame()">🚀 Comenzar</button>
-        <br><br>
-        <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
-    </div>
-</div>
-
-{# ── HUD durante el juego ─────────────────────────────────────────────── #}
-<div id="ui-overlay" class="ar-overlay" style="display:none; top:16px; left:16px; right:16px;">
-    <div class="ar-card">
-        <div style="display:flex; justify-content:center; gap:2.5rem; text-align:center; margin-bottom:0.5rem;">
-            <div>
-                <div class="ar-stat-label">Tiempo</div>
-                <div id="time-display">0:00</div>
-            </div>
-            <div>
-                <div class="ar-stat-label">Aciertos</div>
-                <div id="correct-display">0</div>
-            </div>
-            <div>
-                <div class="ar-stat-label">Errores</div>
-                <div id="errors-display">0</div>
-            </div>
-        </div>
-        <div style="text-align:center; padding-top:0.4rem; border-top:1px solid rgba(255,255,255,0.15);">
-            <span style="font-size:0.85rem; opacity:0.75;">Buscá el número</span>
-            <span id="next-num-value">1</span>
-        </div>
-    </div>
-</div>
-
-{# ── Escena A-Frame: esferas numeradas en espacio 3D ─────────────────── #}
-<a-scene embedded
-         vr-mode-ui="enabled: false"
-         xr-mode-ui="enabled: false"
-         renderer="alpha: true; antialias: true"
-         background="color: transparent">
-
-    <a-camera position="0 1.7 0"
-              look-controls="enabled: false"
-              wasd-controls="enabled: false">
-    </a-camera>
-
-    <a-entity id="ar-cursor"
-              cursor="rayOrigin: mouse; mouseEnabled: true; fuse: false"
-              raycaster="objects: .clickable; far: 100">
-    </a-entity>
-
-    <a-light type="ambient"     color="#ffffff" intensity="1.5"></a-light>
-    <a-light type="directional" color="#ffffff" intensity="0.8" position="0 3 2"></a-light>
-
-    <a-entity id="numbers-container"></a-entity>
-
-</a-scene>
-
-{# ── Modal de resultados ──────────────────────────────────────────────── #}
-<div id="results-modal" class="ar-results-overlay">
-    <div class="ar-results-card">
-        <h2>🎉 ¡Test Completado!</h2>
-        <div id="final-score" class="ar-result-score">0</div>
-        <p style="color:#6b7280; margin:-0.5rem 0 1rem;">Puntuación</p>
-        <div class="ar-result-stats">
-            <div><h3 id="final-time">0s</h3><small>Tiempo</small></div>
-            <div><h3 id="final-correct" style="color:#10b981;">0</h3><small>Aciertos</small></div>
-            <div><h3 id="final-errors" style="color:#dc2626;">0</h3><small>Errores</small></div>
-        </div>
-        <div id="result-message" class="ar-result-note"></div>
-        <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Repetir</button>
-        <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
-    </div>
-</div>
-
+{# ── Esferas numeradas generadas por JS ──────────────────────── #}
+{% block ar_scene_content %}
+<a-entity id="numbers-container"></a-entity>
 {% endblock %}
 
-{% block extra_js %}
+{# ── HUD stats + siguiente número ────────────────────────────── #}
+{% block ar_hud %}
+<div class="ar-card">
+    <div style="display:flex; justify-content:center; gap:2.5rem; text-align:center; margin-bottom:0.5rem;">
+        <div><div class="ar-stat-label">Tiempo</div><div id="time-val">0:00</div></div>
+        <div><div class="ar-stat-label">Aciertos</div><div id="correct-val">0</div></div>
+        <div><div class="ar-stat-label">Errores</div><div id="errors-val">0</div></div>
+    </div>
+    <div style="text-align:center; padding-top:0.4rem; border-top:1px solid rgba(255,255,255,0.15);">
+        <span style="font-size:0.85rem; opacity:0.75;">Buscá el número</span>
+        <span id="next-num">1</span>
+    </div>
+</div>
+{% endblock %}
+
+{# ── Instrucciones iniciales ──────────────────────────────────── #}
+{% block ar_instructions %}
+<div class="ar-modal ar-modal--dark">
+    <h2>🎯 Trail Making AR</h2>
+    <p>Tocá los números del <strong>1 al 10</strong> en orden</p>
+    <ul>
+        <li>✅ Acierto: el número desaparece del espacio 3D</li>
+        <li>❌ Error: el número parpadea en rojo y sigue en pantalla</li>
+        <li>⏱️ Tiempo límite: 60 segundos</li>
+        <li>🧠 Mide: atención visual y función ejecutiva</li>
+    </ul>
+    <button class="ar-btn ar-btn-primary" onclick="startGame()">🚀 Comenzar</button>
+    <br><br>
+    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
+</div>
+{% endblock %}
+
+{# ── Resultados ───────────────────────────────────────────────── #}
+{% block ar_results %}
+<div class="ar-modal ar-modal--light">
+    <h2>🎉 ¡Test Completado!</h2>
+    <div id="final-score" class="ar-result-score">0</div>
+    <p style="color:#6b7280; margin:-0.5rem 0 1rem;">Puntuación</p>
+    <div class="ar-result-stats">
+        <div><h3 id="final-time">0s</h3><small>Tiempo</small></div>
+        <div><h3 id="final-correct" style="color:#10b981;">0</h3><small>Aciertos</small></div>
+        <div><h3 id="final-errors"  style="color:#dc2626;">0</h3><small>Errores</small></div>
+    </div>
+    <div id="result-message" class="ar-result-note"></div>
+    <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Repetir</button>
+    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
 const TOTAL_NUMBERS = 10;
 const TIME_LIMIT    = 60;
 const STUDENT_ID    = {{ student.id }};
-const SPHERE_COLOR  = '#d97706';   // amber-600 — contrasta con fondo de cámara
+const SPHERE_COLOR  = '#d97706';
 
 let gameState = {
-    nextExpected: 1,
-    correct: 0,
-    errors: 0,
-    startTime: null,
-    timerInterval: null,
-    clickTimes: [],      // ms entre clicks consecutivos (correcto e incorrecto)
-    lastClickTime: null,
-    finished: false
+    nextExpected: 1, correct: 0, errors: 0,
+    startTime: null, timerInterval: null,
+    clickTimes: [], lastClickTime: null, finished: false
 };
 
-// Cámara web como fondo
-navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-    .then(stream => { document.getElementById('bg-camera').srcObject = stream; })
-    .catch(err  => console.warn('Cámara no disponible:', err.message));
-
 function startGame() {
-    document.getElementById('start-overlay').style.display = 'none';
-    document.getElementById('ui-overlay').style.display    = 'block';
-
+    document.getElementById('ar-instructions').style.display = 'none';
+    document.getElementById('ar-hud').style.display = 'block';
     gameState.startTime     = Date.now();
     gameState.lastClickTime = Date.now();
-
     generateNumbers();
     gameState.timerInterval = setInterval(updateTimer, 100);
 }
@@ -142,7 +91,6 @@ function generateNumbers() {
     const positions = [];
 
     for (let i = 1; i <= TOTAL_NUMBERS; i++) {
-        // Posición 3D aleatoria, z siempre negativo (frente al usuario)
         let pos, attempts = 0;
         do {
             pos = {
@@ -151,12 +99,9 @@ function generateNumbers() {
                 z: +((-2.0 - Math.random() * 1.5).toFixed(2))
             };
             attempts++;
-        } while (attempts < 60 && positions.some(p =>
-            Math.hypot(p.x - pos.x, p.y - pos.y) < 0.9
-        ));
+        } while (attempts < 60 && positions.some(p => Math.hypot(p.x - pos.x, p.y - pos.y) < 0.9));
         positions.push(pos);
 
-        // Entidad contenedora que flota hacia arriba y hacia abajo
         const entity = document.createElement('a-entity');
         entity.setAttribute('id', `num-${i}`);
         entity.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
@@ -166,23 +111,22 @@ function generateNumbers() {
             `dur: ${2200 + Math.floor(Math.random() * 1000)}; ` +
             `dir: alternate; loop: true; easing: easeInOutSine`);
 
-        // Esfera clickeable
         const sphere = document.createElement('a-sphere');
-        sphere.setAttribute('radius', '0.33');
-        sphere.setAttribute('color', SPHERE_COLOR);
-        sphere.setAttribute('class', 'clickable');
-        sphere.setAttribute('opacity', '0.9');
+        sphere.setAttribute('radius',    '0.33');
+        sphere.setAttribute('color',     SPHERE_COLOR);
+        sphere.setAttribute('class',     'clickable');
+        sphere.setAttribute('opacity',   '0.9');
         sphere.setAttribute('metalness', '0.15');
         sphere.setAttribute('roughness', '0.4');
         sphere.addEventListener('click', () => handleClick(i, entity, sphere));
 
-        // Número visible — scale="2 2 2" para legibilidad
+        // color #1f2937 (gray-800) sobre amber-600 — contraste 4.15:1
         const text = document.createElement('a-text');
-        text.setAttribute('value', String(i));
-        text.setAttribute('align', 'center');
-        text.setAttribute('color', '#1f2937');
+        text.setAttribute('value',    String(i));
+        text.setAttribute('align',    'center');
+        text.setAttribute('color',    '#1f2937');
         text.setAttribute('position', '0 0 0.35');
-        text.setAttribute('scale', '2 2 2');
+        text.setAttribute('scale',    '2 2 2');
 
         entity.appendChild(sphere);
         entity.appendChild(text);
@@ -192,36 +136,30 @@ function generateNumbers() {
 
 function handleClick(num, entity, sphere) {
     if (gameState.finished) return;
-
     const now = Date.now();
     gameState.clickTimes.push(now - gameState.lastClickTime);
     gameState.lastClickTime = now;
 
     if (num === gameState.nextExpected) {
-        // Acierto: desactivar click + animación de desaparición
         gameState.correct++;
         gameState.nextExpected++;
         sphere.setAttribute('class', '');
-
         entity.setAttribute('animation__vanish',
             'property: scale; to: 0 0 0; dur: 200; easing: easeInBack');
-        setTimeout(() => {
-            if (entity.parentNode) entity.parentNode.removeChild(entity);
-        }, 220);
+        setTimeout(() => { if (entity.parentNode) entity.parentNode.removeChild(entity); }, 220);
 
         if (gameState.nextExpected > TOTAL_NUMBERS) {
             endGame();
         } else {
-            document.getElementById('next-num-value').textContent = gameState.nextExpected;
+            document.getElementById('next-num').textContent = gameState.nextExpected;
         }
     } else {
-        // Error: flash rojo, restaurar color
         gameState.errors++;
         sphere.setAttribute('color', '#ef4444');
         setTimeout(() => sphere.setAttribute('color', SPHERE_COLOR), 450);
     }
-
-    updateDisplay();
+    document.getElementById('correct-val').textContent = gameState.correct;
+    document.getElementById('errors-val').textContent  = gameState.errors;
 }
 
 function updateTimer() {
@@ -229,15 +167,9 @@ function updateTimer() {
     const elapsed = (Date.now() - gameState.startTime) / 1000;
     const mins = Math.floor(elapsed / 60);
     const secs = Math.floor(elapsed % 60);
-    document.getElementById('time-display').textContent =
+    document.getElementById('time-val').textContent =
         `${mins}:${secs.toString().padStart(2, '0')}`;
-
     if (elapsed >= TIME_LIMIT) endGame();
-}
-
-function updateDisplay() {
-    document.getElementById('correct-display').textContent = gameState.correct;
-    document.getElementById('errors-display').textContent  = gameState.errors;
 }
 
 function endGame() {
@@ -251,26 +183,22 @@ function endGame() {
         ? Math.max(0, 100 - (totalTime - 20) * 2 - gameState.errors * 10)
         : Math.round((gameState.correct / TOTAL_NUMBERS) * 50);
 
+    document.getElementById('ar-hud').style.display = 'none';
     document.getElementById('final-score').textContent   = score;
     document.getElementById('final-time').textContent    = `${totalTime}s`;
     document.getElementById('final-correct').textContent = gameState.correct;
     document.getElementById('final-errors').textContent  = gameState.errors;
 
     const msg = document.getElementById('result-message');
-    if (completed && gameState.errors === 0) {
-        msg.textContent = `🏆 ¡Perfecto! Completaste todo sin errores en ${totalTime}s`;
-    } else if (completed) {
-        msg.textContent = `✅ ¡Bien hecho! Completaste todo en ${totalTime}s con ${gameState.errors} error(es)`;
-    } else {
+    if (completed && gameState.errors === 0)
+        msg.textContent = `🏆 ¡Perfecto! Sin errores en ${totalTime}s`;
+    else if (completed)
+        msg.textContent = `✅ ¡Bien hecho! ${totalTime}s con ${gameState.errors} error(es)`;
+    else
         msg.textContent = `⏰ Tiempo agotado — llegaste hasta ${gameState.correct}/${TOTAL_NUMBERS}`;
-    }
 
-    document.getElementById('results-modal').style.display = 'flex';
+    document.getElementById('ar-results').style.display = 'flex';
 
-    saveResults(totalTime, score);
-}
-
-function saveResults(totalTime, score) {
     const avgClickTime = gameState.clickTimes.length
         ? gameState.clickTimes.reduce((a, b) => a + b, 0) / gameState.clickTimes.length / 1000
         : 0;
@@ -281,16 +209,14 @@ function saveResults(totalTime, score) {
         body: JSON.stringify({
             activity_type: 'ar_trail_making',
             results: {
-                score:          score,
-                correct:        gameState.correct,
-                errors:         gameState.errors,
-                total_time:     totalTime,
-                completed:      gameState.correct === TOTAL_NUMBERS,
+                score: score, correct: gameState.correct,
+                errors: gameState.errors, total_time: totalTime,
+                completed: completed,
                 avg_click_time: Math.round(avgClickTime * 100) / 100,
-                click_times:    gameState.clickTimes
+                click_times: gameState.clickTimes
             }
         })
-    }).then(r => r.json()).then(d => console.log('Guardado:', d)).catch(e => console.error(e));
+    }).catch(e => console.error('Error guardando:', e));
 }
 </script>
 {% endblock %}

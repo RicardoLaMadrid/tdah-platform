@@ -1,122 +1,76 @@
-{% extends 'base.html' %}
-{% block page_mode %}ar{% endblock %}
+{% extends '_layouts/ar_layout.html' %}
 {% block title %}Caza de Objetos AR{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/ar.css') }}">
+{% block extra_head %}
 <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    #score-display  { font-size: 2rem; font-weight: 800; color: #4ade80; }
-    #errors-display { font-size: 2rem; font-weight: 800; color: #f87171; }
-    #timer-display  { font-size: 1.75rem; font-weight: 800; color: #fbbf24; }
+    #score-val  { font-size: 2rem; font-weight: 800; color: #4ade80; }
+    #errors-val { font-size: 2rem; font-weight: 800; color: #f87171; }
+    #timer-val  { font-size: 1.75rem; font-weight: 800; color: #fbbf24; }
 </style>
-<script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 {% endblock %}
 
-{% block content %}
-
-{# ── Cámara web como fondo ────────────────────────────────────────────── #}
-<video id="bg-camera" autoplay playsinline muted></video>
-
-{# ── Instrucciones iniciales ──────────────────────────────────────────── #}
-<div id="instructions" class="ar-instructions-overlay">
-    <div class="ar-instructions-card">
-        <h2>🎯 Caza de Objetos AR</h2>
-        <p>Encuentra y toca solo las esferas <strong>VERDES</strong></p>
-        <ul>
-            <li>Aparecerán 10 esferas de colores en el espacio</li>
-            <li>Solo toca las <strong>VERDES</strong> 🟢</li>
-            <li>Evita las rojas, azules y amarillas</li>
-            <li>Tienes 60 segundos</li>
-        </ul>
-        <button class="ar-btn ar-btn-success" onclick="startGame()">🚀 Comenzar</button>
-        <br><br>
-        <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
-    </div>
-</div>
-
-{# ── HUD durante el juego ─────────────────────────────────────────────── #}
-<div id="ui-overlay" class="ar-overlay" style="display:none; top:16px; left:16px; right:16px;">
-    <div class="ar-card">
-        <div style="display:flex; justify-content:center; gap:2.5rem; text-align:center;">
-            <div>
-                <div class="ar-stat-label">Puntos</div>
-                <div id="score-display">0</div>
-            </div>
-            <div>
-                <div class="ar-stat-label">Errores</div>
-                <div id="errors-display">0</div>
-            </div>
-            <div>
-                <div class="ar-stat-label">Tiempo</div>
-                <div id="timer-display">60s</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{# ── Escena A-Frame (siempre activa — NO display:none) ───────────────── #}
-<a-scene embedded
-         vr-mode-ui="enabled: false"
-         xr-mode-ui="enabled: false"
-         renderer="alpha: true; antialias: true"
-         background="color: transparent">
-
-    <a-camera position="0 1.6 0"
-              look-controls="enabled: false"
-              wasd-controls="enabled: false">
-    </a-camera>
-
-    {# Cursor de mouse — rayOrigin:mouse proyecta el ray desde la posición del cursor, #}
-    {# no desde el centro de la cámara. Necesario para clicks en magic window AR.      #}
-    <a-entity id="ar-cursor"
-              cursor="rayOrigin: mouse; mouseEnabled: true; fuse: false"
-              raycaster="objects: .clickable; far: 100">
-    </a-entity>
-
-    <a-light type="ambient"     color="#ffffff" intensity="1.5"></a-light>
-    <a-light type="directional" color="#ffffff" intensity="0.8" position="-1 2 1"></a-light>
-
-    <a-entity id="objects-container"></a-entity>
-</a-scene>
-
-{# ── Modal de resultados ──────────────────────────────────────────────── #}
-<div id="results-modal" class="ar-results-overlay">
-    <div class="ar-results-card">
-        <h2>🎉 ¡Actividad Completada!</h2>
-        <div id="final-score" class="ar-result-score">0</div>
-        <div class="ar-result-stats">
-            <div><h4 id="final-correct">0</h4><small>Correctas</small></div>
-            <div><h4 id="final-errors" style="color:#dc2626;">0</h4><small>Errores</small></div>
-            <div><h4 id="final-time">0s</h4><small>Tiempo</small></div>
-        </div>
-        <div id="result-message" class="ar-result-note"></div>
-        <button class="ar-btn ar-btn-primary" onclick="playAgain()" style="margin-right:0.5rem;">🔄 Jugar de Nuevo</button>
-        <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
-    </div>
-</div>
-
+{# ── Objetos 3D generados por JS ──────────────────────────────── #}
+{% block ar_scene_content %}
+<a-entity id="objects-container"></a-entity>
 {% endblock %}
 
-{% block extra_js %}
+{# ── HUD stats ────────────────────────────────────────────────── #}
+{% block ar_hud %}
+<div class="ar-card">
+    <div style="display:flex; justify-content:center; gap:2.5rem; text-align:center;">
+        <div><div class="ar-stat-label">Puntos</div><div id="score-val">0</div></div>
+        <div><div class="ar-stat-label">Errores</div><div id="errors-val">0</div></div>
+        <div><div class="ar-stat-label">Tiempo</div><div id="timer-val">60s</div></div>
+    </div>
+</div>
+{% endblock %}
+
+{# ── Instrucciones iniciales ──────────────────────────────────── #}
+{% block ar_instructions %}
+<div class="ar-modal ar-modal--dark">
+    <h2>🎯 Caza de Objetos AR</h2>
+    <p>Encuentra y toca solo las esferas <strong>VERDES</strong></p>
+    <ul>
+        <li>Aparecerán 10 esferas de colores en el espacio</li>
+        <li>Solo toca las <strong>VERDES</strong> 🟢</li>
+        <li>Evita las rojas, azules y amarillas</li>
+        <li>Tienes 60 segundos</li>
+    </ul>
+    <button class="ar-btn ar-btn-success" onclick="startGame()">🚀 Comenzar</button>
+    <br><br>
+    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
+</div>
+{% endblock %}
+
+{# ── Resultados ───────────────────────────────────────────────── #}
+{% block ar_results %}
+<div class="ar-modal ar-modal--light">
+    <h2>🎉 ¡Actividad Completada!</h2>
+    <div id="final-score" class="ar-result-score">0</div>
+    <div class="ar-result-stats">
+        <div><h4 id="final-correct">0</h4><small>Correctas</small></div>
+        <div><h4 id="final-errors" style="color:#dc2626;">0</h4><small>Errores</small></div>
+        <div><h4 id="final-time">0s</h4><small>Tiempo</small></div>
+    </div>
+    <div id="result-message" class="ar-result-note"></div>
+    <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Jugar de Nuevo</button>
+    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
 const STUDENT_ID = {{ student.id }};
 
-// Cámara web como fondo
-navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-    .then(stream => { document.getElementById('bg-camera').srcObject = stream; })
-    .catch(err => console.warn('Cámara no disponible:', err.message));
-
 let gameData = {
     score: 0, errors: 0, correctClicks: 0,
-    startTime: null, endTime: null,
-    objects: [], clicks: []
+    startTime: null, clicks: [], objects: []
 };
 let timerInterval = null;
 
 function startGame() {
-    document.getElementById('instructions').style.display = 'none';
-    document.getElementById('ui-overlay').style.display = 'block';
+    document.getElementById('ar-instructions').style.display = 'none';
+    document.getElementById('ar-hud').style.display = 'block';
     gameData.startTime = Date.now();
     generateObjects();
     startTimer();
@@ -134,8 +88,7 @@ function generateObjects() {
 
     objectColors.forEach((color, index) => {
         const sphere = document.createElement('a-sphere');
-        // Semicírculo frente al usuario (z siempre negativo = delante)
-        const angle = ((index / objectColors.length) - 0.5) * Math.PI * 1.2;
+        const angle  = ((index / objectColors.length) - 0.5) * Math.PI * 1.2;
         const radius = 2 + Math.random() * 1.5;
         const x = +(Math.sin(angle) * radius).toFixed(2);
         const z = -(Math.abs(Math.cos(angle) * radius)).toFixed(2);
@@ -170,14 +123,15 @@ function handleObjectClick(sphere, isCorrect) {
         gameData.score = Math.max(0, gameData.score - 5);
         sphere.setAttribute('color', '#FF6666');
     }
-    updateUI();
+    document.getElementById('score-val').textContent  = gameData.score;
+    document.getElementById('errors-val').textContent = gameData.errors;
 }
 
 function startTimer() {
     let timeLeft = 60;
     timerInterval = setInterval(() => {
         timeLeft--;
-        document.getElementById('timer-display').textContent = `${timeLeft}s`;
+        document.getElementById('timer-val').textContent = `${timeLeft}s`;
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
             if (gameData.correctClicks < 3) endGame();
@@ -185,20 +139,15 @@ function startTimer() {
     }, 1000);
 }
 
-function updateUI() {
-    document.getElementById('score-display').textContent = gameData.score;
-    document.getElementById('errors-display').textContent = gameData.errors;
-}
-
 function endGame() {
     if (timerInterval) clearInterval(timerInterval);
-    gameData.endTime = Date.now();
-    const duration = Math.round((gameData.endTime - gameData.startTime) / 1000);
-    document.getElementById('ui-overlay').style.display = 'none';
-    document.getElementById('final-score').textContent = gameData.score;
+    const duration = Math.round((Date.now() - gameData.startTime) / 1000);
+
+    document.getElementById('ar-hud').style.display = 'none';
+    document.getElementById('final-score').textContent   = gameData.score;
     document.getElementById('final-correct').textContent = gameData.correctClicks;
-    document.getElementById('final-errors').textContent = gameData.errors;
-    document.getElementById('final-time').textContent = `${duration}s`;
+    document.getElementById('final-errors').textContent  = gameData.errors;
+    document.getElementById('final-time').textContent    = `${duration}s`;
 
     const msg = document.getElementById('result-message');
     if (gameData.correctClicks === 3 && gameData.errors === 0)
@@ -208,7 +157,7 @@ function endGame() {
     else
         msg.textContent = `⏰ Tiempo agotado — ${gameData.correctClicks}/3 esferas`;
 
-    document.getElementById('results-modal').style.display = 'flex';
+    document.getElementById('ar-results').style.display = 'flex';
     saveResults(duration);
 }
 
@@ -224,9 +173,7 @@ function saveResults(duration) {
                 clicks: gameData.clicks, total_objects: gameData.objects.length
             }
         })
-    }).then(r => r.json()).then(d => console.log('Guardado:', d)).catch(e => console.error(e));
+    }).catch(e => console.error('Error guardando:', e));
 }
-
-function playAgain() { location.reload(); }
 </script>
 {% endblock %}

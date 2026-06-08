@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>{% block title %}Actividad AR{% endblock %} — TDAH Platform</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ar.css') }}">
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    {% block extra_head %}{% endblock %}
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; overflow: hidden; background: #000; }
+    </style>
+</head>
+<body>
+
+{# ── Cámara web: fondo full-screen (z-index: 0) ───────────────── #}
+<video id="ar-camera-bg" autoplay playsinline muted></video>
+
+{# ── Escena A-Frame: canvas transparente (z-index: 1) ─────────── #}
+<a-scene embedded
+         vr-mode-ui="enabled: false"
+         xr-mode-ui="enabled: false"
+         renderer="alpha: true; antialias: true"
+         background="color: transparent">
+
+    <a-camera position="0 1.7 0"
+              look-controls="enabled: false"
+              wasd-controls="enabled: false">
+    </a-camera>
+
+    {# cursor con rayOrigin:mouse — requerido para magic window AR #}
+    <a-entity cursor="rayOrigin: mouse; mouseEnabled: true; fuse: false"
+              raycaster="objects: .clickable; far: 100">
+    </a-entity>
+
+    <a-light type="ambient"     color="#ffffff" intensity="1.5"></a-light>
+    <a-light type="directional" color="#ffffff" intensity="0.8" position="-1 2 1"></a-light>
+
+    {% block ar_scene_content %}{% endblock %}
+
+</a-scene>
+
+{# ── Botón de salida (siempre visible, z-index: 20) ──────────── #}
+<a href="{{ url_for('ar.index') }}" id="ar-exit-btn" class="ar-exit-btn">✕ Salir</a>
+
+{# ── HUD de stats durante la actividad (z-index: 10) ─────────── #}
+<div id="ar-hud" class="ar-hud">
+    {% block ar_hud %}{% endblock %}
+</div>
+
+{# ── Overlay instrucciones iniciales (z-index: 20) ───────────── #}
+<div id="ar-instructions" class="ar-instructions">
+    {% block ar_instructions %}{% endblock %}
+</div>
+
+{# ── Overlay resultados finales (z-index: 30) ─────────────────── #}
+<div id="ar-results" class="ar-results">
+    {% block ar_results %}{% endblock %}
+</div>
+
+{# ── Error de cámara ──────────────────────────────────────────── #}
+<div id="ar-error" class="ar-error"></div>
+
+{# ── Espacio para overlays adicionales por actividad ──────────── #}
+{% block ar_overlays %}{% endblock %}
+
+<script>
+// Inicializar cámara web como fondo
+navigator.mediaDevices.getUserMedia({
+    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+    audio: false
+}).then(stream => {
+    const v = document.getElementById('ar-camera-bg');
+    if (v) v.srcObject = stream;
+}).catch(err => {
+    const e = document.getElementById('ar-error');
+    if (e) { e.textContent = 'No se pudo activar la cámara: ' + err.message; e.style.display = 'block'; }
+});
+
+window.addEventListener('beforeunload', () => {
+    const v = document.getElementById('ar-camera-bg');
+    if (v && v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
+});
+</script>
+
+{% block extra_scripts %}{% endblock %}
+
+</body>
+</html>
