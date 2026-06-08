@@ -65,12 +65,14 @@
     <a-camera position="0 1.6 0"
               look-controls="enabled: false"
               wasd-controls="enabled: false">
-        <a-cursor raycaster="objects: .clickable"
-                  fuse="false"
-                  color="#ffffff"
-                  opacity="0.7"
-                  animation__click="property: scale; startEvents: click; easing: easeInCubic; dur: 150; from: 0.1 0.1 0.1; to: 1 1 1"></a-cursor>
     </a-camera>
+
+    {# Cursor de mouse — rayOrigin:mouse proyecta el ray desde la posición del cursor, #}
+    {# no desde el centro de la cámara. Necesario para clicks en magic window AR.      #}
+    <a-entity id="ar-cursor"
+              cursor="rayOrigin: mouse; mouseEnabled: true; fuse: false"
+              raycaster="objects: .clickable; far: 100">
+    </a-entity>
 
     <a-light type="ambient"     color="#ffffff" intensity="1.5"></a-light>
     <a-light type="directional" color="#ffffff" intensity="0.8" position="-1 2 1"></a-light>
