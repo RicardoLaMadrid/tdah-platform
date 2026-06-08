@@ -32,6 +32,11 @@ def create_app(config_name='development'):
         from app.shared.context_processors import register_context_processors
         register_context_processors(app)
 
+        @app.route('/favicon.ico')
+        def favicon():
+            from flask import send_from_directory
+            return send_from_directory(app.static_folder, 'favicon.ico')
+
         @app.route('/')
         def index():
             if current_user.is_authenticated:
