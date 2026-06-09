@@ -26,6 +26,11 @@ def create_app(config_name='development'):
     csrf.init_app(app)
 
     with app.app_context():
+        # Crear carpetas de uploads si no existen (Railway no persiste filesystem)
+        for _folder in ['heatmaps', 'audios', 'videos']:
+            _path = os.path.join(app.static_folder, 'uploads', _folder)
+            os.makedirs(_path, exist_ok=True)
+
         # Importar modelos para que Flask-Migrate los detecte
         from app.core.models import user, student, activity, report, parent, notification, badge, active_test_session
 

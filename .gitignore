@@ -22,13 +22,16 @@ build/
 node_modules/
 package-lock.json
 
-# Tailwind output generado
-app/static/css/output.css
+# Tailwind output — commiteado para que Railway no necesite npm
+# app/static/css/output.css   <-- NO ignorar, va al repo
 
 # Uploads de usuarios (datos reales, no van al repo)
-app/static/uploads/heatmaps/
-app/static/uploads/audios/
-app/static/uploads/videos/
+app/static/uploads/heatmaps/*
+app/static/uploads/audios/*
+app/static/uploads/videos/*
+!app/static/uploads/heatmaps/.gitkeep
+!app/static/uploads/audios/.gitkeep
+!app/static/uploads/videos/.gitkeep
 
 # Logs
 *.log
