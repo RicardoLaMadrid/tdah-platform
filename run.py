@@ -1,12 +1,19 @@
 import os
 from app import create_app, db
+
+
+def get_config_name():
+    # Railway inyecta RAILWAY_ENVIRONMENT en todos los deploys
+    if os.environ.get('RAILWAY_ENVIRONMENT'):
+        return 'production'
+    return os.environ.get('FLASK_ENV', 'development')
 from app.core.models.user import User
 from app.core.models.student import Student
 from app.core.models.activity import Activity, Session
 from app.core.models.report import Report
 
-# Crear la aplicación
-app = create_app(os.getenv('FLASK_ENV', 'development'))
+# Crear la aplicación — detecta Railway automáticamente
+app = create_app(get_config_name())
 
 @app.shell_context_processor
 def make_shell_context():

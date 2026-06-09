@@ -77,7 +77,30 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     SESSION_COOKIE_SECURE = True  # HTTPS only en producción
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'change-this-in-production')
+
+    # Railway inyecta DATABASE_URL automáticamente al agregar MySQL.
+    # SQLAlchemy 2.x requiere mysql+pymysql://, Railway usa mysql://.
+    _db_url = os.environ.get('DATABASE_URL', 'sqlite:///fallback.db')
+    if _db_url.startswith('mysql://'):
+        _db_url = _db_url.replace('mysql://', 'mysql+pymysql://', 1)
+    SQLALCHEMY_DATABASE_URI = _db_url
+
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,    # detecta conexiones muertas
+        'pool_recycle': 280,      # recicla antes del timeout de MySQL (300s)
+    }
+
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+
+    WHATSAPP_ENABLED = os.environ.get('WHATSAPP_ENABLED', 'False').lower() == 'true'
+    TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
+    TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
+    TWILIO_WHATSAPP_FROM = os.environ.get('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886')
 
 
 class TestingConfig(Config):
