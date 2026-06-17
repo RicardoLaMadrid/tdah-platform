@@ -32,7 +32,7 @@ SpeechRecognition==3.14.4
 pydub==0.25.1
 
 # IA — reportes y análisis
-openai==1.12.0
+anthropic==0.109.2
 
 # Servidor WSGI para producción
 gunicorn==21.2.0
