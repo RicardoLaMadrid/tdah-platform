@@ -1,8 +1,8 @@
 """
-app/services/ai_generator.py
+app/reports/ai_generator.py
 
 Generador de actividades personalizadas para estudiantes con TDAH.
-Usa OpenAI GPT cuando hay API key disponible; usa fallback local si no.
+Usa el banco de actividades local (fallback sin dependencias externas).
 """
 import json
 import random
@@ -155,25 +155,15 @@ ACTIVITIES_BANK = {
 class AIActivityGenerator:
     """
     Genera actividades educativas personalizadas para estudiantes con TDAH.
-
-    - Con OPENAI_API_KEY: usa GPT para generar actividades únicas
-    - Sin API key: usa el banco de actividades predefinidas
+    Usa el banco de actividades predefinidas (sin dependencia de API externa).
     """
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key
-        self.model = 'gpt-4o-mini'
+        # api_key mantenido por compatibilidad con llamadas existentes, no se usa
         self._client = None
 
     def _get_client(self):
-        """Inicializa el cliente de OpenAI de forma lazy."""
-        if self._client is None and self.api_key:
-            try:
-                from openai import OpenAI
-                self._client = OpenAI(api_key=self.api_key)
-            except ImportError:
-                pass
-        return self._client
+        return None
 
     # ── PUBLIC API ────────────────────────────────────────────────
 
@@ -188,12 +178,7 @@ class AIActivityGenerator:
         Returns:
             Dict con la actividad generada
         """
-        client = self._get_client()
-
-        if client:
-            return self._generate_with_openai(student_profile, session_data, client)
-        else:
-            return self._generate_from_bank(student_profile, session_data)
+        return self._generate_from_bank(student_profile, session_data)
 
     def generate_recommendations(self, session_results: List[Dict]) -> Dict:
         """
@@ -205,12 +190,7 @@ class AIActivityGenerator:
         Returns:
             Dict con recomendaciones estructuradas
         """
-        client = self._get_client()
-
-        if client and session_results:
-            return self._recommendations_with_openai(session_results, client)
-        else:
-            return self._recommendations_fallback(session_results)
+        return self._recommendations_fallback(session_results)
 
     def get_activities_for_type(self, tdah_type: str, count: int = 3) -> List[Dict]:
         """
@@ -223,63 +203,7 @@ class AIActivityGenerator:
             act['generated_by'] = 'bank'
         return selected
 
-    # ── OPENAI GENERATION ─────────────────────────────────────────
-
-    def _generate_with_openai(self, student_profile: Dict,
-                               session_data: Dict, client) -> Dict:
-        """Genera actividad usando GPT."""
-        try:
-            tdah_type = student_profile.get('tdah_type', 'combinado')
-            age = student_profile.get('age', 9)
-            difficulty = student_profile.get('difficulty_level', 2)
-            username = student_profile.get('username', 'Estudiante')
-
-            attention = session_data.get('attention_score', 70) if session_data else 70
-
-            system_prompt = """Eres un psicopedagogo experto en TDAH infantil.
-Generas actividades educativas personalizadas para niños con TDAH.
-Respondes SOLO en JSON válido, sin texto adicional ni backticks."""
-
-            user_prompt = f"""Crea UNA actividad educativa para:
-- Nombre: {username}
-- Subtipo TDAH: {tdah_type}
-- Edad: {age} años
-- Nivel dificultad: {difficulty}/5
-- Puntuación atención reciente: {attention}%
-
-Responde SOLO con este JSON:
-{{
-    "title": "Nombre creativo de la actividad",
-    "description": "Descripción en 1-2 oraciones",
-    "activity_type": "atencion|memoria|organizacion|control_impulsos|mixta",
-    "difficulty_level": {difficulty},
-    "duration_minutes": 10,
-    "instructions": "Paso 1...\\nPaso 2...\\nPaso 3...",
-    "objectives": ["objetivo 1", "objetivo 2"],
-    "tips_for_teacher": "Consejo específico para el profesor",
-    "tips_for_parent": "Consejo para los padres",
-    "ar_content": {{"enabled": false}}
-}}"""
-
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=800,
-                response_format={"type": "json_object"}
-            )
-
-            content = response.choices[0].message.content
-            activity = json.loads(content)
-            activity['generated_by'] = 'openai'
-            return activity
-
-        except Exception as e:
-            print(f"⚠️  OpenAI error, usando fallback: {e}")
-            return self._generate_from_bank(student_profile, session_data)
+    # ── BANK GENERATION ───────────────────────────────────────────
 
     # ── BANK FALLBACK ─────────────────────────────────────────────
 
@@ -301,51 +225,6 @@ Responde SOLO con este JSON:
         return activity
 
     # ── RECOMMENDATIONS ───────────────────────────────────────────
-
-    def _recommendations_with_openai(self, session_results: List[Dict],
-                                      client) -> Dict:
-        """Genera recomendaciones con OpenAI."""
-        try:
-            avg_attention = (
-                sum(s.get('attention_score', 0) for s in session_results)
-                / len(session_results)
-            )
-
-            system_prompt = """Eres TeacherGPT, asistente pedagógico experto en TDAH.
-Analizas datos de estudiantes y generas reportes profesionales en español.
-Respondes SOLO en JSON válido."""
-
-            user_prompt = f"""Genera recomendaciones pedagógicas basadas en:
-- Sesiones analizadas: {len(session_results)}
-- Promedio de atención: {avg_attention:.1f}%
-- Datos recientes: {json.dumps(session_results[-3:], ensure_ascii=False)}
-
-Responde en JSON:
-{{
-    "strengths": ["fortaleza 1", "fortaleza 2"],
-    "areas_for_improvement": ["área 1", "área 2"],
-    "suggested_activities": ["actividad 1", "actividad 2"],
-    "parent_recommendations": ["consejo 1", "consejo 2"],
-    "teacher_strategies": ["estrategia 1", "estrategia 2"],
-    "progress_summary": "Resumen del progreso en 2-3 oraciones"
-}}"""
-
-            response = client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.4,
-                max_tokens=800,
-                response_format={"type": "json_object"}
-            )
-
-            return json.loads(response.choices[0].message.content)
-
-        except Exception as e:
-            print(f"⚠️  OpenAI recommendations error: {e}")
-            return self._recommendations_fallback(session_results)
 
     def _recommendations_fallback(self, session_results: List[Dict]) -> Dict:
         """Recomendaciones predefinidas cuando no hay API."""

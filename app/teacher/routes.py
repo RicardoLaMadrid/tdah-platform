@@ -256,7 +256,7 @@ def generate_activity():
             }
         
         # Generar actividad con IA
-        ai_generator = AIActivityGenerator(current_app.config['OPENAI_API_KEY'])
+        ai_generator = AIActivityGenerator(current_app.config.get('ANTHROPIC_API_KEY'))
         generated_activity = ai_generator.generate_activity(student_profile, session_data)
         
         # Crear la actividad en la BD
@@ -433,7 +433,7 @@ def session_detail(session_id):
 @teacher_required
 def ai_suggestions():
     """Genera sugerencias de IA reales para un reporte"""
-    from app.services.ai_service import ai_service
+    from app.reports.ai_service import ai_service
     
     try:
         data = request.get_json()
