@@ -40,7 +40,15 @@ En tu servicio web → tab **"Variables"** → agregar:
 | Variable | Valor |
 |----------|-------|
 | `SECRET_KEY` | Generar una clave aleatoria de 50+ caracteres |
-| `OPENAI_API_KEY` | Tu API key de OpenAI |
+| `ANTHROPIC_API_KEY` | Tu API key de Anthropic (console.anthropic.com) |
+
+### Opcionales de IA (estos son los defaults — solo agregalas si querés cambiar el valor)
+
+| Variable | Default | Descripción |
+|----------|---------|-------------|
+| `AI_MODEL` | `claude-haiku-4-5` | Modelo de Claude a usar |
+| `AI_MAX_TOKENS` | `1500` | Tokens máximos por respuesta |
+| `AI_TEMPERATURE` | `0.3` | Creatividad (0=determinista, 1=creativo) |
 
 Para generar SECRET_KEY, podés usar:
 ```python

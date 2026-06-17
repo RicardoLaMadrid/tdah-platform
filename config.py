@@ -13,11 +13,11 @@ class Config:
         'mysql+pymysql://root@localhost/tdah_platform'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # OpenAI
-    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-    AI_MODEL = os.environ.get('AI_MODEL', 'gpt-4o-mini')
-    AI_MAX_TOKENS = int(os.environ.get('AI_MAX_TOKENS', 2000))
-    AI_TEMPERATURE = float(os.environ.get('AI_TEMPERATURE', 0.7))
+    # IA — Anthropic Claude
+    ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
+    AI_MODEL = os.environ.get('AI_MODEL', 'claude-haiku-4-5')
+    AI_MAX_TOKENS = int(os.environ.get('AI_MAX_TOKENS', 1500))
+    AI_TEMPERATURE = float(os.environ.get('AI_TEMPERATURE', 0.3))
     
     # JWT (legacy - solo si decides usar API)
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'jwt-secret-key'
@@ -92,7 +92,7 @@ class ProductionConfig(Config):
         'pool_recycle': 280,      # recicla antes del timeout de MySQL (300s)
     }
 
-    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+    ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY')
 
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
