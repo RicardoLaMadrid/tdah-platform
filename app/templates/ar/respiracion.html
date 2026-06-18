@@ -1,95 +1,76 @@
 {% extends '_layouts/ar_layout.html' %}
-{% block title %}Respiración Guiada AR{% endblock %}
+{% block title %}Respiración Espacial — AR{% endblock %}
 
-{% block extra_head %}
-<style>
-    #instruction-text {
-        font-size: 3rem; font-weight: 800; color: white;
-        text-shadow: 0 3px 14px rgba(0,0,0,0.95), 0 1px 4px rgba(0,0,0,0.8);
-        letter-spacing: 0.02em;
-        min-height: 4rem; display: flex;
-        align-items: center; justify-content: center;
-    }
-    .cycle-dot {
-        display: inline-block; width: 14px; height: 14px;
-        border-radius: 50%; background: rgba(255,255,255,0.25);
-        margin: 0 4px; transition: background 0.5s;
-    }
-    .cycle-dot.done { background: #10b981; }
-</style>
-{% endblock %}
-
-{# ── Esfera de respiración ────────────────────────────────────── #}
+{# Esfera de respiración con glow espacial #}
 {% block ar_scene_content %}
 <a-sphere id="breathing-sphere"
-          position="0 1.7 -2.5" radius="0.5"
-          scale="0.6 0.6 0.6" color="#a5b4fc"
-          opacity="0.88" metalness="0.05" roughness="0.25">
+          position="0 1.7 -2.5"
+          scale="0.6 0.6 0.6"
+          material="color: #06b6d4; emissive: #06b6d4; emissiveIntensity: 0.5; roughness: 0.25; metalness: 0.1">
 </a-sphere>
 {% endblock %}
 
-{# ── HUD (panel de stats top-right) ──────────────────────────── #}
 {% block ar_hud %}
-<div style="position:absolute; top:0; right:0;">
-    <div class="ar-card" style="min-width:180px;">
-        <div class="ar-stat-label" style="margin-bottom:0.4rem;">Respiración Guiada</div>
-        <div style="display:flex; gap:1.5rem; text-align:center;">
-            <div>
-                <div class="ar-stat-label">Ciclo</div>
-                <div id="cycle-count" style="font-size:1.5rem; font-weight:800; color:#a78bfa;">0/5</div>
-            </div>
-            <div>
-                <div class="ar-stat-label">Tiempo</div>
-                <div id="time-display" style="font-size:1.5rem; font-weight:800; color:#4ade80;">0s</div>
-            </div>
-        </div>
-        <div id="cycle-indicators" style="margin-top:0.6rem; text-align:center;"></div>
-    </div>
+<div class="ar-hud-item">
+  <span class="ar-hud-icon">🔄</span>
+  <span class="ar-hud-label">Ciclo</span>
+  <span id="cycle-count" class="ar-hud-value" style="color:#a78bfa;">0/5</span>
+</div>
+<div class="ar-hud-item">
+  <span class="ar-hud-icon">⏱️</span>
+  <span class="ar-hud-label">Tiempo</span>
+  <span id="time-display" class="ar-hud-value">0s</span>
+</div>
+<div class="ar-hud-item" id="cycle-indicators-wrap" style="min-width:90px; gap:0.25rem; flex-direction:row; align-items:center; justify-content:center;">
 </div>
 {% endblock %}
 
-{# ── Instrucciones iniciales ──────────────────────────────────── #}
-{% block ar_instructions %}
-<div class="ar-modal ar-modal--dark">
-    <h2>🧘 Respiración Guiada AR</h2>
-    <p>Seguí el movimiento de la esfera flotante para respirar</p>
-    <ul>
-        <li>Esfera <strong>crece</strong> → Inhalá profundo (4 seg)</li>
-        <li>Esfera se <strong>detiene</strong> → Sostené el aire (2 seg)</li>
-        <li>Esfera <strong>se achica</strong> → Exhalá despacio (4 seg)</li>
-        <li>5 ciclos completos = ejercicio terminado</li>
-    </ul>
-    <button class="ar-btn ar-btn-primary" onclick="startBreathing()">🧘 Comenzar Ejercicio</button>
-    <br><br>
-    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
-</div>
-{% endblock %}
-
-{# ── Resultados ───────────────────────────────────────────────── #}
-{% block ar_results %}
-<div class="ar-modal ar-modal--light">
-    <h2>🧘 Ejercicio Completado</h2>
-    <div class="ar-result-score" style="color:#10b981;">✓</div>
-    <p style="color:#6b7280; margin:-0.5rem 0 1rem;">5 ciclos completados</p>
-    <div class="ar-result-stats">
-        <div><h3 id="final-cycles">5</h3><small>Ciclos</small></div>
-        <div><h3 id="final-duration">0s</h3><small>Duración</small></div>
-        <div><h3 id="final-consistency">—</h3><small>Consistencia</small></div>
-    </div>
-    <div class="ar-result-note">
-        <strong>💪 Beneficios:</strong> La respiración controlada reduce la ansiedad y mejora la concentración.
-    </div>
-    <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Repetir</button>
-    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
-</div>
-{% endblock %}
-
-{# ── Overlay de fase (texto "Inhalá..."): sobre la cámara ─────── #}
 {% block ar_overlays %}
 <div id="instruction-wrapper"
      style="display:none; position:fixed; bottom:18%; left:0; right:0;
             text-align:center; pointer-events:none; z-index:10;">
-    <div id="instruction-text">Prepárate...</div>
+  <div id="instruction-text"
+       style="display:inline-block; padding:0.75rem 2rem;
+              background:rgba(10,14,39,0.85); border:1px solid rgba(139,92,246,0.4);
+              border-radius:9999px; font-size:2rem; font-weight:800; color:white;
+              letter-spacing:0.02em; backdrop-filter:blur(8px);
+              text-shadow: 0 0 20px currentColor;"></div>
+</div>
+{% endblock %}
+
+{% block ar_instructions %}
+<div class="ar-modal">
+  <div class="ar-modal-emoji">🧘</div>
+  <h2>Respiración Espacial</h2>
+  <p>Seguí el movimiento de la nebulosa para respirar con calma</p>
+  <ul>
+    <li>Esfera <strong style="color:#06b6d4;">crece (cyan)</strong> → Inhalá profundo (4 seg)</li>
+    <li>Esfera <strong style="color:#10b981;">quieta (verde)</strong> → Sostené el aire (2 seg)</li>
+    <li>Esfera <strong style="color:#8b5cf6;">se achica (violeta)</strong> → Exhalá despacio (4 seg)</li>
+    <li>5 ciclos = ejercicio completado ✨</li>
+  </ul>
+  <button class="ar-btn ar-btn-primary" onclick="startBreathing()">🧘 Comenzar</button>
+  <br><br>
+  <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
+</div>
+{% endblock %}
+
+{% block ar_results %}
+<div class="ar-modal">
+  <div class="ar-modal-emoji">🌌</div>
+  <h2>Ejercicio Completado</h2>
+  <div class="ar-result-score" style="font-size:4rem;">✓</div>
+  <p style="color:rgba(255,255,255,0.6); margin:-0.5rem 0 1rem;">5 ciclos completados</p>
+  <div class="ar-result-stats">
+    <div><h4 id="final-cycles" style="color:#a78bfa;">5</h4><small>Ciclos</small></div>
+    <div><h4 id="final-duration">0s</h4><small>Duración</small></div>
+    <div><h4 id="final-consistency" style="color:#10b981;">—</h4><small>Consistencia</small></div>
+  </div>
+  <div class="ar-result-note">
+    💪 La respiración controlada reduce la ansiedad y mejora la concentración.
+  </div>
+  <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Repetir</button>
+  <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
 </div>
 {% endblock %}
 
@@ -103,115 +84,120 @@ const EXHALE_MS    = 4000;
 const REST_MS      = 1000;
 
 let breathState = {
-    currentCycle: 0, isActive: false,
-    startTime: null, cycleData: [], timerInterval: null
+  currentCycle: 0, isActive: false,
+  startTime: null, cycleData: [], timerInterval: null
 };
 
 function startBreathing() {
-    document.getElementById('ar-instructions').style.display = 'none';
-    document.getElementById('ar-hud').style.display = 'block';
-    document.getElementById('instruction-wrapper').style.display = 'block';
+  document.getElementById('ar-instructions').style.display = 'none';
+  document.getElementById('ar-hud').style.display          = 'flex';
+  document.getElementById('instruction-wrapper').style.display = 'block';
 
-    breathState.startTime = Date.now();
-    breathState.isActive  = true;
-    createCycleIndicators();
-    startClock();
-    setTimeout(nextCycle, 800);
+  breathState.startTime = Date.now();
+  breathState.isActive  = true;
+  createCycleIndicators();
+  startClock();
+  setTimeout(nextCycle, 800);
 }
 
 function createCycleIndicators() {
-    const el = document.getElementById('cycle-indicators');
-    for (let i = 0; i < TOTAL_CYCLES; i++) {
-        const dot = document.createElement('span');
-        dot.className = 'cycle-dot';
-        dot.id = `dot-${i}`;
-        el.appendChild(dot);
-    }
+  const wrap = document.getElementById('cycle-indicators-wrap');
+  for (let i = 0; i < TOTAL_CYCLES; i++) {
+    const dot = document.createElement('span');
+    dot.id        = `dot-${i}`;
+    dot.style.cssText =
+      'display:inline-block; width:10px; height:10px; border-radius:50%; ' +
+      'background:rgba(255,255,255,0.25); margin:0 2px; transition:background 0.5s;';
+    wrap.appendChild(dot);
+  }
 }
 
 function startClock() {
-    breathState.timerInterval = setInterval(() => {
-        if (!breathState.isActive) return;
-        const s = Math.round((Date.now() - breathState.startTime) / 1000);
-        document.getElementById('time-display').textContent = `${s}s`;
-    }, 1000);
+  breathState.timerInterval = setInterval(() => {
+    if (!breathState.isActive) return;
+    const s = Math.round((Date.now() - breathState.startTime) / 1000);
+    document.getElementById('time-display').textContent = `${s}s`;
+  }, 1000);
 }
 
 function nextCycle() {
-    if (breathState.currentCycle >= TOTAL_CYCLES) { endBreathing(); return; }
-    breathState.currentCycle++;
-    document.getElementById('cycle-count').textContent = `${breathState.currentCycle}/${TOTAL_CYCLES}`;
-    const cycleStart = Date.now();
+  if (breathState.currentCycle >= TOTAL_CYCLES) { endBreathing(); return; }
+  breathState.currentCycle++;
+  document.getElementById('cycle-count').textContent = `${breathState.currentCycle}/${TOTAL_CYCLES}`;
+  const cycleStart = Date.now();
 
-    setPhase('inhale', INHALE_MS);
+  setPhase('inhale', INHALE_MS);
+  setTimeout(() => {
+    setPhase('hold', HOLD_MS);
     setTimeout(() => {
-        setPhase('hold', HOLD_MS);
-        setTimeout(() => {
-            setPhase('exhale', EXHALE_MS);
-            setTimeout(() => {
-                breathState.cycleData.push({ cycle: breathState.currentCycle, duration: Date.now() - cycleStart });
-                const dot = document.getElementById(`dot-${breathState.currentCycle - 1}`);
-                if (dot) dot.classList.add('done');
-                setPhase('rest', REST_MS);
-                setTimeout(nextCycle, REST_MS);
-            }, EXHALE_MS);
-        }, HOLD_MS);
-    }, INHALE_MS);
+      setPhase('exhale', EXHALE_MS);
+      setTimeout(() => {
+        breathState.cycleData.push({ cycle: breathState.currentCycle, duration: Date.now() - cycleStart });
+        const dot = document.getElementById(`dot-${breathState.currentCycle - 1}`);
+        if (dot) dot.style.background = '#10b981';
+        setPhase('rest', REST_MS);
+        setTimeout(nextCycle, REST_MS);
+      }, EXHALE_MS);
+    }, HOLD_MS);
+  }, INHALE_MS);
 }
 
 function setPhase(phase, dur) {
-    const sphere = document.getElementById('breathing-sphere');
-    const text   = document.getElementById('instruction-text');
-    const config = {
-        inhale: { label: 'Inhalá...',  scale: '1.8 1.8 1.8', color: '#3b82f6', colorDur: 1200 },
-        hold:   { label: 'Sostené...', scale: '1.8 1.8 1.8', color: '#10b981', colorDur: 800  },
-        exhale: { label: 'Exhalá...',  scale: '0.6 0.6 0.6', color: '#f59e0b', colorDur: 1200 },
-        rest:   { label: '',           scale: '0.6 0.6 0.6', color: '#a5b4fc', colorDur: 800  }
-    };
-    const c = config[phase];
-    text.textContent = c.label;
-    sphere.setAttribute('animation__scale',
-        `property: scale; to: ${c.scale}; dur: ${dur}; easing: easeInOutSine`);
-    sphere.setAttribute('animation__color',
-        `property: color; to: ${c.color}; dur: ${c.colorDur}; easing: linear`);
+  const sphere = document.getElementById('breathing-sphere');
+  const text   = document.getElementById('instruction-text');
+  const config = {
+    inhale: { label: 'Inhalá...',  scale: '1.8 1.8 1.8', color: '#06b6d4', emissive: '#06b6d4', dur: INHALE_MS },
+    hold:   { label: 'Sostené...', scale: '1.8 1.8 1.8', color: '#10b981', emissive: '#10b981', dur: HOLD_MS   },
+    exhale: { label: 'Exhalá...',  scale: '0.6 0.6 0.6', color: '#8b5cf6', emissive: '#8b5cf6', dur: EXHALE_MS },
+    rest:   { label: '',           scale: '0.6 0.6 0.6', color: '#1e1b4b', emissive: '#1e1b4b', dur: REST_MS   },
+  };
+  const c = config[phase];
+  if (text) text.textContent = c.label;
+
+  sphere.setAttribute('animation__scale',
+    `property: scale; to: ${c.scale}; dur: ${dur}; easing: easeInOutSine`);
+  sphere.setAttribute('animation__mat',
+    `property: material.color; to: ${c.color}; dur: ${Math.round(dur * 0.4)}; easing: linear`);
+  sphere.setAttribute('animation__emit',
+    `property: material.emissive; to: ${c.emissive}; dur: ${Math.round(dur * 0.4)}; easing: linear`);
 }
 
 function endBreathing() {
-    breathState.isActive = false;
-    clearInterval(breathState.timerInterval);
-    const totalDuration = Math.round((Date.now() - breathState.startTime) / 1000);
-    const consistency   = calculateConsistency();
+  breathState.isActive = false;
+  clearInterval(breathState.timerInterval);
+  const totalDuration = Math.round((Date.now() - breathState.startTime) / 1000);
+  const consistency   = calculateConsistency();
 
-    document.getElementById('instruction-wrapper').style.display = 'none';
-    document.getElementById('ar-hud').style.display = 'none';
-    document.getElementById('final-cycles').textContent      = TOTAL_CYCLES;
-    document.getElementById('final-duration').textContent    = `${totalDuration}s`;
-    document.getElementById('final-consistency').textContent = `${consistency}%`;
-    document.getElementById('ar-results').style.display      = 'flex';
+  document.getElementById('instruction-wrapper').style.display = 'none';
+  document.getElementById('ar-hud').style.display              = 'none';
+  document.getElementById('final-cycles').textContent          = TOTAL_CYCLES;
+  document.getElementById('final-duration').textContent        = `${totalDuration}s`;
+  document.getElementById('final-consistency').textContent     = `${consistency}%`;
+  document.getElementById('ar-results').style.display          = 'flex';
 
-    fetch('{{ url_for("ar.save_result") }}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            activity_type: 'ar_respiracion',
-            results: {
-                score: 100, cycles_completed: TOTAL_CYCLES,
-                total_duration: totalDuration,
-                avg_cycle_time: breathState.cycleData.length
-                    ? Math.round(breathState.cycleData.reduce((s,c) => s + c.duration, 0) / TOTAL_CYCLES)
-                    : 0,
-                consistency: consistency
-            }
-        })
-    }).catch(e => console.error('Error guardando:', e));
+  fetch('{{ url_for("ar.save_result") }}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      activity_type: 'ar_respiracion',
+      results: {
+        score: 100, cycles_completed: TOTAL_CYCLES,
+        total_duration: totalDuration,
+        avg_cycle_time: breathState.cycleData.length
+          ? Math.round(breathState.cycleData.reduce((s, c) => s + c.duration, 0) / TOTAL_CYCLES)
+          : 0,
+        consistency: consistency
+      }
+    })
+  }).catch(e => console.error('Error guardando:', e));
 }
 
 function calculateConsistency() {
-    const times = breathState.cycleData.map(c => c.duration);
-    if (times.length < 2) return 100;
-    const avg      = times.reduce((s, t) => s + t, 0) / times.length;
-    const variance = times.reduce((s, t) => s + Math.pow(t - avg, 2), 0) / times.length;
-    return Math.max(0, Math.round(100 - (Math.sqrt(variance) / avg) * 100));
+  const times = breathState.cycleData.map(c => c.duration);
+  if (times.length < 2) return 100;
+  const avg      = times.reduce((s, t) => s + t, 0) / times.length;
+  const variance = times.reduce((s, t) => s + Math.pow(t - avg, 2), 0) / times.length;
+  return Math.max(0, Math.round(100 - (Math.sqrt(variance) / avg) * 100));
 }
 </script>
 {% endblock %}

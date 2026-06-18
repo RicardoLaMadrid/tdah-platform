@@ -1,179 +1,196 @@
 {% extends '_layouts/ar_layout.html' %}
-{% block title %}Caza de Objetos AR{% endblock %}
+{% block title %}Caza Espacial — AR{% endblock %}
 
-{% block extra_head %}
-<style>
-    #score-val  { font-size: 2rem; font-weight: 800; color: #4ade80; }
-    #errors-val { font-size: 2rem; font-weight: 800; color: #f87171; }
-    #timer-val  { font-size: 1.75rem; font-weight: 800; color: #fbbf24; }
-</style>
-{% endblock %}
-
-{# ── Objetos 3D generados por JS ──────────────────────────────── #}
 {% block ar_scene_content %}
 <a-entity id="objects-container"></a-entity>
 {% endblock %}
 
-{# ── HUD stats ────────────────────────────────────────────────── #}
 {% block ar_hud %}
-<div class="ar-card">
-    <div style="display:flex; justify-content:center; gap:2.5rem; text-align:center;">
-        <div><div class="ar-stat-label">Puntos</div><div id="score-val">0</div></div>
-        <div><div class="ar-stat-label">Errores</div><div id="errors-val">0</div></div>
-        <div><div class="ar-stat-label">Tiempo</div><div id="timer-val">60s</div></div>
-    </div>
+<div class="ar-hud-item">
+  <span class="ar-hud-icon">⭐</span>
+  <span class="ar-hud-label">Puntos</span>
+  <span id="score-val" class="ar-hud-value">0</span>
+</div>
+<div class="ar-hud-item">
+  <span class="ar-hud-icon">💥</span>
+  <span class="ar-hud-label">Errores</span>
+  <span id="errors-val" class="ar-hud-value" style="color:#f87171;">0</span>
+</div>
+<div class="ar-hud-item">
+  <span class="ar-hud-icon">⏱️</span>
+  <span class="ar-hud-label">Tiempo</span>
+  <span id="timer-val" class="ar-hud-value">60s</span>
 </div>
 {% endblock %}
 
-{# ── Instrucciones iniciales ──────────────────────────────────── #}
 {% block ar_instructions %}
-<div class="ar-modal ar-modal--dark">
-    <h2>🎯 Caza de Objetos AR</h2>
-    <p>Encuentra y toca solo las esferas <strong>VERDES</strong></p>
-    <ul>
-        <li>Aparecerán 10 esferas de colores en el espacio</li>
-        <li>Solo toca las <strong>VERDES</strong> 🟢</li>
-        <li>Evita las rojas, azules y amarillas</li>
-        <li>Tienes 60 segundos</li>
-    </ul>
-    <button class="ar-btn ar-btn-success" onclick="startGame()">🚀 Comenzar</button>
-    <br><br>
-    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
+<div class="ar-modal">
+  <div class="ar-modal-emoji">🚀</div>
+  <h2>Caza Espacial</h2>
+  <p>Tocá solo las esferas <strong style="color:#fbbf24;">DORADAS</strong> que flotan en el espacio</p>
+  <ul>
+    <li>Aparecen 10 objetos flotantes de colores</li>
+    <li>Solo tocá las <strong style="color:#fbbf24;">DORADAS ✨</strong></li>
+    <li>Evitá las de colores fríos (azul, cyan, violeta, rosa)</li>
+    <li>Tenés 60 segundos — ¡Atención máxima!</li>
+  </ul>
+  <button class="ar-btn ar-btn-primary" onclick="startGame()">🚀 Comenzar</button>
+  <br><br>
+  <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
 </div>
 {% endblock %}
 
-{# ── Resultados ───────────────────────────────────────────────── #}
 {% block ar_results %}
-<div class="ar-modal ar-modal--light">
-    <h2>🎉 ¡Actividad Completada!</h2>
-    <div id="final-score" class="ar-result-score">0</div>
-    <div class="ar-result-stats">
-        <div><h4 id="final-correct">0</h4><small>Correctas</small></div>
-        <div><h4 id="final-errors" style="color:#dc2626;">0</h4><small>Errores</small></div>
-        <div><h4 id="final-time">0s</h4><small>Tiempo</small></div>
-    </div>
-    <div id="result-message" class="ar-result-note"></div>
-    <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Jugar de Nuevo</button>
-    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
+<div class="ar-modal">
+  <div class="ar-modal-emoji">🎉</div>
+  <h2>¡Misión Completada!</h2>
+  <div id="final-score" class="ar-result-score">0</div>
+  <div class="ar-result-stats">
+    <div><h4 id="final-correct" style="color:#fbbf24;">0</h4><small>Doradas</small></div>
+    <div><h4 id="final-errors" style="color:#f87171;">0</h4><small>Errores</small></div>
+    <div><h4 id="final-time">0s</h4><small>Tiempo</small></div>
+  </div>
+  <div id="result-message" class="ar-result-note"></div>
+  <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Jugar de Nuevo</button>
+  <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-const STUDENT_ID = {{ student.id }};
+const STUDENT_ID   = {{ student.id }};
+const CORRECT_COLOR = '#fbbf24';
+const WRONG_COLORS  = ['#ec4899', '#06b6d4', '#3b82f6', '#8b5cf6', '#ef4444'];
 
 let gameData = {
-    score: 0, errors: 0, correctClicks: 0,
-    startTime: null, clicks: [], objects: []
+  score: 0, errors: 0, correctClicks: 0,
+  startTime: null, clicks: [], objects: []
 };
 let timerInterval = null;
 
 function startGame() {
-    document.getElementById('ar-instructions').style.display = 'none';
-    document.getElementById('ar-hud').style.display = 'block';
-    gameData.startTime = Date.now();
-    generateObjects();
-    startTimer();
+  document.getElementById('ar-instructions').style.display = 'none';
+  document.getElementById('ar-hud').style.display = 'flex';
+  gameData.startTime = Date.now();
+  generateObjects();
+  startTimer();
 }
 
 function generateObjects() {
-    const container = document.getElementById('objects-container');
-    const correctColor = '#00DD00';
-    const objectColors = [
-        correctColor, correctColor, correctColor,
-        '#FF2020', '#FF2020', '#1E90FF', '#1E90FF',
-        '#FFDD00', '#FFDD00', '#FF8800'
-    ];
-    objectColors.sort(() => Math.random() - 0.5);
+  const container = document.getElementById('objects-container');
+  const objectColors = [
+    CORRECT_COLOR, CORRECT_COLOR, CORRECT_COLOR,
+    ...WRONG_COLORS.slice(0, 4), WRONG_COLORS[0], WRONG_COLORS[1], WRONG_COLORS[2]
+  ];
+  objectColors.sort(() => Math.random() - 0.5);
 
-    objectColors.forEach((color, index) => {
-        const sphere = document.createElement('a-sphere');
-        const angle  = ((index / objectColors.length) - 0.5) * Math.PI * 1.2;
-        const radius = 2 + Math.random() * 1.5;
-        const x = +(Math.sin(angle) * radius).toFixed(2);
-        const z = -(Math.abs(Math.cos(angle) * radius)).toFixed(2);
-        const y = +(1 + Math.random() * 1.5).toFixed(2);
-        const yTop = +(y + 0.3).toFixed(2);
+  objectColors.forEach((color, index) => {
+    const sphere = document.createElement('a-sphere');
+    const angle  = ((index / objectColors.length) - 0.5) * Math.PI * 1.2;
+    const radius = 2 + Math.random() * 1.5;
+    const x      = +(Math.sin(angle) * radius).toFixed(2);
+    const z      = -(Math.abs(Math.cos(angle) * radius)).toFixed(2);
+    const y      = +(1 + Math.random() * 1.5).toFixed(2);
+    const yTop   = +(y + 0.3).toFixed(2);
+    const isCorrect = color === CORRECT_COLOR;
 
-        sphere.setAttribute('position', `${x} ${y} ${z}`);
-        sphere.setAttribute('radius', '0.3');
-        sphere.setAttribute('color', color);
-        sphere.setAttribute('class', 'clickable');
-        sphere.setAttribute('opacity', '0.92');
-        sphere.setAttribute('animation',
-            `property: position; to: ${x} ${yTop} ${z}; ` +
-            `dur: 2000; dir: alternate; loop: true; easing: easeInOutSine`);
-        sphere.addEventListener('click', () => handleObjectClick(sphere, color === correctColor));
-        container.appendChild(sphere);
-        gameData.objects.push({ color, correct: color === correctColor });
-    });
+    sphere.setAttribute('position', `${x} ${y} ${z}`);
+    sphere.setAttribute('radius', '0.3');
+    sphere.setAttribute('material',
+      `color: ${color}; emissive: ${color}; emissiveIntensity: ${isCorrect ? 0.5 : 0.3}; roughness: 0.3; metalness: 0.2`);
+    sphere.setAttribute('class', 'clickable');
+    sphere.setAttribute('animation',
+      `property: position; to: ${x} ${yTop} ${z}; ` +
+      `dur: 2000; dir: alternate; loop: true; easing: easeInOutSine`);
+
+    sphere.addEventListener('click', (e) => handleObjectClick(e, sphere, isCorrect, `${x} ${y} ${z}`));
+    container.appendChild(sphere);
+    gameData.objects.push({ color, correct: isCorrect });
+  });
 }
 
-function handleObjectClick(sphere, isCorrect) {
-    gameData.clicks.push({ time: Date.now() - gameData.startTime, correct: isCorrect });
-    if (isCorrect) {
-        gameData.score += 10;
-        gameData.correctClicks++;
-        sphere.setAttribute('color', '#FFD700');
-        sphere.setAttribute('scale', '1.5 1.5 1.5');
-        setTimeout(() => sphere.parentNode && sphere.parentNode.removeChild(sphere), 300);
-        if (gameData.correctClicks >= 3) endGame();
-    } else {
-        gameData.errors++;
-        gameData.score = Math.max(0, gameData.score - 5);
-        sphere.setAttribute('color', '#FF6666');
+function handleObjectClick(e, sphere, isCorrect, posStr) {
+  const cx = (e && e.clientX) ? e.clientX : window.innerWidth / 2;
+  const cy = (e && e.clientY) ? e.clientY : window.innerHeight / 2;
+  gameData.clicks.push({ time: Date.now() - gameData.startTime, correct: isCorrect });
+
+  if (window.ARVisuals) {
+    ARVisuals.createClickFeedback(cx, cy, isCorrect ? '#fbbf24' : '#ef4444');
+  }
+
+  if (isCorrect) {
+    gameData.score += 10;
+    gameData.correctClicks++;
+
+    if (window.ARVisuals) {
+      const scene = document.querySelector('a-scene');
+      ARVisuals.createExplosion(posStr, scene, '#fbbf24');
     }
-    document.getElementById('score-val').textContent  = gameData.score;
-    document.getElementById('errors-val').textContent = gameData.errors;
+
+    sphere.setAttribute('class', '');
+    sphere.setAttribute('animation__vanish',
+      'property: scale; to: 0 0 0; dur: 250; easing: easeInBack');
+    setTimeout(() => { if (sphere.parentNode) sphere.parentNode.removeChild(sphere); }, 260);
+
+    if (gameData.correctClicks >= 3) endGame();
+  } else {
+    gameData.errors++;
+    gameData.score = Math.max(0, gameData.score - 5);
+    sphere.setAttribute('material',
+      `color: #ff6666; emissive: #ff6666; emissiveIntensity: 0.8; roughness: 0.3`);
+    setTimeout(() => sphere.setAttribute('material',
+      `color: ${sphere.getAttribute('data-color') || '#ef4444'}; emissive: ${sphere.getAttribute('data-color') || '#ef4444'}; emissiveIntensity: 0.3; roughness: 0.3`
+    ), 400);
+  }
+
+  document.getElementById('score-val').textContent  = gameData.score;
+  document.getElementById('errors-val').textContent = gameData.errors;
 }
 
 function startTimer() {
-    let timeLeft = 60;
-    timerInterval = setInterval(() => {
-        timeLeft--;
-        document.getElementById('timer-val').textContent = `${timeLeft}s`;
-        if (timeLeft <= 0) {
-            clearInterval(timerInterval);
-            if (gameData.correctClicks < 3) endGame();
-        }
-    }, 1000);
+  let timeLeft = 60;
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    document.getElementById('timer-val').textContent = `${timeLeft}s`;
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      if (gameData.correctClicks < 3) endGame();
+    }
+  }, 1000);
 }
 
 function endGame() {
-    if (timerInterval) clearInterval(timerInterval);
-    const duration = Math.round((Date.now() - gameData.startTime) / 1000);
+  if (timerInterval) clearInterval(timerInterval);
+  const duration = Math.round((Date.now() - gameData.startTime) / 1000);
 
-    document.getElementById('ar-hud').style.display = 'none';
-    document.getElementById('final-score').textContent   = gameData.score;
-    document.getElementById('final-correct').textContent = gameData.correctClicks;
-    document.getElementById('final-errors').textContent  = gameData.errors;
-    document.getElementById('final-time').textContent    = `${duration}s`;
+  document.getElementById('ar-hud').style.display = 'none';
+  document.getElementById('final-score').textContent   = gameData.score;
+  document.getElementById('final-correct').textContent = gameData.correctClicks;
+  document.getElementById('final-errors').textContent  = gameData.errors;
+  document.getElementById('final-time').textContent    = `${duration}s`;
 
-    const msg = document.getElementById('result-message');
-    if (gameData.correctClicks === 3 && gameData.errors === 0)
-        msg.textContent = '🏆 ¡Perfecto! Sin errores';
-    else if (gameData.correctClicks === 3)
-        msg.textContent = '✅ ¡Bien hecho! Completaste el desafío';
-    else
-        msg.textContent = `⏰ Tiempo agotado — ${gameData.correctClicks}/3 esferas`;
+  const msg = document.getElementById('result-message');
+  if (gameData.correctClicks === 3 && gameData.errors === 0)
+    msg.textContent = '🏆 ¡Perfecto! Sin errores';
+  else if (gameData.correctClicks === 3)
+    msg.textContent = '✅ ¡Bien hecho! Completaste el desafío';
+  else
+    msg.textContent = `⏰ Tiempo agotado — ${gameData.correctClicks}/3 esferas`;
 
-    document.getElementById('ar-results').style.display = 'flex';
-    saveResults(duration);
-}
+  document.getElementById('ar-results').style.display = 'flex';
 
-function saveResults(duration) {
-    fetch('{{ url_for("ar.save_result") }}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            activity_type: 'ar_caza',
-            results: {
-                score: gameData.score, errors: gameData.errors,
-                correct: gameData.correctClicks, time: duration,
-                clicks: gameData.clicks, total_objects: gameData.objects.length
-            }
-        })
-    }).catch(e => console.error('Error guardando:', e));
+  fetch('{{ url_for("ar.save_result") }}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      activity_type: 'ar_caza',
+      results: {
+        score: gameData.score, errors: gameData.errors,
+        correct: gameData.correctClicks, time: duration,
+        clicks: gameData.clicks, total_objects: gameData.objects.length
+      }
+    })
+  }).catch(e => console.error('Error guardando:', e));
 }
 </script>
 {% endblock %}

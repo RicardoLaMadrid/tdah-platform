@@ -1,222 +1,238 @@
 {% extends '_layouts/ar_layout.html' %}
-{% block title %}Trail Making AR{% endblock %}
+{% block title %}Trail Cósmico — AR{% endblock %}
 
-{% block extra_head %}
-<style>
-    #time-val    { font-size: 1.75rem; font-weight: 800; color: #fbbf24; }
-    #correct-val { font-size: 1.75rem; font-weight: 800; color: #4ade80; }
-    #errors-val  { font-size: 1.75rem; font-weight: 800; color: #f87171; }
-    #next-num    { font-size: 2.5rem;  font-weight: 900; color: #fde68a; margin-left: 0.6rem; }
-</style>
-{% endblock %}
-
-{# ── Esferas numeradas generadas por JS ──────────────────────── #}
+{# Esferas numeradas generadas por JS #}
 {% block ar_scene_content %}
 <a-entity id="numbers-container"></a-entity>
 {% endblock %}
 
-{# ── HUD stats + siguiente número ────────────────────────────── #}
 {% block ar_hud %}
-<div class="ar-card">
-    <div style="display:flex; justify-content:center; gap:2.5rem; text-align:center; margin-bottom:0.5rem;">
-        <div><div class="ar-stat-label">Tiempo</div><div id="time-val">0:00</div></div>
-        <div><div class="ar-stat-label">Aciertos</div><div id="correct-val">0</div></div>
-        <div><div class="ar-stat-label">Errores</div><div id="errors-val">0</div></div>
-    </div>
-    <div style="text-align:center; padding-top:0.4rem; border-top:1px solid rgba(255,255,255,0.15);">
-        <span style="font-size:0.85rem; opacity:0.75;">Buscá el número</span>
-        <span id="next-num">1</span>
-    </div>
+<div class="ar-hud-item">
+  <span class="ar-hud-icon">⏱️</span>
+  <span class="ar-hud-label">Tiempo</span>
+  <span id="time-val" class="ar-hud-value">0:00</span>
+</div>
+<div class="ar-hud-item">
+  <span class="ar-hud-icon">✅</span>
+  <span class="ar-hud-label">Aciertos</span>
+  <span id="correct-val" class="ar-hud-value" style="color:#4ade80;">0</span>
+</div>
+<div class="ar-hud-item">
+  <span class="ar-hud-icon">💥</span>
+  <span class="ar-hud-label">Errores</span>
+  <span id="errors-val" class="ar-hud-value" style="color:#f87171;">0</span>
+</div>
+<div class="ar-hud-item" style="border-left:1px solid rgba(139,92,246,0.3); padding-left:1.5rem;">
+  <span class="ar-hud-icon">🔢</span>
+  <span class="ar-hud-label">Buscá</span>
+  <span id="next-num" class="ar-hud-value" style="color:#06b6d4; font-size:1.5rem;">1</span>
 </div>
 {% endblock %}
 
-{# ── Instrucciones iniciales ──────────────────────────────────── #}
 {% block ar_instructions %}
-<div class="ar-modal ar-modal--dark">
-    <h2>🎯 Trail Making AR</h2>
-    <p>Tocá los números del <strong>1 al 10</strong> en orden</p>
-    <ul>
-        <li>✅ Acierto: el número desaparece del espacio 3D</li>
-        <li>❌ Error: el número parpadea en rojo y sigue en pantalla</li>
-        <li>⏱️ Tiempo límite: 60 segundos</li>
-        <li>🧠 Mide: atención visual y función ejecutiva</li>
-    </ul>
-    <button class="ar-btn ar-btn-primary" onclick="startGame()">🚀 Comenzar</button>
-    <br><br>
-    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
+<div class="ar-modal">
+  <div class="ar-modal-emoji">🎯</div>
+  <h2>Trail Cósmico</h2>
+  <p>Tocá los planetas numerados del <strong style="color:#fbbf24;">1 al 10</strong> en orden</p>
+  <ul>
+    <li>✅ Acierto: el planeta desaparece con una explosión</li>
+    <li>❌ Error: el planeta parpadea en rojo y sigue flotando</li>
+    <li>⏱️ Tiempo límite: 60 segundos</li>
+    <li>🧠 Mide atención visual y función ejecutiva</li>
+  </ul>
+  <button class="ar-btn ar-btn-primary" onclick="startGame()">🚀 Comenzar</button>
+  <br><br>
+  <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
 </div>
 {% endblock %}
 
-{# ── Resultados ───────────────────────────────────────────────── #}
 {% block ar_results %}
-<div class="ar-modal ar-modal--light">
-    <h2>🎉 ¡Test Completado!</h2>
-    <div id="final-score" class="ar-result-score">0</div>
-    <p style="color:#6b7280; margin:-0.5rem 0 1rem;">Puntuación</p>
-    <div class="ar-result-stats">
-        <div><h3 id="final-time">0s</h3><small>Tiempo</small></div>
-        <div><h3 id="final-correct" style="color:#10b981;">0</h3><small>Aciertos</small></div>
-        <div><h3 id="final-errors"  style="color:#dc2626;">0</h3><small>Errores</small></div>
-    </div>
-    <div id="result-message" class="ar-result-note"></div>
-    <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Repetir</button>
-    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
+<div class="ar-modal">
+  <div class="ar-modal-emoji">🌠</div>
+  <h2>¡Test Completado!</h2>
+  <div id="final-score" class="ar-result-score">0</div>
+  <p style="color:rgba(255,255,255,0.6); margin:-0.5rem 0 1rem;">Puntuación</p>
+  <div class="ar-result-stats">
+    <div><h4 id="final-time">0s</h4><small>Tiempo</small></div>
+    <div><h4 id="final-correct" style="color:#4ade80;">0</h4><small>Aciertos</small></div>
+    <div><h4 id="final-errors"  style="color:#f87171;">0</h4><small>Errores</small></div>
+  </div>
+  <div id="result-message" class="ar-result-note"></div>
+  <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Repetir</button>
+  <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-const TOTAL_NUMBERS = 10;
-const TIME_LIMIT    = 60;
-const STUDENT_ID    = {{ student.id }};
-const SPHERE_COLOR  = '#d97706';
+const TOTAL_NUMBERS  = 10;
+const TIME_LIMIT     = 60;
+const STUDENT_ID     = {{ student.id }};
+const SPHERE_COLOR   = '#fbbf24';
+const SPHERE_MAT     = 'color: #fbbf24; emissive: #f59e0b; emissiveIntensity: 0.5; roughness: 0.3; metalness: 0.2';
+const SPHERE_ERR_MAT = 'color: #ef4444; emissive: #dc2626; emissiveIntensity: 0.8; roughness: 0.3; metalness: 0.1';
 
 let gameState = {
-    nextExpected: 1, correct: 0, errors: 0,
-    startTime: null, timerInterval: null,
-    clickTimes: [], lastClickTime: null, finished: false
+  nextExpected: 1, correct: 0, errors: 0,
+  startTime: null, timerInterval: null,
+  clickTimes: [], lastClickTime: null, finished: false
 };
 
 function startGame() {
-    document.getElementById('ar-instructions').style.display = 'none';
-    document.getElementById('ar-hud').style.display = 'block';
-    gameState.startTime     = Date.now();
-    gameState.lastClickTime = Date.now();
-    generateNumbers();
-    gameState.timerInterval = setInterval(updateTimer, 100);
+  document.getElementById('ar-instructions').style.display = 'none';
+  document.getElementById('ar-hud').style.display          = 'flex';
+  gameState.startTime     = Date.now();
+  gameState.lastClickTime = Date.now();
+  generateNumbers();
+  gameState.timerInterval = setInterval(updateTimer, 100);
 }
 
 function generateNumbers() {
-    const container = document.getElementById('numbers-container');
-    const positions = [];
+  const container = document.getElementById('numbers-container');
+  const positions = [];
 
-    for (let i = 1; i <= TOTAL_NUMBERS; i++) {
-        let pos, attempts = 0;
-        do {
-            pos = {
-                x: +((-2.0 + Math.random() * 4.0).toFixed(2)),
-                y: +( (0.6 + Math.random() * 2.2).toFixed(2)),
-                z: +((-2.0 - Math.random() * 1.5).toFixed(2))
-            };
-            attempts++;
-        } while (attempts < 60 && positions.some(p => Math.hypot(p.x - pos.x, p.y - pos.y) < 0.9));
-        positions.push(pos);
+  for (let i = 1; i <= TOTAL_NUMBERS; i++) {
+    let pos, attempts = 0;
+    do {
+      pos = {
+        x: +((-2.0 + Math.random() * 4.0).toFixed(2)),
+        y: +( (0.6 + Math.random() * 2.2).toFixed(2)),
+        z: +((-2.0 - Math.random() * 1.5).toFixed(2))
+      };
+      attempts++;
+    } while (attempts < 60 && positions.some(p => Math.hypot(p.x - pos.x, p.y - pos.y) < 0.9));
+    positions.push(pos);
 
-        const entity = document.createElement('a-entity');
-        entity.setAttribute('id', `num-${i}`);
-        entity.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
-        entity.setAttribute('animation',
-            `property: position; ` +
-            `to: ${pos.x} ${(pos.y + 0.18).toFixed(2)} ${pos.z}; ` +
-            `dur: ${2200 + Math.floor(Math.random() * 1000)}; ` +
-            `dir: alternate; loop: true; easing: easeInOutSine`);
+    const entity = document.createElement('a-entity');
+    entity.setAttribute('id', `num-${i}`);
+    entity.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+    entity.setAttribute('animation',
+      `property: position; ` +
+      `to: ${pos.x} ${(pos.y + 0.18).toFixed(2)} ${pos.z}; ` +
+      `dur: ${2200 + Math.floor(Math.random() * 1000)}; ` +
+      `dir: alternate; loop: true; easing: easeInOutSine`);
 
-        const sphere = document.createElement('a-sphere');
-        sphere.setAttribute('radius',    '0.33');
-        sphere.setAttribute('color',     SPHERE_COLOR);
-        sphere.setAttribute('class',     'clickable');
-        sphere.setAttribute('opacity',   '0.9');
-        sphere.setAttribute('metalness', '0.15');
-        sphere.setAttribute('roughness', '0.4');
-        sphere.addEventListener('click', () => handleClick(i, entity, sphere));
+    const sphere = document.createElement('a-sphere');
+    sphere.setAttribute('radius',    '0.33');
+    sphere.setAttribute('material',  SPHERE_MAT);
+    sphere.setAttribute('class',     'clickable');
+    sphere.addEventListener('click', (e) => handleClick(e, i, entity, sphere, pos));
 
-        // color #1f2937 (gray-800) sobre amber-600 — contraste 4.15:1
-        const text = document.createElement('a-text');
-        text.setAttribute('value',    String(i));
-        text.setAttribute('align',    'center');
-        text.setAttribute('color',    '#1f2937');
-        text.setAttribute('position', '0 0 0.35');
-        text.setAttribute('scale',    '2 2 2');
+    // número visible en la esfera
+    const text = document.createElement('a-text');
+    text.setAttribute('value',    String(i));
+    text.setAttribute('align',    'center');
+    text.setAttribute('color',    '#1f2937');
+    text.setAttribute('position', '0 0 0.35');
+    text.setAttribute('scale',    '2 2 2');
 
-        entity.appendChild(sphere);
-        entity.appendChild(text);
-        container.appendChild(entity);
-    }
+    entity.appendChild(sphere);
+    entity.appendChild(text);
+    container.appendChild(entity);
+  }
 }
 
-function handleClick(num, entity, sphere) {
-    if (gameState.finished) return;
-    const now = Date.now();
-    gameState.clickTimes.push(now - gameState.lastClickTime);
-    gameState.lastClickTime = now;
+function handleClick(e, num, entity, sphere, pos) {
+  if (gameState.finished) return;
+  const now = Date.now();
+  gameState.clickTimes.push(now - gameState.lastClickTime);
+  gameState.lastClickTime = now;
 
-    if (num === gameState.nextExpected) {
-        gameState.correct++;
-        gameState.nextExpected++;
-        sphere.setAttribute('class', '');
-        entity.setAttribute('animation__vanish',
-            'property: scale; to: 0 0 0; dur: 200; easing: easeInBack');
-        setTimeout(() => { if (entity.parentNode) entity.parentNode.removeChild(entity); }, 220);
+  // Feedback en pantalla
+  if (window.ARVisuals && e) {
+    const isCorrect = num === gameState.nextExpected;
+    ARVisuals.createClickFeedback(
+      e.clientX || window.innerWidth / 2,
+      e.clientY || window.innerHeight / 2,
+      isCorrect ? '#fbbf24' : '#ef4444'
+    );
+  }
 
-        if (gameState.nextExpected > TOTAL_NUMBERS) {
-            endGame();
-        } else {
-            document.getElementById('next-num').textContent = gameState.nextExpected;
-        }
-    } else {
-        gameState.errors++;
-        sphere.setAttribute('color', '#ef4444');
-        setTimeout(() => sphere.setAttribute('color', SPHERE_COLOR), 450);
+  if (num === gameState.nextExpected) {
+    gameState.correct++;
+    gameState.nextExpected++;
+    sphere.setAttribute('class', '');
+
+    // Explosión 3D en posición del planeta
+    if (window.ARVisuals) {
+      const scene = document.querySelector('a-scene');
+      ARVisuals.createExplosion(`${pos.x} ${pos.y} ${pos.z}`, scene, '#fbbf24');
     }
-    document.getElementById('correct-val').textContent = gameState.correct;
-    document.getElementById('errors-val').textContent  = gameState.errors;
+
+    entity.setAttribute('animation__vanish',
+      'property: scale; to: 0 0 0; dur: 200; easing: easeInBack');
+    setTimeout(() => { if (entity.parentNode) entity.parentNode.removeChild(entity); }, 220);
+
+    if (gameState.nextExpected > TOTAL_NUMBERS) {
+      endGame();
+    } else {
+      document.getElementById('next-num').textContent = gameState.nextExpected;
+    }
+  } else {
+    gameState.errors++;
+    sphere.setAttribute('material', SPHERE_ERR_MAT);
+    setTimeout(() => sphere.setAttribute('material', SPHERE_MAT), 450);
+  }
+
+  document.getElementById('correct-val').textContent = gameState.correct;
+  document.getElementById('errors-val').textContent  = gameState.errors;
 }
 
 function updateTimer() {
-    if (gameState.finished) return;
-    const elapsed = (Date.now() - gameState.startTime) / 1000;
-    const mins = Math.floor(elapsed / 60);
-    const secs = Math.floor(elapsed % 60);
-    document.getElementById('time-val').textContent =
-        `${mins}:${secs.toString().padStart(2, '0')}`;
-    if (elapsed >= TIME_LIMIT) endGame();
+  if (gameState.finished) return;
+  const elapsed = (Date.now() - gameState.startTime) / 1000;
+  const mins = Math.floor(elapsed / 60);
+  const secs = Math.floor(elapsed % 60);
+  document.getElementById('time-val').textContent =
+    `${mins}:${secs.toString().padStart(2, '0')}`;
+  if (elapsed >= TIME_LIMIT) endGame();
 }
 
 function endGame() {
-    if (gameState.finished) return;
-    gameState.finished = true;
-    clearInterval(gameState.timerInterval);
+  if (gameState.finished) return;
+  gameState.finished = true;
+  clearInterval(gameState.timerInterval);
 
-    const totalTime = Math.round((Date.now() - gameState.startTime) / 1000);
-    const completed = gameState.correct === TOTAL_NUMBERS;
-    const score     = completed
-        ? Math.max(0, 100 - (totalTime - 20) * 2 - gameState.errors * 10)
-        : Math.round((gameState.correct / TOTAL_NUMBERS) * 50);
+  const totalTime = Math.round((Date.now() - gameState.startTime) / 1000);
+  const completed = gameState.correct === TOTAL_NUMBERS;
+  const score     = completed
+    ? Math.max(0, 100 - (totalTime - 20) * 2 - gameState.errors * 10)
+    : Math.round((gameState.correct / TOTAL_NUMBERS) * 50);
 
-    document.getElementById('ar-hud').style.display = 'none';
-    document.getElementById('final-score').textContent   = score;
-    document.getElementById('final-time').textContent    = `${totalTime}s`;
-    document.getElementById('final-correct').textContent = gameState.correct;
-    document.getElementById('final-errors').textContent  = gameState.errors;
+  document.getElementById('ar-hud').style.display        = 'none';
+  document.getElementById('final-score').textContent     = score;
+  document.getElementById('final-time').textContent      = `${totalTime}s`;
+  document.getElementById('final-correct').textContent   = gameState.correct;
+  document.getElementById('final-errors').textContent    = gameState.errors;
 
-    const msg = document.getElementById('result-message');
-    if (completed && gameState.errors === 0)
-        msg.textContent = `🏆 ¡Perfecto! Sin errores en ${totalTime}s`;
-    else if (completed)
-        msg.textContent = `✅ ¡Bien hecho! ${totalTime}s con ${gameState.errors} error(es)`;
-    else
-        msg.textContent = `⏰ Tiempo agotado — llegaste hasta ${gameState.correct}/${TOTAL_NUMBERS}`;
+  const msg = document.getElementById('result-message');
+  if (completed && gameState.errors === 0)
+    msg.textContent = `🏆 ¡Perfecto! Sin errores en ${totalTime}s`;
+  else if (completed)
+    msg.textContent = `✅ ¡Bien hecho! ${totalTime}s con ${gameState.errors} error(es)`;
+  else
+    msg.textContent = `⏰ Tiempo agotado — llegaste hasta ${gameState.correct}/${TOTAL_NUMBERS}`;
 
-    document.getElementById('ar-results').style.display = 'flex';
+  document.getElementById('ar-results').style.display = 'flex';
 
-    const avgClickTime = gameState.clickTimes.length
-        ? gameState.clickTimes.reduce((a, b) => a + b, 0) / gameState.clickTimes.length / 1000
-        : 0;
+  const avgClickTime = gameState.clickTimes.length
+    ? gameState.clickTimes.reduce((a, b) => a + b, 0) / gameState.clickTimes.length / 1000
+    : 0;
 
-    fetch('{{ url_for("ar.save_result") }}', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            activity_type: 'ar_trail_making',
-            results: {
-                score: score, correct: gameState.correct,
-                errors: gameState.errors, total_time: totalTime,
-                completed: completed,
-                avg_click_time: Math.round(avgClickTime * 100) / 100,
-                click_times: gameState.clickTimes
-            }
-        })
-    }).catch(e => console.error('Error guardando:', e));
+  fetch('{{ url_for("ar.save_result") }}', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      activity_type: 'ar_trail_making',
+      results: {
+        score: score, correct: gameState.correct,
+        errors: gameState.errors, total_time: totalTime,
+        completed: completed,
+        avg_click_time: Math.round(avgClickTime * 100) / 100,
+        click_times: gameState.clickTimes
+      }
+    })
+  }).catch(e => console.error('Error guardando:', e));
 }
 </script>
 {% endblock %}
