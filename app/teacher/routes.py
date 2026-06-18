@@ -255,28 +255,21 @@ def generate_activity():
                 'difficulties': []
             }
         
-        # Generar actividad con IA
+        # Generar actividad con IA (solo draft — la BD se escribe cuando el
+        # profesor confirma con el formulario "Crear Actividad")
         ai_generator = AIActivityGenerator(current_app.config.get('ANTHROPIC_API_KEY'))
         generated_activity = ai_generator.generate_activity(student_profile, session_data)
-        
-        # Crear la actividad en la BD
-        new_activity = Activity(
-            student_id=student_id,
-            teacher_id=current_user.id,
-            title=generated_activity['title'],
-            description=generated_activity['description'],
-            activity_type=generated_activity['activity_type'],
-            difficulty_level=generated_activity['difficulty_level'],
-            instructions=generated_activity['instructions'],
-            ar_content=generated_activity.get('ar_content')
-        )
-        
-        db.session.add(new_activity)
-        db.session.commit()
-        
+
         return jsonify({
             'success': True,
-            'activity': new_activity.to_dict(),
+            'activity': {
+                'title':          generated_activity.get('title', ''),
+                'description':    generated_activity.get('description', ''),
+                'activity_type':  generated_activity.get('activity_type', 'mixta'),
+                'difficulty_level': int(generated_activity.get('difficulty_level', 1)),
+                'instructions':   generated_activity.get('instructions', ''),
+                'ar_content':     generated_activity.get('ar_content', {'enabled': False}),
+            },
             'message': 'Actividad generada con IA exitosamente'
         })
         
