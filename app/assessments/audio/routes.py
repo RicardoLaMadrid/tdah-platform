@@ -1,14 +1,26 @@
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for
 from flask_login import login_required, current_user
 import os
-import speech_recognition as sr
-from pydub import AudioSegment
+import shutil
 from datetime import datetime
 import json
 import numpy as np
 from app.models.student import Student
 from app.models.report import Report
 from app.extensions import db
+
+# Audio processing requiere ffmpeg en el sistema — opcional en producción
+try:
+    import speech_recognition as sr
+    from pydub import AudioSegment
+    AUDIO_AVAILABLE = shutil.which('ffmpeg') is not None
+    if not AUDIO_AVAILABLE:
+        print("Audio processing no disponible: ffmpeg no encontrado en el sistema")
+except (ImportError, OSError) as e:
+    AUDIO_AVAILABLE = False
+    sr = None
+    AudioSegment = None
+    print(f"Audio processing no disponible: {e}")
 
 audio_bp = Blueprint('audio', __name__, url_prefix='/audio')
 
@@ -286,9 +298,10 @@ def index():
     
     texto_para_leer = TEXTOS_LECTURA[nivel]
     
-    return render_template('student/test_audio.html', 
+    return render_template('student/test_audio.html',
                          texto_para_leer=texto_para_leer,
-                         nivel=nivel)
+                         nivel=nivel,
+                         audio_available=AUDIO_AVAILABLE)
 
 
 @audio_bp.route('/start_test', methods=['POST'])
@@ -316,6 +329,12 @@ def start_test():
 @login_required
 def upload_audio():
     """Procesa el audio subido"""
+    if not AUDIO_AVAILABLE:
+        return jsonify({
+            'success': False,
+            'error': 'El procesamiento de audio requiere FFmpeg, que no está disponible en este entorno de demostración. Esta funcionalidad funciona normalmente en instalaciones locales.'
+        }), 503
+
     try:
         session_id = request.form.get('session_id')
         nivel = request.form.get('nivel', 'basico')

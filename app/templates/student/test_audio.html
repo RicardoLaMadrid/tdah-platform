@@ -16,6 +16,17 @@
 {% endblock %}
 
 {% block content %}
+{% if not audio_available %}
+<div class="max-w-2xl mx-auto mt-12 p-8 bg-amber-50 border-2 border-amber-300 rounded-2xl text-center">
+  <div class="text-6xl mb-4">🎤</div>
+  <h2 class="text-2xl font-bold text-amber-900 mb-3">Test de Audio no disponible online</h2>
+  <p class="text-amber-800 mb-2">Esta funcionalidad requiere FFmpeg, una librería de procesamiento de audio que no está disponible en la versión web de demostración.</p>
+  <p class="text-amber-700 text-sm mb-6">El test funciona normalmente cuando la plataforma se ejecuta en entorno local.</p>
+  <a href="{{ url_for('student.index') }}" class="inline-block bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition">
+    Volver al inicio
+  </a>
+</div>
+{% else %}
 <div class="max-w-2xl mx-auto py-2">
 
   {# ── INSTRUCCIONES (JS oculta cuando empieza a grabar) ─────────── #}
@@ -307,4 +318,5 @@ window.addEventListener('load', async () => {
     await initMicrophone();
 });
 </script>
+{% endif %}
 {% endblock %}
