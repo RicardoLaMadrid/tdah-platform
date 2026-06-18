@@ -28,8 +28,10 @@ Pillow==10.2.0
 matplotlib==3.10.7
 
 # Audio — test de lectura
-SpeechRecognition==3.14.4
-pydub==0.25.1
+# pydub y SpeechRecognition se instalan solo en desarrollo local (requieren ffmpeg).
+# Railpack las detecta y fuerza instalación de ffmpeg causando OOM en plan Hobby.
+# El código detecta su ausencia en runtime y muestra mensaje amable al usuario.
+# Para desarrollo local: pip install SpeechRecognition==3.14.4 pydub==0.25.1
 
 # IA — reportes y análisis
 anthropic==0.109.2
