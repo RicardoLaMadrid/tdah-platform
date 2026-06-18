@@ -1,87 +1,112 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>{% block title %}Actividad AR{% endblock %} — TDAH Platform</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/ar.css') }}">
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    {% block extra_head %}{% endblock %}
-    <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; overflow: hidden; background: #000; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>{% block title %}Actividad AR{% endblock %} — TDAH Platform</title>
+
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/ar.css') }}">
+
+  <script src="{{ url_for('static', filename='js/ar/ar_visuals.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/ar/ar_base.js') }}"></script>
+
+  <style>* { box-sizing: border-box; } body { margin: 0; overflow: hidden; }</style>
+
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
 
-{# ── Cámara web: fondo full-screen (z-index: 0) ───────────────── #}
-<video id="ar-camera-bg" autoplay playsinline muted></video>
+<div class="ar-container">
 
-{# ── Escena A-Frame: canvas transparente (z-index: 1) ─────────── #}
-<a-scene embedded
-         vr-mode-ui="enabled: false"
-         xr-mode-ui="enabled: false"
-         renderer="alpha: true; antialias: true"
-         background="color: transparent">
+  {# Botón salir — siempre visible #}
+  <a href="{{ url_for('ar.index') }}" id="ar-exit-btn" class="ar-exit-btn">✕ Salir</a>
+
+  {# HUD de stats durante la actividad #}
+  <div id="ar-hud" class="ar-hud">
+    {% block ar_hud %}
+    {# HUD por defecto (pill con score + timer) — las actividades pueden sobreescribir #}
+    <div class="ar-hud-item">
+      <span class="ar-hud-icon">⭐</span>
+      <span class="ar-hud-label">Puntos</span>
+      <span id="ar-score" class="ar-hud-value">0</span>
+    </div>
+    <div class="ar-hud-item">
+      <span class="ar-hud-icon">⏱️</span>
+      <span class="ar-hud-label">Tiempo</span>
+      <span id="ar-timer" class="ar-hud-value">60s</span>
+    </div>
+    <div class="ar-hud-item" id="ar-extra-stat" style="display: none;">
+      <span class="ar-hud-icon" id="ar-extra-icon">📊</span>
+      <span class="ar-hud-label" id="ar-extra-label">Extra</span>
+      <span id="ar-extra-value" class="ar-hud-value">0</span>
+    </div>
+    {% endblock %}
+  </div>
+
+  {# Overlay instrucciones iniciales #}
+  <div id="ar-instructions" class="ar-instructions">
+    {% block ar_instructions %}{% endblock %}
+  </div>
+
+  {# Overlay resultados finales #}
+  <div id="ar-results" class="ar-results">
+    {% block ar_results %}{% endblock %}
+  </div>
+
+  {# Error genérico #}
+  <div id="ar-error" class="ar-error"></div>
+
+  {# Overlays adicionales por actividad #}
+  {% block ar_overlays %}{% endblock %}
+
+  {# Escena A-Frame principal #}
+  <a-scene embedded
+           vr-mode-ui="enabled: false"
+           xr-mode-ui="enabled: false"
+           renderer="alpha: true; antialias: true"
+           background="color: transparent">
 
     <a-camera position="0 1.7 0"
               look-controls="enabled: false"
               wasd-controls="enabled: false">
     </a-camera>
 
-    {# cursor con rayOrigin:mouse — requerido para magic window AR #}
+    {# Cursor para interacción click con objetos .clickable #}
     <a-entity cursor="rayOrigin: mouse; mouseEnabled: true; fuse: false"
               raycaster="objects: .clickable; far: 100">
     </a-entity>
 
-    <a-light type="ambient"     color="#ffffff" intensity="1.5"></a-light>
-    <a-light type="directional" color="#ffffff" intensity="0.8" position="-1 2 1"></a-light>
-
+    {# Contenido 3D de cada actividad (objetos, formas, etc.) #}
     {% block ar_scene_content %}{% endblock %}
 
-</a-scene>
+    {# Bloque abierto para nuevas actividades que prefieran poner todo aquí #}
+    {% block ar_content %}{% endblock %}
 
-{# ── Botón de salida (siempre visible, z-index: 20) ──────────── #}
-<a href="{{ url_for('ar.index') }}" id="ar-exit-btn" class="ar-exit-btn">✕ Salir</a>
+  </a-scene>
 
-{# ── HUD de stats durante la actividad (z-index: 10) ─────────── #}
-<div id="ar-hud" class="ar-hud">
-    {% block ar_hud %}{% endblock %}
 </div>
 
-{# ── Overlay instrucciones iniciales (z-index: 20) ───────────── #}
-<div id="ar-instructions" class="ar-instructions">
-    {% block ar_instructions %}{% endblock %}
-</div>
-
-{# ── Overlay resultados finales (z-index: 30) ─────────────────── #}
-<div id="ar-results" class="ar-results">
-    {% block ar_results %}{% endblock %}
-</div>
-
-{# ── Error de cámara ──────────────────────────────────────────── #}
-<div id="ar-error" class="ar-error"></div>
-
-{# ── Espacio para overlays adicionales por actividad ──────────── #}
-{% block ar_overlays %}{% endblock %}
-
+{# Inicializar skybox espacial en todas las actividades #}
 <script>
-// Inicializar cámara web como fondo
-navigator.mediaDevices.getUserMedia({
-    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-    audio: false
-}).then(stream => {
-    const v = document.getElementById('ar-camera-bg');
-    if (v) v.srcObject = stream;
-}).catch(err => {
-    const e = document.getElementById('ar-error');
-    if (e) { e.textContent = 'No se pudo activar la cámara: ' + err.message; e.style.display = 'block'; }
-});
+(function () {
+  const scene = document.querySelector('a-scene');
+  if (!scene) return;
 
-window.addEventListener('beforeunload', () => {
-    const v = document.getElementById('ar-camera-bg');
-    if (v && v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
-});
+  function initSpace() {
+    if (!window.ARVisuals) return;
+    ARVisuals.createSpaceSkybox(scene);
+    ARVisuals.setupLighting(scene);
+  }
+
+  if (scene.hasLoaded) {
+    initSpace();
+  } else {
+    scene.addEventListener('loaded', initSpace, { once: true });
+  }
+})();
 </script>
 
 {% block extra_scripts %}{% endblock %}

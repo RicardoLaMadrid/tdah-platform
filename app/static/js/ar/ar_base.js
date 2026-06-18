@@ -1,35 +1,43 @@
 /**
- * ARActivity — motor base para actividades magic window AR
- * Cámara web como fondo + objetos 3D A-Frame encima, sin marcadores.
+ * ARActivity — Motor base para actividades de espacio 3D inmersivo.
+ * Reemplaza el paradigma "magic window" con cámara por un entorno espacial completo.
+ * Las actividades existentes (caza, secuencia, respiracion, trail_making) usan
+ * su propio JS standalone y NO instancian esta clase.
  */
 class ARActivity {
   constructor(config) {
-    this.activityId  = config.activityId;
-    this.studentId   = config.studentId;
-    this.duration    = config.duration || 60;
-    this.onStart     = config.onStart  || (() => {});
-    this.onEnd       = config.onEnd    || (() => {});
+    this.activityId    = config.activityId;
+    this.studentId     = config.studentId;
+    this.duration      = config.duration || 60;
+    this.onStart       = config.onStart  || (() => {});
+    this.onEnd         = config.onEnd    || (() => {});
 
-    this.score       = 0;
-    this.startTime   = null;
+    this.score         = 0;
+    this.errors        = 0;
+    this.startTime     = null;
     this.timerInterval = null;
-    this.cameraStream  = null;
-    this.isRunning   = false;
+    this.isRunning     = false;
+    this.reactionTimes = [];
 
-    this._initCamera();
+    this._initSpace();
     this._bindUI();
   }
 
-  async _initCamera() {
-    try {
-      this.cameraStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: 1280, height: 720 },
-        audio: false
-      });
-      const video = document.getElementById('ar-camera-bg');
-      if (video) video.srcObject = this.cameraStream;
-    } catch (err) {
-      this._showError('No se pudo activar la cámara: ' + err.message);
+  _initSpace() {
+    const scene = document.querySelector('a-scene');
+    if (!scene) return;
+
+    const setup = () => {
+      if (window.ARVisuals) {
+        ARVisuals.createSpaceSkybox(scene);
+        ARVisuals.setupLighting(scene);
+      }
+    };
+
+    if (scene.hasLoaded) {
+      setup();
+    } else {
+      scene.addEventListener('loaded', setup);
     }
   }
 
@@ -44,10 +52,14 @@ class ARActivity {
     if (this.isRunning) return;
     this.isRunning = true;
     this.startTime = Date.now();
-    this.score = 0;
+    this.score  = 0;
+    this.errors = 0;
+    this.reactionTimes = [];
 
-    document.getElementById('ar-instructions').style.display = 'none';
-    document.getElementById('ar-hud').style.display = 'flex';
+    const instructions = document.getElementById('ar-instructions');
+    const hud          = document.getElementById('ar-hud');
+    if (instructions) instructions.style.display = 'none';
+    if (hud)          hud.style.display          = 'flex';
 
     this._startTimer();
     this.onStart();
@@ -56,6 +68,7 @@ class ARActivity {
   _startTimer() {
     let remaining = this.duration;
     this._updateTimer(remaining);
+
     this.timerInterval = setInterval(() => {
       remaining--;
       this._updateTimer(remaining);
@@ -68,10 +81,32 @@ class ARActivity {
     if (el) el.textContent = `${seconds}s`;
   }
 
-  addScore(points) {
-    this.score += (points || 1);
+  recordReactionTime(stimulusTime) {
+    if (stimulusTime) this.reactionTimes.push(Date.now() - stimulusTime);
+  }
+
+  addScore(points = 1) {
+    this.score += points;
     const el = document.getElementById('ar-score');
     if (el) el.textContent = this.score;
+  }
+
+  addError() {
+    this.errors += 1;
+    const el = document.getElementById('ar-extra-value');
+    if (el) el.textContent = this.errors;
+  }
+
+  setExtraStat(label, icon, value) {
+    const stat    = document.getElementById('ar-extra-stat');
+    const labelEl = document.getElementById('ar-extra-label');
+    const iconEl  = document.getElementById('ar-extra-icon');
+    const valueEl = document.getElementById('ar-extra-value');
+
+    if (stat)    stat.style.display = 'flex';
+    if (labelEl) labelEl.textContent = label;
+    if (iconEl)  iconEl.textContent  = icon;
+    if (valueEl) valueEl.textContent = value;
   }
 
   end() {
@@ -79,19 +114,40 @@ class ARActivity {
     this.isRunning = false;
     clearInterval(this.timerInterval);
 
-    const elapsed = Math.round((Date.now() - this.startTime) / 1000);
+    const hud     = document.getElementById('ar-hud');
+    const results = document.getElementById('ar-results');
+    const final   = document.getElementById('ar-final-score');
 
-    document.getElementById('ar-hud').style.display = 'none';
-    const resultsEl = document.getElementById('ar-results');
-    if (resultsEl) resultsEl.style.display = 'flex';
-    const finalEl = document.getElementById('ar-final-score');
-    if (finalEl) finalEl.textContent = this.score;
+    if (hud)     hud.style.display     = 'none';
+    if (results) results.style.display = 'flex';
+    if (final)   final.textContent     = this.score;
 
-    this._saveResult(elapsed);
-    this.onEnd(this.score, elapsed);
+    const completionTime = Math.round((Date.now() - this.startTime) / 1000);
+    const accuracy       = this._calculateAccuracy();
+    const avgRT          = this._calculateAvgReactionTime();
+
+    this._saveResult({ completion_time: completionTime, accuracy, avg_reaction_time: avgRT });
+    this.onEnd(this.score, completionTime, accuracy);
   }
 
-  async _saveResult(elapsed) {
+  _calculateAccuracy() {
+    const total = this.score + this.errors;
+    if (total === 0) return 100;
+    return Math.round((this.score / total) * 100);
+  }
+
+  _calculateAvgReactionTime() {
+    if (this.reactionTimes.length === 0) return 0;
+    return Math.round(this.reactionTimes.reduce((a, b) => a + b, 0) / this.reactionTimes.length);
+  }
+
+  _calculateAttentionScore(accuracy, avgRT) {
+    const accScore   = accuracy;
+    const speedScore = avgRT > 0 ? Math.max(0, 100 - avgRT / 30) : 50;
+    return Math.round(accScore * 0.7 + speedScore * 0.3);
+  }
+
+  async _saveResult(metrics) {
     try {
       await fetch('/ar/save-result', {
         method: 'POST',
@@ -99,14 +155,20 @@ class ARActivity {
         body: JSON.stringify({
           activity_type: this.activityId,
           results: {
-            score:       this.score,
-            total_time:  elapsed,
-            completed:   true
-          }
-        })
+            score:           this.score,
+            total_time:      metrics.completion_time,
+            errors:          this.errors,
+            accuracy:        metrics.accuracy,
+            avg_reaction_time: metrics.avg_reaction_time,
+            attention_score: this._calculateAttentionScore(
+              metrics.accuracy, metrics.avg_reaction_time
+            ),
+            completed: true,
+          },
+        }),
       });
     } catch (err) {
-      console.error('Error guardando resultado:', err);
+      console.error('Error guardando resultado AR:', err);
     }
   }
 
@@ -116,18 +178,15 @@ class ARActivity {
   }
 
   cleanup() {
-    clearInterval(this.timerInterval);
-    if (this.cameraStream) {
-      this.cameraStream.getTracks().forEach(t => t.stop());
-    }
+    if (this.timerInterval) clearInterval(this.timerInterval);
   }
 
-  _showError(msg) {
+  showError(message) {
     const el = document.getElementById('ar-error');
-    if (el) { el.textContent = msg; el.style.display = 'block'; }
+    if (el) { el.textContent = message; el.style.display = 'block'; }
   }
 }
 
 window.addEventListener('beforeunload', () => {
-  if (window._arActivity) window._arActivity.cleanup();
+  if (window.currentARActivity) window.currentARActivity.cleanup();
 });

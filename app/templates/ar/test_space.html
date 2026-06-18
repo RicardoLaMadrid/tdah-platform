@@ -1,0 +1,35 @@
+{% extends '_layouts/ar_layout.html' %}
+{% block title %}Test — Entorno Espacial{% endblock %}
+
+{% block ar_instructions %}
+<div class="ar-modal">
+  <div class="ar-modal-emoji">🚀</div>
+  <h2>Entorno Espacial</h2>
+  <p>Verificación del skybox, estrellas y nebulosas.</p>
+  <button id="ar-start-btn" class="ar-btn ar-btn-primary">Ver el espacio</button>
+</div>
+{% endblock %}
+
+{% block ar_results %}
+<div class="ar-modal">
+  <div class="ar-modal-emoji">🌌</div>
+  <h2>¡Entorno OK!</h2>
+  <p>El skybox espacial funciona correctamente.</p>
+  <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">Volver</a>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('ar-start-btn').addEventListener('click', function () {
+  document.getElementById('ar-instructions').style.display = 'none';
+  document.getElementById('ar-hud').style.display = 'flex';
+
+  // Mostrar resultados a los 5 s para confirmar que todo funciona
+  setTimeout(function () {
+    document.getElementById('ar-hud').style.display = 'none';
+    document.getElementById('ar-results').style.display = 'flex';
+  }, 5000);
+});
+</script>
+{% endblock %}

@@ -19,6 +19,13 @@ def student_required(f):
     return decorated_function
 
 
+@ar_bp.route('/test-space')
+@login_required
+def test_space():
+    """Prueba visual del entorno espacial — verificar skybox, estrellas, nebulosas."""
+    return render_template('ar/test_space.html')
+
+
 @ar_bp.route('/')
 @student_required
 def index():
