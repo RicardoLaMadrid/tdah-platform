@@ -9,18 +9,19 @@ from app.models.student import Student
 from app.models.report import Report
 from app.extensions import db
 
-# Audio processing requiere ffmpeg en el sistema — opcional en producción
-try:
-    import speech_recognition as sr
-    from pydub import AudioSegment
-    AUDIO_AVAILABLE = shutil.which('ffmpeg') is not None
-    if not AUDIO_AVAILABLE:
-        print("Audio processing no disponible: ffmpeg no encontrado en el sistema")
-except (ImportError, OSError) as e:
-    AUDIO_AVAILABLE = False
-    sr = None
-    AudioSegment = None
-    print(f"Audio processing no disponible: {e}")
+# Audio processing requiere ffmpeg + librerías opcionales (no instaladas en Railway)
+# Para desarrollo local: pip install SpeechRecognition==3.14.4 pydub==0.25.1
+AUDIO_AVAILABLE = shutil.which('ffmpeg') is not None
+sr = None
+AudioSegment = None
+if AUDIO_AVAILABLE:
+    try:
+        import importlib
+        sr = importlib.import_module('speech_recognition')
+        _pydub = importlib.import_module('pydub')
+        AudioSegment = _pydub.AudioSegment
+    except ImportError:
+        AUDIO_AVAILABLE = False
 
 audio_bp = Blueprint('audio', __name__, url_prefix='/audio')
 
