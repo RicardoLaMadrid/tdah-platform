@@ -229,10 +229,10 @@ async function generateWithAI() {
     if (data.success) {
       showAIActivity(data.activity);
     } else {
-      alert('Error: ' + data.error);
+      alert('No se pudo generar la actividad: ' + (data.error || 'Error desconocido'));
     }
   } catch (error) {
-    alert('Error al generar actividad con IA');
+    alert('Error al generar actividad con IA: ' + error.message);
   } finally {
     document.getElementById('ai-status').style.display = 'none';
   }
@@ -252,7 +252,8 @@ function showAIActivity(activity) {
     ${activity.ar_content && activity.ar_content.enabled ?
       '<span class="inline-flex items-center px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full mt-3">Incluye AR</span>' : ''}
   `;
-  const alpineComp = document.querySelector('[x-data]').__x.$data;
+  const _xEl = document.querySelector('[x-data]');
+  const alpineComp = _xEl._x_dataStack ? _xEl._x_dataStack[0] : _xEl.__x.$data;
   alpineComp.showAIModal = true;
 }
 
@@ -263,8 +264,9 @@ function useAIActivity() {
   document.getElementById('activity_type').value = generatedActivity.activity_type;
   document.getElementById('difficulty_level').value = generatedActivity.difficulty_level;
   document.getElementById('instructions').value = generatedActivity.instructions;
+  const _xEl = document.querySelector('[x-data]');
+  const alpineComp = _xEl._x_dataStack ? _xEl._x_dataStack[0] : _xEl.__x.$data;
   if (generatedActivity.ar_content && generatedActivity.ar_content.enabled) {
-    const alpineComp = document.querySelector('[x-data]').__x.$data;
     alpineComp.arEnabled = true;
     setTimeout(() => {
       document.getElementById('ar_type').value = generatedActivity.ar_content.type || 'markerless';
@@ -272,7 +274,6 @@ function useAIActivity() {
       document.getElementById('ar_interaction').value = generatedActivity.ar_content.interaction || '';
     }, 50);
   }
-  const alpineComp = document.querySelector('[x-data]').__x.$data;
   alpineComp.showAIModal = false;
 }
 </script>

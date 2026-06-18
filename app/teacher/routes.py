@@ -282,7 +282,8 @@ def generate_activity():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @teacher_bp.route('/reports')
 @teacher_required

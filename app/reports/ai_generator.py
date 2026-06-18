@@ -155,7 +155,7 @@ ACTIVITIES_BANK = {
 class AIActivityGenerator:
     """
     Genera actividades educativas personalizadas para estudiantes con TDAH.
-    Usa el banco de actividades predefinidas (sin dependencia de API externa).
+    Intenta Claude primero; cae al banco local si la API no está disponible.
     """
 
     def __init__(self, api_key: Optional[str] = None):
@@ -170,6 +170,7 @@ class AIActivityGenerator:
     def generate_activity(self, student_profile: Dict, session_data: Dict = None) -> Dict:
         """
         Genera una actividad personalizada para el estudiante.
+        Intenta Claude primero; usa banco local como fallback.
 
         Args:
             student_profile: {tdah_type, age, difficulty_level, username}
@@ -178,7 +179,61 @@ class AIActivityGenerator:
         Returns:
             Dict con la actividad generada
         """
-        return self._generate_from_bank(student_profile, session_data)
+        try:
+            return self._generate_with_claude(student_profile, session_data)
+        except Exception as e:
+            try:
+                from flask import current_app
+                current_app.logger.warning(f"Claude no disponible para actividad ({e}), usando banco local")
+            except RuntimeError:
+                pass
+            return self._generate_from_bank(student_profile, session_data)
+
+    def _generate_with_claude(self, student_profile: Dict, session_data: Dict = None) -> Dict:
+        """Genera actividad usando Claude. Lanza excepción si falla."""
+        from app.reports.ai_service import ai_service
+
+        tdah_type = student_profile.get('tdah_type') or 'combinado'
+        difficulty = int(student_profile.get('difficulty_level', 2))
+        age = student_profile.get('age') or 10
+
+        system_prompt = (
+            "Eres un especialista en diseño de actividades educativas para niños "
+            "con TDAH (9-12 años) en escuelas bolivianas. Generás UNA actividad "
+            "concreta, aplicable en aula, con materiales comunes (papel, lápiz, "
+            "tarjetas). Duración: 15-30 minutos. Lenguaje claro para el profesor. "
+            "NUNCA sugerís medicación. Respondés SIEMPRE en español latinoamericano."
+        )
+
+        context = ""
+        if session_data and session_data.get('attention_score'):
+            context = f"\nNota: en la última sesión el alumno tuvo {session_data['attention_score']:.0f}% de atención."
+
+        user_prompt = f"""Diseñá una actividad educativa para este perfil:
+- Tipo TDAH: {tdah_type}
+- Edad: {age} años
+- Nivel de dificultad deseado: {difficulty}/5{context}
+
+Respondé con este JSON exacto (sin texto adicional, sin bloques markdown):
+{{
+  "title": "nombre atractivo de la actividad",
+  "description": "1-2 oraciones que describan el propósito",
+  "activity_type": "atencion|memoria|organizacion|control_impulsos|mixta",
+  "difficulty_level": {difficulty},
+  "instructions": "pasos numerados que el profesor debe seguir",
+  "ar_content": {{"enabled": false}}
+}}"""
+
+        result = ai_service.chat_json(system_prompt, user_prompt, temperature=0.5, max_tokens=600)
+
+        for field in ('title', 'description', 'activity_type', 'instructions'):
+            if not result.get(field):
+                raise ValueError(f"Claude omitió el campo requerido '{field}'")
+
+        result['difficulty_level'] = int(result.get('difficulty_level', difficulty))
+        result.setdefault('ar_content', {'enabled': False})
+        result['generated_by'] = 'claude'
+        return result
 
     def generate_recommendations(self, session_results: List[Dict]) -> Dict:
         """
