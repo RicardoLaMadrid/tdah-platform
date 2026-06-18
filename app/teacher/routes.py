@@ -147,9 +147,9 @@ def student_detail(student_id):
     ).order_by(Report.created_at.desc()).all()
     
     # Estadísticas
-    avg_attention = db.session.query(
+    avg_attention = float(db.session.query(
         db.func.avg(Session.attention_score)
-    ).filter_by(student_id=student_id).scalar() or 0
+    ).filter_by(student_id=student_id).scalar() or 0)
     
     avg_completion_time = db.session.query(
         db.func.avg(Session.completion_time)
@@ -455,9 +455,9 @@ def ai_suggestions():
             'tdah_type': student.tdah_type or 'En evaluación',
             'tdah_confidence': student.tdah_confidence or 0,
             'total_tests': Report.query.filter_by(student_id=student.id).count(),
-            'avg_attention': db.session.query(
+            'avg_attention': float(db.session.query(
                 db.func.avg(Session.attention_score)
-            ).filter_by(student_id=student.id).scalar() or 0,
+            ).filter_by(student_id=student.id).scalar() or 0),
             'recent_history': [
                 {
                     'type': r.report_type,

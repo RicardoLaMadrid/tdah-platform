@@ -211,7 +211,7 @@ class AIActivityGenerator:
                              session_data: Dict = None) -> Dict:
         """Selecciona actividad del banco local según el perfil."""
         tdah_type = student_profile.get('tdah_type', 'combinado')
-        difficulty = student_profile.get('difficulty_level', 2)
+        difficulty = int(student_profile.get('difficulty_level', 2))
 
         bank = ACTIVITIES_BANK.get(tdah_type, ACTIVITIES_BANK['combinado'])
 
