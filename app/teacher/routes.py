@@ -294,28 +294,83 @@ def reports():
     
     return render_template('teacher/reports.html', reports=reports)
 
+def _build_student_data(student):
+    """Arma el dict de contexto del alumno que se pasa a la IA."""
+    recent_reports = Report.query.filter_by(
+        student_id=student.id
+    ).order_by(Report.created_at.desc()).limit(5).all()
+    return {
+        'username': student.user.username,
+        'tdah_type': student.tdah_type or 'En evaluación',
+        'tdah_confidence': student.tdah_confidence or 0,
+        'total_tests': Report.query.filter_by(student_id=student.id).count(),
+        'avg_attention': float(db.session.query(
+            db.func.avg(Session.attention_score)
+        ).filter_by(student_id=student.id).scalar() or 0),
+        'recent_history': [
+            {
+                'type': r.report_type,
+                'tipo_tdah': r.tipo_tdah,
+                'confianza': r.confianza,
+                'date': r.created_at.strftime('%Y-%m-%d')
+            }
+            for r in recent_reports
+        ]
+    }
+
+
 @teacher_bp.route('/reports/create/<int:session_id>', methods=['GET', 'POST'])
 @teacher_required
 def create_report(session_id):
     session = Session.query.get_or_404(session_id)
     student = session.student
-    
+
     if student.teacher_id != current_user.id:
         flash('No autorizado', 'danger')
         return redirect(url_for('teacher.reports'))
-    
+
     if request.method == 'GET':
-        return render_template('teacher/create_report.html', session=session, student=student)
-    
+        ai_draft = None
+        observations_text = ''
+        recommendations_text = ''
+        alerts_text = ''
+        try:
+            from app.reports.ai_service import ai_service
+            from app.shared.helpers import build_observations, build_recommendations
+            student_data = _build_student_data(student)
+            ai_draft = ai_service.generate_teacher_report(student_data, period='última sesión')
+            observations_text = build_observations(ai_draft)
+            recommendations_text = build_recommendations(ai_draft)
+            if ai_draft and ai_draft.get('alertas'):
+                alerts_text = '• ' + '\n• '.join(ai_draft['alertas'])
+        except Exception as e:
+            current_app.logger.error(f"Error generando borrador IA: {e}")
+
+        return render_template(
+            'teacher/create_report.html',
+            session=session,
+            student=student,
+            ai_draft=ai_draft,
+            observations_text=observations_text,
+            recommendations_text=recommendations_text,
+            alerts_text=alerts_text,
+        )
+
     data = request.form
-    
+
+    # Combinar alertas al final del contenido si el profesor las ingresó
+    content_text = data.get('content', '')
+    alerts_val = (data.get('alerts') or '').strip()
+    if alerts_val:
+        content_text = content_text.rstrip() + '\n\nAlertas:\n' + alerts_val
+
     try:
         new_report = Report(
             student_id=student.id,
             teacher_id=current_user.id,
             session_id=session_id,
             report_type='manual_teacher',
-            content=data.get('content'),
+            content=content_text,
             recommendations=data.get('recommendations'),
             parent_comments=data.get('parent_comments'),
         )
@@ -330,7 +385,7 @@ def create_report(session_id):
                 Notification.notify_parents_of_student(
                     student_id=student.id,
                     title=f"Nuevo reporte de {current_user.username}",
-                    message=(data.get('content', '')[:150] + '...') if len(data.get('content', '')) > 150 else data.get('content', ''),
+                    message=(content_text[:150] + '...') if len(content_text) > 150 else content_text,
                     notification_type='new_report'
                 )
                 new_report.sent_to_parents = True

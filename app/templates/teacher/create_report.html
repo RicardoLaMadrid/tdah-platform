@@ -1,7 +1,7 @@
 {% extends '_layouts/teacher_layout.html' %}
 
-{% block title %}Crear Reporte - {{ student.user.username }}{% endblock %}
-{% block page_title %}Crear Reporte con IA{% endblock %}
+{% block title %}Crear Reporte — {{ student.full_name or student.user.username }}{% endblock %}
+{% block page_title %}Crear Reporte{% endblock %}
 
 {% block topbar_actions %}
 <a href="{{ url_for('teacher.student_detail', student_id=student.id) }}"
@@ -14,368 +14,268 @@
 {% endblock %}
 
 {% block content %}
+<div class="max-w-3xl mx-auto">
 
-<!-- ── Header alumno + sesión ── -->
-<div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-5 mb-6">
-  <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-    <div class="flex items-center gap-3">
-      <div class="w-11 h-11 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#818CF8] text-white flex items-center justify-center text-base font-bold flex-shrink-0" aria-hidden="true">
-        {{ (student.full_name or student.user.username)[0].upper() }}
+  <!-- ── Header alumno + sesión ── -->
+  <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-5 mb-5">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#818CF8] text-white flex items-center justify-center text-base font-bold flex-shrink-0" aria-hidden="true">
+          {{ (student.full_name or student.user.username)[0].upper() }}
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-[#1F2937]">{{ student.full_name or student.user.username }}</p>
+          {% if student.tdah_type %}
+          <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">{{ student.tdah_type }}</span>
+          {% endif %}
+        </div>
       </div>
-      <div>
-        <p class="text-sm font-semibold text-[#1F2937]">{{ student.full_name or student.user.username }}</p>
-        {% if student.tdah_type %}<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">{{ student.tdah_type }}</span>{% endif %}
-      </div>
-    </div>
-    <div class="sm:ml-auto grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-      <div class="text-center">
-        <p class="text-xs text-[#9CA3AF]">Actividad</p>
-        <p class="font-medium text-[#1F2937] text-xs mt-0.5">{{ session.activity.title if session.activity else 'Libre' }}</p>
-      </div>
-      <div class="text-center">
-        <p class="text-xs text-[#9CA3AF]">Fecha</p>
-        <p class="font-medium text-[#1F2937] text-xs mt-0.5">{{ session.created_at.strftime('%d/%m/%Y') }}</p>
-      </div>
-      <div class="text-center">
-        <p class="text-xs text-[#9CA3AF]">Atención</p>
-        <p class="font-bold text-xs mt-0.5
-          {% if (session.attention_score or 0) >= 70 %}text-emerald-600
-          {% elif (session.attention_score or 0) >= 50 %}text-amber-600
-          {% else %}text-red-600{% endif %}">
-          {{ session.attention_score or 0 }}%
-        </p>
-      </div>
-      <div class="text-center">
-        <p class="text-xs text-[#9CA3AF]">Tiempo</p>
-        <p class="font-medium text-[#1F2937] text-xs mt-0.5">{{ (session.completion_time // 60) if session.completion_time else 0 }} min</p>
+      <div class="sm:ml-auto grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+        <div class="text-center">
+          <p class="text-xs text-[#9CA3AF]">Actividad</p>
+          <p class="font-medium text-[#1F2937] text-xs mt-0.5">{{ session.activity.title if session.activity else 'Libre' }}</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-[#9CA3AF]">Fecha</p>
+          <p class="font-medium text-[#1F2937] text-xs mt-0.5">{{ session.created_at.strftime('%d/%m/%Y') }}</p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-[#9CA3AF]">Atención</p>
+          <p class="font-bold text-xs mt-0.5
+            {% if (session.attention_score or 0) >= 70 %}text-emerald-600
+            {% elif (session.attention_score or 0) >= 50 %}text-amber-600
+            {% else %}text-red-600{% endif %}">
+            {{ session.attention_score or 0 }}%
+          </p>
+        </div>
+        <div class="text-center">
+          <p class="text-xs text-[#9CA3AF]">Tiempo</p>
+          <p class="font-medium text-[#1F2937] text-xs mt-0.5">{{ (session.completion_time // 60) if session.completion_time else 0 }} min</p>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- ── Layout 2 columnas ── -->
-<div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+  <!-- ── Banner: borrador IA o fallback manual ── -->
+  {% if ai_draft %}
+  <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-5 rounded-r-xl flex items-start gap-3">
+    <span class="text-indigo-500 text-lg leading-none mt-0.5" aria-hidden="true">✨</span>
+    <div>
+      <p class="text-sm font-semibold text-indigo-900">Borrador generado con IA</p>
+      <p class="text-xs text-indigo-700 mt-0.5">Revisalo, editalo si es necesario y guardalo cuando esté listo.</p>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-amber-50 border-l-4 border-amber-500 p-4 mb-5 rounded-r-xl flex items-start gap-3">
+    <span class="text-amber-500 text-lg leading-none mt-0.5" aria-hidden="true">⚠</span>
+    <div>
+      <p class="text-sm font-semibold text-amber-900">Borrador no disponible</p>
+      <p class="text-xs text-amber-700 mt-0.5">No se pudo generar el borrador automático. Podés escribirlo manualmente o usar el botón <strong>Regenerar con IA</strong>.</p>
+    </div>
+  </div>
+  {% endif %}
 
-  <!-- Columna izquierda: formulario (más ancho) -->
-  <div class="xl:col-span-3">
-    <form method="POST" action="{{ url_for('teacher.create_report', session_id=session.id) }}" id="report-form">
+  <!-- ── Formulario ── -->
+  <form method="POST" action="{{ url_for('teacher.create_report', session_id=session.id) }}" id="report-form">
 
-      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-6 mb-4">
-        <div class="flex items-center gap-2 mb-5">
-          <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
-            <svg class="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-            </svg>
-          </div>
-          <h2 class="text-base font-semibold text-[#1F2937]">Reporte del Profesor</h2>
-        </div>
-
-        <div class="space-y-5">
-          <!-- Observaciones -->
-          <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <label for="content" class="text-sm font-medium text-[#374151]">Observaciones *</label>
-              <button type="button" onclick="applyToField('content', document.getElementById('ai-summary')?.textContent)"
-                      class="text-xs text-[#4F46E5] hover:underline hidden" id="apply-summary-btn">
-                Aplicar resumen IA
-              </button>
-            </div>
-            <textarea id="content" name="content" rows="6" required
-                      placeholder="Describe el desempeño del estudiante durante esta sesión..."
-                      class="w-full px-4 py-3 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"></textarea>
-          </div>
-
-          <!-- Recomendaciones -->
-          <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <label for="recommendations" class="text-sm font-medium text-[#374151]">Recomendaciones *</label>
-              <button type="button" onclick="applyAllRecommendations()"
-                      class="text-xs text-[#4F46E5] hover:underline hidden" id="apply-recs-btn">
-                Aplicar todas
-              </button>
-            </div>
-            <textarea id="recommendations" name="recommendations" rows="4" required
-                      placeholder="Sugerencias pedagógicas para mejorar el rendimiento..."
-                      class="w-full px-4 py-3 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"></textarea>
-          </div>
-
-          <!-- Comentarios tutor -->
-          <div>
-            <label for="parent_comments" class="block text-sm font-medium text-[#374151] mb-1.5">
-              Punto de vista del Tutor
-              <span class="text-[#9CA3AF] font-normal">(opcional)</span>
-            </label>
-            <textarea id="parent_comments" name="parent_comments" rows="3"
-                      placeholder="Espacio para que los padres compartan su observación..."
-                      class="w-full px-4 py-3 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"></textarea>
-            <p class="text-xs text-[#9CA3AF] mt-1">Este campo lo puede llenar el padre al recibir el reporte.</p>
-          </div>
-
-          <!-- Enviar a tutores -->
-          <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-[#E5E7EB] hover:bg-[#F9FAFB] transition-colors">
-            <input type="checkbox" id="send_to_parents" name="send_to_parents" checked
-                   class="w-4 h-4 rounded border-[#D1D5DB] text-[#4F46E5] focus:ring-[#4F46E5]">
-            <div>
-              <p class="text-sm font-medium text-[#1F2937]">Enviar reporte a los tutores</p>
-              <p class="text-xs text-[#6B7280]">Notificación web + WhatsApp si está habilitado</p>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <!-- Botones de acción -->
-      <div class="flex gap-3">
-        <a href="{{ url_for('teacher.student_detail', student_id=student.id) }}"
-           class="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-[#6B7280] bg-white border border-[#E5E7EB] rounded-xl hover:bg-[#F9FAFB] transition-colors">
-          Cancelar
-        </a>
-        <button type="submit"
-                class="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    <div id="form-fields" class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-6 mb-4">
+      <div class="flex items-center gap-2 mb-5">
+        <div class="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+          <svg class="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
           </svg>
-          Crear y Enviar Reporte
-        </button>
+        </div>
+        <h2 class="text-base font-semibold text-[#1F2937]">Contenido del reporte</h2>
       </div>
-    </form>
-  </div>
 
-  <!-- Columna derecha: asistente IA (sticky) -->
-  <div class="xl:col-span-2">
-    <div class="sticky top-6">
-      <div class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden">
+      <div class="space-y-5">
 
-        <!-- Header IA -->
-        <div class="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 text-white">
-          <div class="flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-            </svg>
-            <span class="text-sm font-semibold">Asistente IA</span>
-          </div>
-          <button type="button" onclick="generateAISuggestions()" id="ai-generate-btn"
-                  class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-            </svg>
-            Generar análisis
-          </button>
+        <!-- Observaciones -->
+        <div>
+          <label for="content" class="block text-sm font-medium text-[#374151] mb-1.5">Observaciones *</label>
+          <textarea id="content" name="content" rows="9" required
+                    placeholder="Describe el desempeño del estudiante durante esta sesión..."
+                    class="w-full px-4 py-3 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none">{{ observations_text }}</textarea>
         </div>
 
-        <!-- Cuerpo IA -->
-        <div class="p-5">
-
-          <!-- Placeholder inicial -->
-          <div id="ai-placeholder" class="flex flex-col items-center text-center py-6 text-[#9CA3AF]">
-            <svg class="w-12 h-12 mb-3 text-indigo-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-            </svg>
-            <p class="text-sm font-medium text-[#374151] mb-1">Análisis con IA</p>
-            <p class="text-xs">Haz clic en <strong>"Generar análisis"</strong> para que GPT analice tipo de TDAH, historial y nivel de atención.</p>
-          </div>
-
-          <!-- Loading -->
-          <div id="ai-loading" style="display: none;" class="flex flex-col items-center py-8">
-            <div class="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
-            <p class="text-sm text-[#6B7280]">Analizando con IA...</p>
-            <p class="text-xs text-[#9CA3AF] mt-1">10-20 segundos</p>
-          </div>
-
-          <!-- Resultados -->
-          <div id="ai-results" style="display: none;" class="space-y-4">
-
-            <!-- Resumen ejecutivo -->
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Resumen Ejecutivo</h3>
-                <button type="button"
-                        onclick="applyToField('content', document.getElementById('ai-summary').textContent); document.getElementById('apply-summary-btn').classList.remove('hidden')"
-                        class="text-xs text-[#4F46E5] hover:underline font-medium">
-                  Aplicar
-                </button>
-              </div>
-              <div id="ai-summary" class="text-xs text-[#374151] bg-[#F9FAFB] rounded-lg p-3 leading-relaxed"></div>
-            </div>
-
-            <!-- Fortalezas y áreas de mejora -->
-            <div class="grid grid-cols-1 gap-3">
-              <div>
-                <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2">Fortalezas</h3>
-                <ul id="ai-strengths" class="space-y-1 text-xs text-[#374151]"></ul>
-              </div>
-              <div>
-                <h3 class="text-xs font-semibold text-amber-700 uppercase tracking-wider mb-2">Áreas de Mejora</h3>
-                <ul id="ai-improvements" class="space-y-1 text-xs text-[#374151]"></ul>
-              </div>
-            </div>
-
-            <!-- Recomendaciones -->
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="text-xs font-semibold text-[#6B7280] uppercase tracking-wider">Recomendaciones</h3>
-                <button type="button" onclick="applyAllRecommendations()"
-                        class="text-xs text-[#4F46E5] hover:underline font-medium">
-                  Aplicar todas
-                </button>
-              </div>
-              <div id="ai-recommendations" class="space-y-2"></div>
-            </div>
-
-            <!-- Alertas -->
-            <div id="ai-alerts-section" style="display: none;">
-              <h3 class="text-xs font-semibold text-red-700 uppercase tracking-wider mb-2">Alertas</h3>
-              <div id="ai-alerts" class="space-y-1"></div>
-            </div>
-
-            <!-- Predicción -->
-            <div id="ai-prediction-section" style="display: none;">
-              <h3 class="text-xs font-semibold text-[#6B7280] uppercase tracking-wider mb-2">Predicción de Progreso</h3>
-              <p id="ai-prediction" class="text-xs text-[#374151] bg-blue-50 rounded-lg p-3"></p>
-            </div>
-
-            <!-- Auto-fill global -->
-            <button type="button" onclick="autoFillReport()"
-                    class="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-[#4F46E5] hover:bg-[#4338CA] text-white text-sm font-semibold rounded-xl transition-colors">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-              </svg>
-              Llenar reporte automáticamente
-            </button>
-            <p class="text-xs text-center text-[#9CA3AF] mt-1">Puedes editar antes de enviar.</p>
-
-          </div>
+        <!-- Recomendaciones pedagógicas -->
+        <div>
+          <label for="recommendations" class="block text-sm font-medium text-[#374151] mb-1.5">Recomendaciones pedagógicas *</label>
+          <textarea id="recommendations" name="recommendations" rows="6" required
+                    placeholder="Estrategias y sugerencias para el alumno..."
+                    class="w-full px-4 py-3 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none">{{ recommendations_text }}</textarea>
         </div>
+
+        <!-- Alertas -->
+        <div>
+          <label for="alerts" class="block text-sm font-medium text-[#374151] mb-1.5">
+            Alertas
+            <span class="font-normal text-[#9CA3AF]">(opcional)</span>
+          </label>
+          <textarea id="alerts" name="alerts" rows="3"
+                    placeholder="Situaciones que ameritan atención especial del tutor..."
+                    class="w-full px-4 py-3 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none">{{ alerts_text }}</textarea>
+        </div>
+
+        <!-- Comentario del tutor -->
+        <div>
+          <label for="parent_comments" class="block text-sm font-medium text-[#374151] mb-1.5">
+            Punto de vista del Tutor
+            <span class="font-normal text-[#9CA3AF]">(opcional)</span>
+          </label>
+          <textarea id="parent_comments" name="parent_comments" rows="3"
+                    placeholder="Espacio para que los padres compartan su observación..."
+                    class="w-full px-4 py-3 rounded-xl border border-[#D1D5DB] text-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent resize-none"></textarea>
+          <p class="text-xs text-[#9CA3AF] mt-1">Este campo lo puede llenar el padre al recibir el reporte.</p>
+        </div>
+
+        <!-- Enviar a tutores -->
+        <label class="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-[#E5E7EB] hover:bg-[#F9FAFB] transition-colors">
+          <input type="checkbox" id="send_to_parents" name="send_to_parents" checked
+                 class="w-4 h-4 rounded border-[#D1D5DB] text-[#4F46E5] focus:ring-[#4F46E5]">
+          <div>
+            <p class="text-sm font-medium text-[#1F2937]">Enviar reporte a los tutores</p>
+            <p class="text-xs text-[#6B7280]">Notificación web + WhatsApp si está habilitado</p>
+          </div>
+        </label>
+
       </div>
     </div>
-  </div>
 
+    <!-- ── Skeleton loader durante regeneración ── -->
+    <div id="regenerate-loader" style="display:none;" class="bg-white rounded-xl shadow-sm border border-[#E5E7EB] p-6 mb-4">
+      <div class="animate-pulse space-y-3">
+        <div class="h-3 bg-slate-200 rounded w-1/3"></div>
+        <div class="h-3 bg-slate-200 rounded"></div>
+        <div class="h-3 bg-slate-200 rounded w-5/6"></div>
+        <div class="h-3 bg-slate-200 rounded w-4/6"></div>
+        <div class="h-3 bg-slate-200 rounded w-2/3 mt-5"></div>
+        <div class="h-3 bg-slate-200 rounded w-1/4"></div>
+        <div class="h-3 bg-slate-200 rounded w-5/6"></div>
+        <div class="h-3 bg-slate-200 rounded"></div>
+      </div>
+      <p class="text-sm text-[#6B7280] text-center mt-5">Generando nuevo borrador con IA...</p>
+    </div>
+
+    <!-- ── Botones de acción ── -->
+    <div class="flex flex-wrap gap-3">
+      <button type="submit"
+              class="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Guardar y enviar al tutor
+      </button>
+
+      <button type="button" id="regenerate-btn" onclick="regenerateAll()"
+              class="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        <span id="regenerate-label">Regenerar con IA</span>
+      </button>
+
+      <button type="button" onclick="clearAll()"
+              class="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-[#6B7280] bg-white border border-[#E5E7EB] hover:bg-[#F9FAFB] rounded-xl transition-colors">
+        Limpiar y empezar de cero
+      </button>
+
+      <a href="{{ url_for('teacher.student_detail', student_id=student.id) }}"
+         class="flex items-center px-5 py-2.5 text-sm text-[#6B7280] hover:text-[#1F2937] transition-colors">
+        Cancelar
+      </a>
+    </div>
+
+  </form>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-let aiData = null;
+const SESSION_ID = {{ session.id }};
+const AI_SUGGESTIONS_URL = '{{ url_for("teacher.ai_suggestions") }}';
 
-async function generateAISuggestions() {
-  const btn = document.getElementById('ai-generate-btn');
-  const placeholder = document.getElementById('ai-placeholder');
-  const loading = document.getElementById('ai-loading');
-  const results = document.getElementById('ai-results');
+function buildObservations(d) {
+  const parts = [];
+  if (d.resumen_ejecutivo) parts.push(d.resumen_ejecutivo);
+  if (d.fortalezas && d.fortalezas.length) {
+    parts.push('\n\nFortalezas observadas:');
+    d.fortalezas.forEach(f => parts.push('• ' + f));
+  }
+  if (d.areas_mejora && d.areas_mejora.length) {
+    parts.push('\n\nÁreas de mejora:');
+    d.areas_mejora.forEach(a => parts.push('• ' + a));
+  }
+  return parts.join('\n');
+}
+
+function buildRecommendations(d) {
+  if (!d.recomendaciones || !d.recomendaciones.length) return '';
+  return d.recomendaciones.map(r => {
+    const p = (r.prioridad || '').toUpperCase();
+    return '• [' + p + '] ' + r.titulo + ': ' + r.descripcion;
+  }).join('\n');
+}
+
+function buildAlerts(d) {
+  if (!d.alertas || !d.alertas.length) return '';
+  return '• ' + d.alertas.join('\n• ');
+}
+
+async function regenerateAll() {
+  const btn = document.getElementById('regenerate-btn');
+  const label = document.getElementById('regenerate-label');
+  const formFields = document.getElementById('form-fields');
+  const loader = document.getElementById('regenerate-loader');
 
   btn.disabled = true;
-  placeholder.style.display = 'none';
-  results.style.display = 'none';
-  loading.style.display = 'flex';
+  label.textContent = 'Generando...';
+  formFields.style.display = 'none';
+  loader.style.display = 'block';
 
   try {
-    const response = await fetch('{{ url_for("teacher.ai_suggestions") }}', {
+    const resp = await fetch(AI_SUGGESTIONS_URL, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({session_id: {{ session.id }}})
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: SESSION_ID })
     });
-    const data = await response.json();
+    const data = await resp.json();
     if (!data.success) throw new Error(data.error || 'Error desconocido');
-    aiData = data.suggestions;
-    renderAIResults(aiData);
-    loading.style.display = 'none';
-    results.style.display = 'block';
+
+    const d = data.suggestions;
+    document.getElementById('content').value = buildObservations(d);
+    document.getElementById('recommendations').value = buildRecommendations(d);
+    document.getElementById('alerts').value = buildAlerts(d);
+    showToast('Borrador regenerado ✓');
+  } catch (err) {
+    showToast('Error al regenerar: ' + err.message, true);
+  } finally {
+    loader.style.display = 'none';
+    formFields.style.display = 'block';
     btn.disabled = false;
-    btn.querySelector('span') && (btn.innerHTML = btn.innerHTML.replace('Generar análisis', 'Regenerar'));
-  } catch (error) {
-    loading.style.display = 'none';
-    placeholder.style.display = 'flex';
-    placeholder.innerHTML = `<div class="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-3 w-full text-left">Error: ${error.message}</div>`;
-    btn.disabled = false;
+    label.textContent = 'Regenerar con IA';
   }
 }
 
-function renderAIResults(data) {
-  document.getElementById('ai-summary').textContent = data.resumen_ejecutivo || 'Sin resumen';
-
-  const strengthsEl = document.getElementById('ai-strengths');
-  strengthsEl.innerHTML = '';
-  (data.fortalezas || []).forEach(f => {
-    strengthsEl.innerHTML += `<li class="flex items-start gap-1.5"><span class="text-emerald-500 mt-0.5">✓</span>${f}</li>`;
-  });
-
-  const improvementsEl = document.getElementById('ai-improvements');
-  improvementsEl.innerHTML = '';
-  (data.areas_mejora || []).forEach(a => {
-    improvementsEl.innerHTML += `<li class="flex items-start gap-1.5"><span class="text-amber-500 mt-0.5">→</span>${a}</li>`;
-  });
-
-  const recsEl = document.getElementById('ai-recommendations');
-  recsEl.innerHTML = '';
-  (data.recomendaciones || []).forEach(rec => {
-    const pColors = {alta: 'red', media: 'amber', baja: 'slate'};
-    const c = pColors[rec.prioridad?.toLowerCase()] || 'slate';
-    recsEl.innerHTML += `
-      <div class="flex items-start gap-2 p-2.5 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB]">
-        <div class="flex-1 min-w-0">
-          <p class="text-xs font-semibold text-[#1F2937]">${rec.titulo} <span class="font-normal text-${c}-600 text-[10px]">${rec.prioridad || ''}</span></p>
-          <p class="text-xs text-[#6B7280] mt-0.5">${rec.descripcion}</p>
-        </div>
-        <button type="button"
-                onclick="appendToField('recommendations', '${rec.titulo}: ${rec.descripcion.replace(/'/g,"\\'")}')"
-                class="flex-shrink-0 text-[#4F46E5] hover:text-[#4338CA] transition-colors"
-                title="Agregar a recomendaciones">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        </button>
-      </div>`;
-  });
-
-  if (data.alertas?.length) {
-    document.getElementById('ai-alerts-section').style.display = 'block';
-    document.getElementById('ai-alerts').innerHTML = data.alertas.map(a =>
-      `<div class="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2.5">⚠ ${a}</div>`
-    ).join('');
-  }
-
-  if (data.prediccion_progreso) {
-    document.getElementById('ai-prediction-section').style.display = 'block';
-    document.getElementById('ai-prediction').textContent = data.prediccion_progreso;
+function clearAll() {
+  if (confirm('¿Limpiar todos los campos y empezar de cero?')) {
+    ['content', 'recommendations', 'alerts', 'parent_comments'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
   }
 }
 
-function applyToField(fieldId, text) {
-  if (!text) return;
-  document.getElementById(fieldId).value = text;
-  showToast('Aplicado al campo ✓');
-  document.getElementById(fieldId).scrollIntoView({behavior: 'smooth', block: 'center'});
-}
-
-function appendToField(fieldId, text) {
-  const field = document.getElementById(fieldId);
-  field.value = field.value ? field.value + '\n• ' + text : '• ' + text;
-  showToast('Agregado ✓');
-}
-
-function applyAllRecommendations() {
-  if (!aiData?.recomendaciones) return;
-  const text = aiData.recomendaciones.map(r => `• ${r.titulo}: ${r.descripcion}`).join('\n');
-  document.getElementById('recommendations').value = text;
-  showToast('Recomendaciones aplicadas ✓');
-}
-
-function autoFillReport() {
-  if (!aiData) return;
-  let content = aiData.resumen_ejecutivo || '';
-  if (aiData.fortalezas?.length) content += '\n\nFortalezas:\n' + aiData.fortalezas.map(f => '• ' + f).join('\n');
-  if (aiData.areas_mejora?.length) content += '\n\nÁreas de mejora:\n' + aiData.areas_mejora.map(a => '• ' + a).join('\n');
-  document.getElementById('content').value = content;
-  if (aiData.recomendaciones?.length) {
-    document.getElementById('recommendations').value = aiData.recomendaciones.map(r => `• ${r.titulo}: ${r.descripcion}`).join('\n');
-  }
-  showToast('Reporte completado automáticamente ✓ Revisa antes de enviar');
-  document.getElementById('content').scrollIntoView({behavior: 'smooth', block: 'start'});
-}
-
-function showToast(msg) {
+function showToast(msg, isError) {
   const toast = document.createElement('div');
-  toast.className = 'fixed top-4 right-4 z-50 px-4 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-xl shadow-lg transition-all';
+  toast.className = 'fixed top-4 right-4 z-50 px-4 py-2.5 text-white text-sm font-medium rounded-xl shadow-lg';
+  toast.style.background = isError ? '#DC2626' : '#059669';
   toast.textContent = msg;
   document.body.appendChild(toast);
-  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2000);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s';
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
 }
 </script>
 {% endblock %}

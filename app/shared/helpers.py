@@ -59,6 +59,37 @@ def filter_users_query(q=None, role=None, grade=None, section=None,
     return query.order_by(User.created_at.desc())
 
 
+def build_observations(ai_draft):
+    """Combina resumen_ejecutivo + fortalezas + areas_mejora en prosa para textarea."""
+    if not ai_draft:
+        return ''
+    parts = []
+    if ai_draft.get('resumen_ejecutivo'):
+        parts.append(ai_draft['resumen_ejecutivo'])
+    if ai_draft.get('fortalezas'):
+        parts.append('\n\nFortalezas observadas:')
+        for f in ai_draft['fortalezas']:
+            parts.append('• ' + f)
+    if ai_draft.get('areas_mejora'):
+        parts.append('\n\nÁreas de mejora:')
+        for a in ai_draft['areas_mejora']:
+            parts.append('• ' + a)
+    return '\n'.join(parts)
+
+
+def build_recommendations(ai_draft):
+    """Convierte la lista de recomendaciones de la IA en texto con bullets."""
+    if not ai_draft or not ai_draft.get('recomendaciones'):
+        return ''
+    parts = []
+    for r in ai_draft['recomendaciones']:
+        titulo = r.get('titulo', '')
+        desc = r.get('descripcion', '')
+        prioridad = (r.get('prioridad') or '').upper()
+        parts.append(f'• [{prioridad}] {titulo}: {desc}')
+    return '\n'.join(parts)
+
+
 def filter_students_query(teacher_id_filter, q=None, tdah_type=None,
                           grade=None, activity_status=None, sort=None):
     """
