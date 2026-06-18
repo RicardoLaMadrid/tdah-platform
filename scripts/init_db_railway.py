@@ -50,5 +50,11 @@ def _run_seed():
         sys.argv = old_argv
 
 
+def run_seed(app):
+    """Punto de entrada para ser llamado desde app/__init__.py con app ya creada."""
+    with app.app_context():
+        _run_seed()
+
+
 if __name__ == '__main__':
     init_db()

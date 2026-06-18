@@ -34,6 +34,20 @@ def create_app(config_name='development'):
         # Importar modelos para que Flask-Migrate los detecte
         from app.core.models import user, student, activity, report, parent, notification, badge, active_test_session
 
+        # En Railway: crear tablas y seed automático si la BD está vacía
+        if os.environ.get('RAILWAY_ENVIRONMENT'):
+            try:
+                db.create_all()
+                from app.core.models.user import User as _User
+                if _User.query.count() == 0:
+                    print("  BD vacía — ejecutando seed de datos demo...")
+                    import sys as _sys
+                    _sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+                    from scripts.init_db_railway import run_seed
+                    run_seed(app)
+            except Exception as _e:
+                print(f"⚠️  init_db Railway: {_e}")
+
         from app.shared.context_processors import register_context_processors
         register_context_processors(app)
 
