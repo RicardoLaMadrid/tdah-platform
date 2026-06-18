@@ -1,9 +1,3 @@
-"""
-app/reports/ai_generator.py
-
-Generador de actividades personalizadas para estudiantes con TDAH.
-Usa el banco de actividades local (fallback sin dependencias externas).
-"""
 import json
 import random
 from typing import Dict, List, Optional
