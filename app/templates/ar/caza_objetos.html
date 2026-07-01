@@ -1,196 +1,360 @@
 {% extends '_layouts/ar_layout.html' %}
-{% block title %}Caza Espacial — AR{% endblock %}
+{% block title %}Caza de Asteroides — AR{% endblock %}
 
+{# Contenedor de objetos 3D del juego #}
 {% block ar_scene_content %}
-<a-entity id="objects-container"></a-entity>
+<a-entity id="game-container"></a-entity>
 {% endblock %}
 
+{# HUD de 3 stats: Puntos / Errores / Tiempo #}
 {% block ar_hud %}
 <div class="ar-hud-item">
   <span class="ar-hud-icon">⭐</span>
   <span class="ar-hud-label">Puntos</span>
-  <span id="score-val" class="ar-hud-value">0</span>
+  <span id="ar-score" class="ar-hud-value">0</span>
 </div>
 <div class="ar-hud-item">
-  <span class="ar-hud-icon">💥</span>
+  <span class="ar-hud-icon">❌</span>
   <span class="ar-hud-label">Errores</span>
-  <span id="errors-val" class="ar-hud-value" style="color:#f87171;">0</span>
+  <span id="ar-extra-value" class="ar-hud-value" style="color:#f87171;">0</span>
 </div>
 <div class="ar-hud-item">
   <span class="ar-hud-icon">⏱️</span>
   <span class="ar-hud-label">Tiempo</span>
-  <span id="timer-val" class="ar-hud-value">60s</span>
+  <span id="ar-timer" class="ar-hud-value">60s</span>
 </div>
 {% endblock %}
 
-{% block ar_instructions %}
-<div class="ar-modal">
-  <div class="ar-modal-emoji">🚀</div>
-  <h2>Caza Espacial</h2>
-  <p>Tocá solo las esferas <strong style="color:#fbbf24;">DORADAS</strong> que flotan en el espacio</p>
-  <ul>
-    <li>Aparecen 10 objetos flotantes de colores</li>
-    <li>Solo tocá las <strong style="color:#fbbf24;">DORADAS ✨</strong></li>
-    <li>Evitá las de colores fríos (azul, cyan, violeta, rosa)</li>
-    <li>Tenés 60 segundos — ¡Atención máxima!</li>
-  </ul>
-  <button class="ar-btn ar-btn-primary" onclick="startGame()">🚀 Comenzar</button>
-  <br><br>
-  <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary" style="font-size:0.85rem;">← Volver al menú</a>
-</div>
-{% endblock %}
+{# Override vacío: el tutorial reemplaza el modal de instrucciones estándar #}
+{% block ar_instructions %}{% endblock %}
 
-{% block ar_results %}
-<div class="ar-modal">
-  <div class="ar-modal-emoji">🎉</div>
-  <h2>¡Misión Completada!</h2>
-  <div id="final-score" class="ar-result-score">0</div>
-  <div class="ar-result-stats">
-    <div><h4 id="final-correct" style="color:#fbbf24;">0</h4><small>Doradas</small></div>
-    <div><h4 id="final-errors" style="color:#f87171;">0</h4><small>Errores</small></div>
-    <div><h4 id="final-time">0s</h4><small>Tiempo</small></div>
+{# Override vacío: usamos #caza-results propio para evitar conflicto de IDs #}
+{% block ar_results %}{% endblock %}
+
+{# Tutorial interactivo + pantalla de resultados personalizada #}
+{% block ar_overlays %}
+
+{# Paso 1: Asteroide — el usuario DEBE hacer click para avanzar #}
+<div id="tutorial-step-1" class="ar-tutorial" style="display:none;">
+  <div class="ar-tutorial-text-top">
+    <div class="ar-tutorial-badge"
+         style="background:rgba(251,191,36,0.2); border-color:rgba(251,191,36,0.6); color:#fbbf24;">
+      PASO 1 / 3
+    </div>
+    <h3>Estos son los <span style="color:#fbbf24;">ASTEROIDES</span></h3>
+    <p>Aparecen solos y rotan. ¡Tocálos para destruirlos y ganar puntos!</p>
   </div>
-  <div id="result-message" class="ar-result-note"></div>
-  <button class="ar-btn ar-btn-primary" onclick="location.reload()" style="margin-right:0.5rem;">🔄 Jugar de Nuevo</button>
-  <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
+  <div class="ar-tutorial-pointer ar-bounce">
+    <span style="font-size:2.5rem;">👆</span>
+    <span class="ar-tutorial-label">Tocá el asteroide para continuar</span>
+  </div>
 </div>
+
+{# Paso 2: Satélite — el usuario NO debe hacer click, esperar 3 s #}
+<div id="tutorial-step-2" class="ar-tutorial" style="display:none;">
+  <div class="ar-tutorial-text-top">
+    <div class="ar-tutorial-badge"
+         style="background:rgba(96,165,250,0.2); border-color:rgba(96,165,250,0.6); color:#60a5fa;">
+      PASO 2 / 3
+    </div>
+    <h3>Estos son los <span style="color:#60a5fa;">SATÉLITES</span></h3>
+    <p>Son equipos científicos. ¡NO los toques! Dejá que pasen.</p>
+  </div>
+  <div class="ar-tutorial-pointer" style="flex-direction:row; gap:1.25rem; align-items:center;">
+    <span style="font-size:3rem;">⛔</span>
+    <div style="text-align:center;">
+      <div class="ar-tutorial-label" style="margin-bottom:0.4rem;">No hagas clic — esperá</div>
+      <div id="tut-countdown"
+           style="font-size:3rem; font-weight:800; color:#fbbf24;
+                  font-family:'Courier New',monospace; line-height:1;">3</div>
+    </div>
+  </div>
+</div>
+
+{# Paso 3: Previsualización de ambos + botón COMENZAR #}
+<div id="tutorial-step-3" class="ar-tutorial" style="display:none;">
+  <div class="ar-tutorial-text-top">
+    <div class="ar-tutorial-badge"
+         style="background:rgba(16,185,129,0.2); border-color:rgba(16,185,129,0.6); color:#34d399;">
+      PASO 3 / 3
+    </div>
+    <h3>¡Ya sabés qué hacer!</h3>
+    <p>
+      <span style="color:#fbbf24;">⭐ ASTEROIDE</span> → Tocalo para ganar puntos<br>
+      <span style="color:#60a5fa;">🛸 SATÉLITE</span> → No lo toques, resta puntos<br>
+      <span style="color:rgba(255,255,255,0.6); font-size:0.9rem;">Tenés 60 segundos — ¡Atención máxima!</span>
+    </p>
+  </div>
+  <div class="ar-tutorial-pointer">
+    <button id="ar-start-btn" class="ar-btn ar-btn-primary"
+            style="pointer-events:auto; font-size:1.1rem; padding:0.9rem 2.75rem;">
+      🚀 COMENZAR
+    </button>
+  </div>
+</div>
+
+{# Pantalla de resultados personalizada (evita conflicto con #ar-results del layout) #}
+<div id="caza-results"
+     style="display:none; position:fixed; inset:0; z-index:35;
+            align-items:center; justify-content:center;
+            background:rgba(10,14,39,0.85); backdrop-filter:blur(8px);">
+  <div class="ar-modal">
+    <div class="ar-modal-emoji">🚀</div>
+    <h2>¡Misión Completada!</h2>
+    <div id="caza-final-score" class="ar-result-score">0</div>
+    <p style="color:rgba(255,255,255,0.6); margin:-0.5rem 0 1rem;">Asteroides destruidos</p>
+    <div class="ar-result-stats">
+      <div>
+        <h4 id="caza-final-accuracy" style="color:#34d399;">0%</h4>
+        <small>Precisión</small>
+      </div>
+      <div>
+        <h4 id="caza-final-rt" style="color:#a78bfa;">—</h4>
+        <small>Reacción prom.</small>
+      </div>
+    </div>
+    <div id="caza-result-note" class="ar-result-note"></div>
+    <button class="ar-btn ar-btn-primary" onclick="location.reload()"
+            style="margin-right:0.5rem;">🔄 Jugar de Nuevo</button>
+    <a href="{{ url_for('ar.index') }}" class="ar-btn ar-btn-secondary">🏠 Menú</a>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-const STUDENT_ID   = {{ student.id }};
-const CORRECT_COLOR = '#fbbf24';
-const WRONG_COLORS  = ['#ec4899', '#06b6d4', '#3b82f6', '#8b5cf6', '#ef4444'];
+const SCENE = () => document.getElementById('ar-scene') || document.querySelector('a-scene');
 
-let gameData = {
-  score: 0, errors: 0, correctClicks: 0,
-  startTime: null, clicks: [], objects: []
+const CONFIG = {
+  gameDuration:   60,
+  spawnInterval:  2500,
+  objectLifetime: 4000,
+  asteroidRatio:  0.65,
+  maxObjects:     5,
 };
-let timerInterval = null;
 
-function startGame() {
-  document.getElementById('ar-instructions').style.display = 'none';
-  document.getElementById('ar-hud').style.display = 'flex';
-  gameData.startTime = Date.now();
-  generateObjects();
-  startTimer();
+let activity;
+let spawnInterval;
+let activeObjects = [];
+
+// ─── TUTORIAL ──────────────────────────────────────────────────────────────
+
+function showStep1() {
+  document.getElementById('tutorial-step-1').style.display = 'flex';
+
+  const asteroid = ARVisuals.createAsteroid('0 1.7 -3', { radius: 0.4 });
+  asteroid.classList.add('clickable');
+  asteroid.id = 'tut-object';
+
+  asteroid.addEventListener('click', () => {
+    ARVisuals.createExplosion('0 1.7 -3', SCENE(), '#fbbf24');
+    if (asteroid.parentNode) asteroid.parentNode.removeChild(asteroid);
+    document.getElementById('tutorial-step-1').style.display = 'none';
+    setTimeout(showStep2, 300);
+  });
+
+  SCENE().appendChild(asteroid);
 }
 
-function generateObjects() {
-  const container = document.getElementById('objects-container');
-  const objectColors = [
-    CORRECT_COLOR, CORRECT_COLOR, CORRECT_COLOR,
-    ...WRONG_COLORS.slice(0, 4), WRONG_COLORS[0], WRONG_COLORS[1], WRONG_COLORS[2]
-  ];
-  objectColors.sort(() => Math.random() - 0.5);
+function showStep2() {
+  document.getElementById('tutorial-step-2').style.display = 'flex';
 
-  objectColors.forEach((color, index) => {
-    const sphere = document.createElement('a-sphere');
-    const angle  = ((index / objectColors.length) - 0.5) * Math.PI * 1.2;
-    const radius = 2 + Math.random() * 1.5;
-    const x      = +(Math.sin(angle) * radius).toFixed(2);
-    const z      = -(Math.abs(Math.cos(angle) * radius)).toFixed(2);
-    const y      = +(1 + Math.random() * 1.5).toFixed(2);
-    const yTop   = +(y + 0.3).toFixed(2);
-    const isCorrect = color === CORRECT_COLOR;
+  const satellite = ARVisuals.createSatellite('0 1.7 -3');
+  satellite.classList.add('clickable');
+  satellite.id = 'tut-object';
+  SCENE().appendChild(satellite);
 
-    sphere.setAttribute('position', `${x} ${y} ${z}`);
-    sphere.setAttribute('radius', '0.3');
-    sphere.setAttribute('material',
-      `color: ${color}; emissive: ${color}; emissiveIntensity: ${isCorrect ? 0.5 : 0.3}; roughness: 0.3; metalness: 0.2`);
-    sphere.setAttribute('class', 'clickable');
-    sphere.setAttribute('animation',
-      `property: position; to: ${x} ${yTop} ${z}; ` +
-      `dur: 2000; dir: alternate; loop: true; easing: easeInOutSine`);
+  let countdown = 3;
+  let wrongClick = false;
+  let timer;
 
-    sphere.addEventListener('click', (e) => handleObjectClick(e, sphere, isCorrect, `${x} ${y} ${z}`));
-    container.appendChild(sphere);
-    gameData.objects.push({ color, correct: isCorrect });
+  function tick() {
+    if (wrongClick) return;
+    countdown--;
+    document.getElementById('tut-countdown').textContent = countdown;
+    if (countdown <= 0) {
+      clearInterval(timer);
+      if (satellite.parentNode) satellite.parentNode.removeChild(satellite);
+      document.getElementById('tutorial-step-2').style.display = 'none';
+      setTimeout(showStep3, 300);
+    }
+  }
+  timer = setInterval(tick, 1000);
+
+  satellite.addEventListener('click', () => {
+    wrongClick = true;
+    clearInterval(timer);
+    showErrorFlash('❌ Es un satélite — no lo toques. El contador se reinicia.');
+    setTimeout(() => {
+      wrongClick = false;
+      countdown = 3;
+      document.getElementById('tut-countdown').textContent = countdown;
+      timer = setInterval(tick, 1000);
+    }, 1800);
   });
 }
 
-function handleObjectClick(e, sphere, isCorrect, posStr) {
-  const cx = (e && e.clientX) ? e.clientX : window.innerWidth / 2;
-  const cy = (e && e.clientY) ? e.clientY : window.innerHeight / 2;
-  gameData.clicks.push({ time: Date.now() - gameData.startTime, correct: isCorrect });
+function showStep3() {
+  document.getElementById('tutorial-step-3').style.display = 'flex';
 
-  if (window.ARVisuals) {
-    ARVisuals.createClickFeedback(cx, cy, isCorrect ? '#fbbf24' : '#ef4444');
-  }
+  const asteroid = ARVisuals.createAsteroid('-1.5 1.7 -3', { radius: 0.32 });
+  asteroid.id = 'preview-asteroid';
+  SCENE().appendChild(asteroid);
 
-  if (isCorrect) {
-    gameData.score += 10;
-    gameData.correctClicks++;
+  const satellite = ARVisuals.createSatellite('1.5 1.7 -3');
+  satellite.id = 'preview-satellite';
+  SCENE().appendChild(satellite);
+}
 
-    if (window.ARVisuals) {
-      const scene = document.querySelector('a-scene');
-      ARVisuals.createExplosion(posStr, scene, '#fbbf24');
-    }
+function showErrorFlash(msg) {
+  const el = document.createElement('div');
+  el.className = 'ar-error-flash';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 1800);
+}
 
-    sphere.setAttribute('class', '');
-    sphere.setAttribute('animation__vanish',
-      'property: scale; to: 0 0 0; dur: 250; easing: easeInBack');
-    setTimeout(() => { if (sphere.parentNode) sphere.parentNode.removeChild(sphere); }, 260);
+// ─── JUEGO ─────────────────────────────────────────────────────────────────
 
-    if (gameData.correctClicks >= 3) endGame();
+function startGame() {
+  document.getElementById('tutorial-step-3').style.display = 'none';
+  ['preview-asteroid', 'preview-satellite'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  });
+
+  // Dos objetos iniciales escalonados
+  setTimeout(spawnObject, 300);
+  setTimeout(spawnObject, 900);
+
+  spawnInterval = setInterval(() => {
+    if (activeObjects.length < CONFIG.maxObjects && activity.isRunning) spawnObject();
+  }, CONFIG.spawnInterval);
+}
+
+function spawnObject() {
+  const isAsteroid = Math.random() < CONFIG.asteroidRatio;
+  const x      = +((Math.random() - 0.5) * 5).toFixed(2);
+  const y      = +(0.8 + Math.random() * 2).toFixed(2);
+  const z      = +(-2 - Math.random() * 3).toFixed(2);
+  const posStr = `${x} ${y} ${z}`;
+  const spawnTime = Date.now();
+
+  const obj = isAsteroid
+    ? ARVisuals.createAsteroid(posStr, { radius: +(0.2 + Math.random() * 0.15).toFixed(2) })
+    : ARVisuals.createSatellite(posStr);
+
+  obj.classList.add('clickable');
+  obj.dataset.type      = isAsteroid ? 'asteroid' : 'satellite';
+  obj.dataset.spawnTime = spawnTime;
+  obj.dataset.posStr    = posStr;
+
+  obj.setAttribute('scale', '0 0 0');
+  obj.setAttribute('animation__spawn',
+    'property: scale; from: 0 0 0; to: 1 1 1; dur: 400; easing: easeOutBack');
+
+  obj._lifetimeTimer = setTimeout(() => despawnObject(obj), CONFIG.objectLifetime);
+
+  obj.addEventListener('click', (e) => onObjectClicked(e, obj));
+  SCENE().appendChild(obj);
+  activeObjects.push(obj);
+}
+
+function despawnObject(obj) {
+  activeObjects = activeObjects.filter(o => o !== obj);
+  if (!obj.parentNode) return;
+  obj.setAttribute('animation__fade',
+    'property: scale; to: 0 0 0; dur: 300; easing: easeInBack');
+  setTimeout(() => { if (obj.parentNode) obj.parentNode.removeChild(obj); }, 310);
+}
+
+function onObjectClicked(e, obj) {
+  if (!activity.isRunning) return;
+  clearTimeout(obj._lifetimeTimer);
+  activeObjects = activeObjects.filter(o => o !== obj);
+  if (obj.parentNode) obj.parentNode.removeChild(obj);
+
+  const type      = obj.dataset.type;
+  const posStr    = obj.dataset.posStr;
+  const spawnTime = parseInt(obj.dataset.spawnTime);
+
+  ARVisuals.createClickFeedback(
+    (e && e.clientX) ? e.clientX : window.innerWidth / 2,
+    (e && e.clientY) ? e.clientY : window.innerHeight / 2,
+    type === 'asteroid' ? '#fbbf24' : '#ef4444'
+  );
+
+  if (type === 'asteroid') {
+    activity.addScore(1);
+    activity.recordReactionTime(spawnTime);
+    ARVisuals.createExplosion(posStr, SCENE(), '#fbbf24');
   } else {
-    gameData.errors++;
-    gameData.score = Math.max(0, gameData.score - 5);
-    sphere.setAttribute('material',
-      `color: #ff6666; emissive: #ff6666; emissiveIntensity: 0.8; roughness: 0.3`);
-    setTimeout(() => sphere.setAttribute('material',
-      `color: ${sphere.getAttribute('data-color') || '#ef4444'}; emissive: ${sphere.getAttribute('data-color') || '#ef4444'}; emissiveIntensity: 0.3; roughness: 0.3`
-    ), 400);
+    activity.addError();
+    if (activity.score > 0) {
+      activity.score = Math.max(0, activity.score - 1);
+      const el = document.getElementById('ar-score');
+      if (el) el.textContent = activity.score;
+    }
+    // Flash rojo en el puntaje
+    const scoreEl = document.getElementById('ar-score');
+    if (scoreEl) {
+      scoreEl.style.color = '#ef4444';
+      setTimeout(() => { scoreEl.style.color = '#fbbf24'; }, 400);
+    }
+  }
+}
+
+function onGameEnd(score, completionTime, accuracy) {
+  clearInterval(spawnInterval);
+  activeObjects.forEach(obj => {
+    clearTimeout(obj._lifetimeTimer);
+    if (obj.parentNode) obj.parentNode.removeChild(obj);
+  });
+  activeObjects = [];
+
+  // ARActivity.end() mostró el #ar-results vacío del layout — ocultarlo
+  const emptyResults = document.getElementById('ar-results');
+  if (emptyResults) emptyResults.style.display = 'none';
+
+  const avgRT   = activity._calculateAvgReactionTime();
+  const noteEl  = document.getElementById('caza-result-note');
+  if (noteEl) {
+    if (accuracy >= 90 && score >= 20)
+      noteEl.textContent = '🏆 ¡Excelente control de impulsos! Inhibición perfecta.';
+    else if (accuracy >= 70 && score >= 10)
+      noteEl.textContent = '✅ Buen desempeño. La práctica mejora la inhibición.';
+    else
+      noteEl.textContent = '💡 Seguí practicando — la inhibición mejora con el tiempo.';
   }
 
-  document.getElementById('score-val').textContent  = gameData.score;
-  document.getElementById('errors-val').textContent = gameData.errors;
+  document.getElementById('caza-final-score').textContent    = score;
+  document.getElementById('caza-final-accuracy').textContent = `${accuracy}%`;
+  document.getElementById('caza-final-rt').textContent       = avgRT > 0 ? `${avgRT}ms` : '—';
+  document.getElementById('caza-results').style.display      = 'flex';
 }
 
-function startTimer() {
-  let timeLeft = 60;
-  timerInterval = setInterval(() => {
-    timeLeft--;
-    document.getElementById('timer-val').textContent = `${timeLeft}s`;
-    if (timeLeft <= 0) {
-      clearInterval(timerInterval);
-      if (gameData.correctClicks < 3) endGame();
-    }
-  }, 1000);
-}
+// ─── INIT ──────────────────────────────────────────────────────────────────
 
-function endGame() {
-  if (timerInterval) clearInterval(timerInterval);
-  const duration = Math.round((Date.now() - gameData.startTime) / 1000);
+document.addEventListener('DOMContentLoaded', () => {
+  // El CSS pone ar-instructions en display:flex por defecto.
+  // Como esta actividad no lo usa, lo ocultamos para que no cubra el tutorial.
+  const arInstr = document.getElementById('ar-instructions');
+  if (arInstr) arInstr.style.display = 'none';
 
-  document.getElementById('ar-hud').style.display = 'none';
-  document.getElementById('final-score').textContent   = gameData.score;
-  document.getElementById('final-correct').textContent = gameData.correctClicks;
-  document.getElementById('final-errors').textContent  = gameData.errors;
-  document.getElementById('final-time').textContent    = `${duration}s`;
+  activity = new ARActivity({
+    activityId: 'ar_caza_asteroides',
+    studentId:  {{ student.id }},
+    duration:   CONFIG.gameDuration,
+    onStart:    startGame,
+    onEnd:      onGameEnd,
+  });
+  window.currentARActivity = activity;
 
-  const msg = document.getElementById('result-message');
-  if (gameData.correctClicks === 3 && gameData.errors === 0)
-    msg.textContent = '🏆 ¡Perfecto! Sin errores';
-  else if (gameData.correctClicks === 3)
-    msg.textContent = '✅ ¡Bien hecho! Completaste el desafío';
-  else
-    msg.textContent = `⏰ Tiempo agotado — ${gameData.correctClicks}/3 esferas`;
-
-  document.getElementById('ar-results').style.display = 'flex';
-
-  fetch('{{ url_for("ar.save_result") }}', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      activity_type: 'ar_caza',
-      results: {
-        score: gameData.score, errors: gameData.errors,
-        correct: gameData.correctClicks, time: duration,
-        clicks: gameData.clicks, total_objects: gameData.objects.length
-      }
-    })
-  }).catch(e => console.error('Error guardando:', e));
-}
+  const scene = SCENE();
+  const doTutorial = () => setTimeout(showStep1, 500);
+  if (scene && scene.hasLoaded) doTutorial();
+  else if (scene) scene.addEventListener('loaded', doTutorial, { once: true });
+});
 </script>
 {% endblock %}
