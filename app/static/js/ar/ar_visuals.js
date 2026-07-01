@@ -190,6 +190,48 @@ const ARVisuals = {
   },
 
   /**
+   * Construye el entorno espacial completo (alias unificado para el layout)
+   */
+  buildSpaceEnvironment(scene) {
+    this.createSpaceSkybox(scene);
+    this.setupLighting(scene);
+    this.createDistantSun(scene);
+  },
+
+  /**
+   * Alias de createStars con más conteo por defecto (compatibilidad spec)
+   */
+  createStarfield(scene, count = 300) {
+    this.createStars(scene, count);
+  },
+
+  /**
+   * Sol distante visible como esfera brillante con halo
+   */
+  createDistantSun(scene) {
+    const sun = document.createElement('a-entity');
+    sun.setAttribute('id', 'distant-sun');
+    sun.setAttribute('position', '30 20 -50');
+
+    const core = document.createElement('a-sphere');
+    core.setAttribute('radius', '3');
+    core.setAttribute('material',
+      'shader: flat; color: #fef3c7; emissive: #fbbf24; emissiveIntensity: 1');
+    sun.appendChild(core);
+
+    const halo = document.createElement('a-ring');
+    halo.setAttribute('radius-inner', '3.2');
+    halo.setAttribute('radius-outer', '5.5');
+    halo.setAttribute('material',
+      'shader: flat; color: #fbbf24; opacity: 0.3; transparent: true; side: double');
+    halo.setAttribute('look-at', '[camera]');
+    sun.appendChild(halo);
+
+    scene.appendChild(sun);
+    return sun;
+  },
+
+  /**
    * Feedback visual al hacer click (anillo que se expande en pantalla)
    */
   createClickFeedback(screenX, screenY, color = '#fbbf24') {
