@@ -136,6 +136,7 @@ const CONFIG = {
 
 let activity;
 let spawnInterval;
+let beepInterval = null;
 let activeObjects = [];
 
 // ─── TUTORIAL ──────────────────────────────────────────────────────────────
@@ -148,7 +149,9 @@ function showStep1() {
   asteroid.id = 'tut-object';
 
   asteroid.addEventListener('click', () => {
+    if (window.ARSounds) ARSounds.init(); // inicia audio en primer evento de usuario
     ARVisuals.createExplosion('0 1.7 -3', SCENE(), '#fbbf24');
+    if (window.ARSounds) ARSounds.playExplosion();
     if (asteroid.parentNode) asteroid.parentNode.removeChild(asteroid);
     document.getElementById('tutorial-step-1').style.display = 'none';
     setTimeout(showStep2, 300);
@@ -231,6 +234,13 @@ function startGame() {
   spawnInterval = setInterval(() => {
     if (activeObjects.length < CONFIG.maxObjects && activity.isRunning) spawnObject();
   }, CONFIG.spawnInterval);
+
+  // Beep de alerta cuando quedan <= 10 segundos
+  beepInterval = setInterval(() => {
+    if (!activity.isRunning) { clearInterval(beepInterval); return; }
+    const remaining = CONFIG.gameDuration - Math.round((Date.now() - activity.startTime) / 1000);
+    if (remaining <= 10 && remaining > 0 && window.ARSounds) ARSounds.playTimerBeep();
+  }, 1000);
 }
 
 function spawnObject() {
@@ -279,16 +289,19 @@ function onObjectClicked(e, obj) {
   const posStr    = obj.dataset.posStr;
   const spawnTime = parseInt(obj.dataset.spawnTime);
 
-  ARVisuals.createClickFeedback(
-    (e && e.clientX) ? e.clientX : window.innerWidth / 2,
-    (e && e.clientY) ? e.clientY : window.innerHeight / 2,
-    type === 'asteroid' ? '#fbbf24' : '#ef4444'
-  );
+  const cx = (e && e.clientX) ? e.clientX : window.innerWidth / 2;
+  const cy = (e && e.clientY) ? e.clientY : window.innerHeight / 2;
+
+  ARVisuals.createClickFeedback(cx, cy, type === 'asteroid' ? '#fbbf24' : '#ef4444');
 
   if (type === 'asteroid') {
     activity.addScore(1);
     activity.recordReactionTime(spawnTime);
     ARVisuals.createExplosion(posStr, SCENE(), '#fbbf24');
+    ARVisuals.createFloatingText(cx, cy, '+1', '#fbbf24');
+    ARVisuals.createScreenFlash('hit');
+    if (window.ARSounds) ARSounds.playExplosion();
+    try { if (navigator.vibrate) navigator.vibrate(50); } catch (_) {}
   } else {
     activity.addError();
     if (activity.score > 0) {
@@ -296,6 +309,10 @@ function onObjectClicked(e, obj) {
       const el = document.getElementById('ar-score');
       if (el) el.textContent = activity.score;
     }
+    ARVisuals.createFloatingText(cx, cy, '−1', '#ef4444');
+    ARVisuals.createScreenFlash('error');
+    if (window.ARSounds) ARSounds.playError();
+    try { if (navigator.vibrate) navigator.vibrate([80, 30, 80]); } catch (_) {}
     // Flash rojo en el puntaje
     const scoreEl = document.getElementById('ar-score');
     if (scoreEl) {
@@ -307,6 +324,8 @@ function onObjectClicked(e, obj) {
 
 function onGameEnd(score, completionTime, accuracy) {
   clearInterval(spawnInterval);
+  clearInterval(beepInterval);
+  if (window.ARSounds) ARSounds.playVictory();
   activeObjects.forEach(obj => {
     clearTimeout(obj._lifetimeTimer);
     if (obj.parentNode) obj.parentNode.removeChild(obj);
