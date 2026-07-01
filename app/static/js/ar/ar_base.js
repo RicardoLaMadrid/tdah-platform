@@ -19,27 +19,33 @@ class ARActivity {
     this.isRunning     = false;
     this.reactionTimes = [];
 
-    this._initSpace();
+    this.initSpaceEnvironment();
     this._bindUI();
   }
 
-  _initSpace() {
+  initSpaceEnvironment() {
     const scene = document.querySelector('a-scene');
     if (!scene) return;
 
     const setup = () => {
-      if (window.ARVisuals) {
-        ARVisuals.createSpaceSkybox(scene);
-        ARVisuals.setupLighting(scene);
+      if (!window.ARVisuals || document.getElementById('space-skybox')) return;
+      try {
+        if (typeof ARVisuals.buildSpaceEnvironment === 'function') {
+          ARVisuals.buildSpaceEnvironment(scene);
+        } else {
+          ARVisuals.createSpaceSkybox(scene);
+          ARVisuals.setupLighting(scene);
+        }
+      } catch (e) {
+        console.error('Error inicializando entorno espacial:', e);
       }
     };
 
-    if (scene.hasLoaded) {
-      setup();
-    } else {
-      scene.addEventListener('loaded', setup);
-    }
+    if (scene.hasLoaded) setup();
+    else scene.addEventListener('loaded', setup, { once: true });
   }
+
+  _initSpace() { this.initSpaceEnvironment(); }
 
   _bindUI() {
     const startBtn = document.getElementById('ar-start-btn');
@@ -129,6 +135,8 @@ class ARActivity {
     this._saveResult({ completion_time: completionTime, accuracy, avg_reaction_time: avgRT });
     this.onEnd(this.score, completionTime, accuracy);
   }
+
+  calculateAccuracy() { return this._calculateAccuracy(); }
 
   _calculateAccuracy() {
     const total = this.score + this.errors;
