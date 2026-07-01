@@ -13,6 +13,7 @@ const ARVisuals = {
     skybox.setAttribute('radius', '100');
     skybox.setAttribute('material',
       'shader: flat; side: back; color: #0a0e27;');
+    skybox.classList.add('ar-background');
     scene.appendChild(skybox);
 
     this.createStars(scene, 200);
@@ -27,6 +28,7 @@ const ARVisuals = {
   createStars(scene, count = 200) {
     const container = document.createElement('a-entity');
     container.setAttribute('id', 'stars-container');
+    container.classList.add('ar-background');
 
     for (let i = 0; i < count; i++) {
       const star = document.createElement('a-sphere');
@@ -75,6 +77,7 @@ const ARVisuals = {
       neb.setAttribute('position', n.position);
       neb.setAttribute('material',
         `shader: flat; color: ${n.color}; opacity: ${n.opacity}; transparent: true; side: double`);
+      neb.classList.add('ar-background');
       neb.setAttribute('look-at', '[camera]');
       scene.appendChild(neb);
     });
@@ -217,6 +220,7 @@ const ARVisuals = {
     const sun = document.createElement('a-entity');
     sun.setAttribute('id', 'distant-sun');
     sun.setAttribute('position', '30 20 -50');
+    sun.classList.add('ar-background');
 
     const core = document.createElement('a-sphere');
     core.setAttribute('radius', '3');
