@@ -543,6 +543,38 @@ a-scene {
   100% { opacity: 0; }
 }
 
+/* ── Texto flotante (+1 / −1) ────────────────────────────── */
+@keyframes ar-float-up {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-70px) scale(1.4); }
+}
+
+.ar-float-text {
+  position: fixed;
+  pointer-events: none;
+  z-index: 60;
+  font-size: 1.75rem;
+  font-weight: 800;
+  font-family: 'Courier New', 'Consolas', monospace;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  animation: ar-float-up 0.9s ease-out forwards;
+  user-select: none;
+}
+
+/* ── Flash de borde de pantalla (acierto / error) ─────────── */
+@keyframes ar-flash-out {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.ar-screen-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 55;
+  animation: ar-flash-out 0.4s ease-out forwards;
+}
+
 /* ── Estrellas de loading ────────────────────────────────── */
 .ar-loading-stars {
   display: flex;
