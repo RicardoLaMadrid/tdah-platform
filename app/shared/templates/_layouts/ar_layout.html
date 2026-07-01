@@ -87,13 +87,14 @@
            background="color: transparent">
 
     <a-camera position="0 1.6 0"
-              look-controls="enabled: true; pointerLockEnabled: false; touchEnabled: true; magicWindowTrackingEnabled: true"
+              look-controls="enabled: true; pointerLockEnabled: false; mouseEnabled: false; touchEnabled: false; magicWindowTrackingEnabled: true"
               wasd-controls="enabled: false">
-      {# Cursor dentro de la cámara (A-Frame 1.4 best practice) #}
-      <a-entity cursor="rayOrigin: mouse; fuse: false"
-                raycaster="objects: .clickable; far: 100">
-      </a-entity>
     </a-camera>
+
+    {# Cursor fuera de la cámara: rayOrigin mouse no depende de la rotación de la cámara #}
+    <a-entity cursor="rayOrigin: mouse; fuse: false"
+              raycaster="objects: .clickable; far: 100; interval: 100">
+    </a-entity>
 
     {# Contenido 3D de cada actividad (objetos, formas, etc.) #}
     {% block ar_scene_content %}{% endblock %}
