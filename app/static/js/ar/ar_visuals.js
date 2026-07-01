@@ -121,6 +121,11 @@ const ARVisuals = {
       `color: ${color}; roughness: 0.9; metalness: 0.1; emissive: ${color}; emissiveIntensity: 0.1`);
     asteroid.appendChild(body);
 
+    // Glow pulsante (solo emissiveIntensity — no afecta click detection)
+    body.setAttribute('animation__glow',
+      `property: material.emissiveIntensity; from: 0.1; to: 0.45; ` +
+      `dur: ${1100 + Math.floor(Math.random() * 700)}; dir: alternate; loop: true; easing: easeInOutSine`);
+
     asteroid.setAttribute('animation__rot',
       `property: rotation; to: 360 720 360; loop: true; ` +
       `dur: ${4000 + Math.random() * 3000}; easing: linear`);
@@ -245,33 +250,87 @@ const ARVisuals = {
   },
 
   /**
-   * Explosión espacial: 8 partículas que se expanden y desvanecen
+   * Texto flotante "+1" / "−1" sobre el punto de click
+   */
+  createFloatingText(screenX, screenY, text, color = '#fbbf24') {
+    const el = document.createElement('div');
+    el.className = 'ar-float-text';
+    el.textContent = text;
+    el.style.color = color;
+    el.style.left  = (screenX - 16) + 'px';
+    el.style.top   = (screenY - 24) + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 900);
+  },
+
+  /**
+   * Flash en el borde de la pantalla (verde = acierto, rojo = error)
+   */
+  createScreenFlash(type = 'hit') {
+    const el = document.createElement('div');
+    el.className = 'ar-screen-flash';
+    el.style.background = type === 'hit'
+      ? 'radial-gradient(ellipse at center, transparent 55%, rgba(16,185,129,0.35) 100%)'
+      : 'radial-gradient(ellipse at center, transparent 55%, rgba(239,68,68,0.35) 100%)';
+    document.body.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+  },
+
+  /**
+   * Explosión mejorada: 12 partículas + núcleo brillante + flash esférico
    */
   createExplosion(position, scene, color = '#fbbf24') {
     const explosion = document.createElement('a-entity');
     explosion.setAttribute('position', position);
 
-    for (let i = 0; i < 8; i++) {
-      const particle = document.createElement('a-sphere');
-      particle.setAttribute('radius', '0.05');
-      particle.setAttribute('material',
-        `shader: flat; color: ${color}; emissive: ${color}; emissiveIntensity: 1`);
+    // Flash esférico que crece y desaparece
+    const flash = document.createElement('a-sphere');
+    flash.setAttribute('radius', '0.05');
+    flash.setAttribute('material',
+      'shader: flat; color: #ffffff; emissive: #ffffff; emissiveIntensity: 1; opacity: 0.9; transparent: true');
+    flash.setAttribute('animation__grow',
+      'property: scale; from: 0.1 0.1 0.1; to: 4 4 4; dur: 220; easing: easeOutQuad');
+    flash.setAttribute('animation__fade',
+      'property: material.opacity; from: 0.9; to: 0; dur: 220; easing: easeOutQuad');
+    explosion.appendChild(flash);
 
-      const angle   = (Math.PI * 2 / 8) * i;
-      const tx = Math.cos(angle);
-      const ty = Math.sin(angle);
-      const tz = (Math.random() - 0.5) * 0.5;
+    // 12 partículas de color expandiéndose en 3D
+    for (let i = 0; i < 12; i++) {
+      const angle  = (Math.PI * 2 / 12) * i;
+      const radius = 0.9 + Math.random() * 0.8;
+      const tx = +(Math.cos(angle) * radius).toFixed(3);
+      const ty = +(Math.sin(angle) * radius).toFixed(3);
+      const tz = +((Math.random() - 0.5) * 1.2).toFixed(3);
+      const size = +(0.04 + Math.random() * 0.06).toFixed(3);
 
-      particle.setAttribute('animation',
-        `property: position; to: ${tx} ${ty} ${tz}; dur: 600; easing: easeOutQuad`);
-      particle.setAttribute('animation__fade',
-        'property: material.opacity; from: 1; to: 0; dur: 600');
+      const p = document.createElement('a-sphere');
+      p.setAttribute('radius', size);
+      p.setAttribute('material',
+        `shader: flat; color: ${color}; emissive: ${color}; emissiveIntensity: 1; transparent: true`);
+      p.setAttribute('animation',
+        `property: position; to: ${tx} ${ty} ${tz}; dur: 550; easing: easeOutQuad`);
+      p.setAttribute('animation__fade',
+        'property: material.opacity; from: 1; to: 0; dur: 550; easing: easeInQuad');
+      explosion.appendChild(p);
+    }
 
-      explosion.appendChild(particle);
+    // 3 chispas que van más lejos
+    for (let i = 0; i < 3; i++) {
+      const angle  = Math.random() * Math.PI * 2;
+      const radius = 1.8 + Math.random() * 0.6;
+      const p = document.createElement('a-sphere');
+      p.setAttribute('radius', '0.03');
+      p.setAttribute('material',
+        'shader: flat; color: #ffffff; emissive: #ffffff; emissiveIntensity: 1; transparent: true');
+      p.setAttribute('animation',
+        `property: position; to: ${+(Math.cos(angle)*radius).toFixed(2)} ${+(Math.sin(angle)*radius).toFixed(2)} ${+((Math.random()-0.5)*1.5).toFixed(2)}; dur: 700; easing: easeOutQuad`);
+      p.setAttribute('animation__fade',
+        'property: material.opacity; from: 1; to: 0; dur: 700; easing: easeInQuad');
+      explosion.appendChild(p);
     }
 
     scene.appendChild(explosion);
-    setTimeout(() => explosion.remove(), 700);
+    setTimeout(() => { if (explosion.parentNode) explosion.parentNode.removeChild(explosion); }, 750);
   },
 };
 
