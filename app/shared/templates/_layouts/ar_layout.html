@@ -2,10 +2,15 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0e27">
   <title>{% block title %}Actividad AR{% endblock %} — TDAH Platform</title>
 
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/aframe-look-at-component@1.0.0/dist/aframe-look-at-component.min.js"></script>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ar.css') }}">
@@ -22,7 +27,12 @@
 <div class="ar-container">
 
   {# Botón salir — siempre visible #}
-  <a href="{{ url_for('ar.index') }}" id="ar-exit-btn" class="ar-exit-btn">✕ Salir</a>
+  <button id="ar-exit-btn" class="ar-exit-btn"
+          onclick="window.location.href='{{ url_for('ar.index') }}'"
+          aria-label="Salir de la actividad">
+    <span class="ar-exit-icon">✕</span>
+    <span class="ar-exit-text">Salir</span>
+  </button>
 
   {# HUD de stats durante la actividad #}
   <div id="ar-hud" class="ar-hud">
@@ -62,28 +72,30 @@
   {# Overlays adicionales por actividad #}
   {% block ar_overlays %}{% endblock %}
 
+  {# Bloque para HTML extra (overlays personalizados, tutoriales, etc.)
+     — FUERA de la escena A-Frame, dentro del container #}
+  {% block ar_content %}{% endblock %}
+
   {# Escena A-Frame principal #}
-  <a-scene embedded
+  <a-scene id="ar-scene"
+           embedded
            vr-mode-ui="enabled: false"
            xr-mode-ui="enabled: false"
-           renderer="alpha: true; antialias: true"
+           device-orientation-permission-ui="enabled: false"
+           renderer="alpha: true; antialias: true; logarithmicDepthBuffer: true; colorManagement: true"
            background="color: transparent">
 
-    <a-camera position="0 1.7 0"
-              look-controls="enabled: false"
+    <a-camera position="0 1.6 0"
+              look-controls="enabled: true; pointerLockEnabled: false; touchEnabled: true; magicWindowTrackingEnabled: true"
               wasd-controls="enabled: false">
+      {# Cursor dentro de la cámara (A-Frame 1.4 best practice) #}
+      <a-entity cursor="rayOrigin: mouse; fuse: false"
+                raycaster="objects: .clickable; far: 100">
+      </a-entity>
     </a-camera>
-
-    {# Cursor para interacción click con objetos .clickable #}
-    <a-entity cursor="rayOrigin: mouse; mouseEnabled: true; fuse: false"
-              raycaster="objects: .clickable; far: 100">
-    </a-entity>
 
     {# Contenido 3D de cada actividad (objetos, formas, etc.) #}
     {% block ar_scene_content %}{% endblock %}
-
-    {# Bloque abierto para nuevas actividades que prefieran poner todo aquí #}
-    {% block ar_content %}{% endblock %}
 
   </a-scene>
 
@@ -96,9 +108,13 @@
   if (!scene) return;
 
   function initSpace() {
-    if (!window.ARVisuals) return;
-    ARVisuals.createSpaceSkybox(scene);
-    ARVisuals.setupLighting(scene);
+    if (!window.ARVisuals || document.getElementById('space-skybox')) return;
+    if (typeof ARVisuals.buildSpaceEnvironment === 'function') {
+      ARVisuals.buildSpaceEnvironment(scene);
+    } else {
+      ARVisuals.createSpaceSkybox(scene);
+      ARVisuals.setupLighting(scene);
+    }
   }
 
   if (scene.hasLoaded) {
