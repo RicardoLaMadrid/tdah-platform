@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="page-mode" content="{% block page_mode %}normal{% endblock %}">
+  <meta name="sidebar-mode" content="{% block sidebar_mode %}desktop{% endblock %}">
   <title>{% block title %}Plataforma TDAH{% endblock %}</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,8 +16,9 @@
 </head>
 
 {%- set _fs = self.page_mode()|string|trim == 'ar' -%}
+{%- set _mobile_drawer = self.sidebar_mode()|string|trim == 'mobile-drawer' -%}
 <body class="h-full{% if not _fs %} bg-[#FAFAF9] text-[#1F2937] font-[Inter,Arial,sans-serif]{% endif %}"
-      {% if not _fs %}x-data="{ sidebarOpen: true }"{% endif %}>
+      {% if not _fs %}x-data="{ sidebarOpen: {{ 'false' if _mobile_drawer else 'true' }} }"{% endif %}>
 
 {% if _fs %}
   {# ── AR FULLSCREEN MODE — sin sidebar, sin topbar, main = 100vw × 100vh ── #}
@@ -38,10 +40,41 @@
   {# ── LAYOUT NORMAL — sidebar + topbar ──────────────────────────────────── #}
   <div class="flex h-full">
 
+    {% if _mobile_drawer %}
+    <!-- OVERLAY (solo mobile-drawer, <1024px) -->
+    <div x-show="sidebarOpen"
+         @click="sidebarOpen = false"
+         x-transition:enter="transition-opacity ease-linear duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity ease-linear duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 bg-slate-900/50 z-30 lg:hidden"
+         style="display: none;"
+         aria-hidden="true"></div>
+    {% endif %}
+
     <!-- SIDEBAR -->
-    <aside class="flex-shrink-0 bg-[#1E1B4B] text-[#C7D2FE] flex flex-col transition-all duration-200"
-           :class="sidebarOpen ? 'w-56' : 'w-16'"
-           aria-label="Menú principal">
+    <aside
+      {% if _mobile_drawer %}
+        :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+        class="fixed lg:sticky inset-y-0 lg:inset-y-auto lg:top-0 left-0 z-40 w-64 h-full lg:h-screen bg-[#1E1B4B] text-[#C7D2FE] flex flex-col transition-transform duration-200 ease-in-out"
+      {% else %}
+        :class="sidebarOpen ? 'w-56' : 'w-16'"
+        class="flex-shrink-0 bg-[#1E1B4B] text-[#C7D2FE] flex flex-col transition-all duration-200"
+      {% endif %}
+      aria-label="Menú principal">
+
+      {% if _mobile_drawer %}
+      <button @click="sidebarOpen = false"
+              class="lg:hidden absolute top-3 right-3 p-2 rounded-lg text-[#818CF8] hover:bg-[#312E81] hover:text-white transition-colors"
+              aria-label="Cerrar menú">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+      {% endif %}
 
       <a href="{{ home_url() }}"
          class="flex items-center gap-3 px-4 py-5 border-b border-[#312E81] hover:bg-[#312E81] transition-colors"
@@ -49,13 +82,15 @@
         <svg class="w-7 h-7 flex-shrink-0 text-[#818CF8]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 14.93V15a1 1 0 0 0-2 0v1.93A8 8 0 0 1 4.07 11H6a1 1 0 0 0 0-2H4.07A8 8 0 0 1 11 4.07V6a1 1 0 0 0 2 0V4.07A8 8 0 0 1 19.93 11H18a1 1 0 0 0 0 2h1.93A8 8 0 0 1 13 16.93Z"/>
         </svg>
-        <span class="font-bold text-white text-sm tracking-wide truncate" x-show="sidebarOpen" x-transition>TDAH Platform</span>
+        <span class="font-bold text-white text-sm tracking-wide truncate"
+              {% if not _mobile_drawer %}x-show="sidebarOpen" x-transition{% endif %}>TDAH Platform</span>
       </a>
 
       <nav class="flex-1 overflow-y-auto py-4 space-y-1 px-2" aria-label="Navegación principal">
         {% block sidebar_nav %}{% endblock %}
       </nav>
 
+      {% if not _mobile_drawer %}
       <button @click="sidebarOpen = !sidebarOpen"
               class="flex items-center justify-center gap-2 px-4 py-3 text-[#818CF8] hover:text-white hover:bg-[#312E81] transition-colors border-t border-[#312E81]"
               :aria-label="sidebarOpen ? 'Colapsar menú' : 'Expandir menú'">
@@ -64,6 +99,7 @@
         </svg>
         <span class="text-xs font-medium" x-show="sidebarOpen" x-transition>Colapsar</span>
       </button>
+      {% endif %}
     </aside>
 
     <!-- CONTENIDO PRINCIPAL -->
@@ -71,6 +107,15 @@
 
       <!-- TOPBAR -->
       <header class="flex-shrink-0 bg-white border-b border-[#E5E7EB] h-14 flex items-center px-6 gap-4">
+        {% if _mobile_drawer %}
+        <button @click="sidebarOpen = true"
+                class="lg:hidden -ml-2 p-2 rounded-lg text-[#1F2937] hover:bg-[#F3F4F6] transition-colors"
+                aria-label="Abrir menú">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+        {% endif %}
         <h1 class="text-sm font-semibold text-[#1F2937] flex-1 truncate">{% block page_title %}{% endblock %}</h1>
 
         <div class="flex items-center gap-3">

@@ -6,7 +6,10 @@
   - Sidebar simplificada: 4 ítems
   - Header con saludo personalizado
   - Mascota Tito (robot SVG) en esquina inferior derecha
+  - Sidebar retráctil (drawer) en móvil, fijo en desktop — ver base.html
 #}
+
+{% block sidebar_mode %}mobile-drawer{% endblock %}
 
 {# ── Sidebar links ──────────────────────────────────────────────────────── #}
 {% macro slink(endpoint, label, icon_path, exact=False) %}
