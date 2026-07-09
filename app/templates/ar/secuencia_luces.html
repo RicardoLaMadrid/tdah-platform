@@ -226,5 +226,8 @@ function endGame() {
     })
   }).catch(e => console.error('Error guardando:', e));
 }
+
+// Activar giroscopio en móvil (helper compartido de ar_base.js)
+if (window.initARGyroscope) window.initARGyroscope();
 </script>
 {% endblock %}

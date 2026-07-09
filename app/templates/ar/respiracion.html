@@ -199,5 +199,8 @@ function calculateConsistency() {
   const variance = times.reduce((s, t) => s + Math.pow(t - avg, 2), 0) / times.length;
   return Math.max(0, Math.round(100 - (Math.sqrt(variance) / avg) * 100));
 }
+
+// Activar giroscopio en móvil (helper compartido de ar_base.js)
+if (window.initARGyroscope) window.initARGyroscope();
 </script>
 {% endblock %}

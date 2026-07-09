@@ -1,8 +1,80 @@
 /**
+ * Activa look-controls con magic window (mover el celular mueve la
+ * cámara) en móvil. En móvil, look-controls necesita permiso explícito
+ * de sensores (DeviceOrientationEvent.requestPermission en iOS 13+).
+ * En Android el permiso suele ser implícito, pero igual requerimos una
+ * interacción del usuario como red de seguridad.
+ * Helper global — usado por ARActivity y por las actividades que no
+ * instancian esa clase (secuencia_luces, trail_making, respiracion).
+ */
+window.initARGyroscope = function () {
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  if (!isMobile) {
+    console.log('ℹ️ Desktop detectado — clicks habilitados, giroscopio no aplica');
+    return;
+  }
+
+  const requestPermissionIfNeeded = async () => {
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const response = await DeviceOrientationEvent.requestPermission();
+        return response === 'granted';
+      } catch (err) {
+        console.error('Error solicitando permiso de sensores:', err);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const activateGyroscope = async () => {
+    const granted = await requestPermissionIfNeeded();
+    if (!granted) {
+      console.warn('⚠️ Permiso de sensores denegado');
+      return;
+    }
+
+    // Nota: <a-camera> no tiene id="ar-camera" en ar_layout.html, se
+    // selecciona por tag para no depender de un id que no existe.
+    const camera = document.querySelector('a-camera');
+    if (camera) {
+      camera.setAttribute('look-controls',
+        'enabled: true; ' +
+        'mouseEnabled: false; ' +
+        'touchEnabled: false; ' +
+        'magicWindowTrackingEnabled: true'
+      );
+      console.log('✅ Giroscopio activado en móvil');
+    }
+  };
+
+  const scene = document.querySelector('a-scene');
+  if (!scene) return;
+
+  const setup = () => {
+    activateGyroscope();
+
+    const activateOnTouch = () => {
+      activateGyroscope();
+      document.removeEventListener('touchstart', activateOnTouch);
+      document.removeEventListener('click', activateOnTouch);
+    };
+    document.addEventListener('touchstart', activateOnTouch, { once: true });
+    document.addEventListener('click', activateOnTouch, { once: true });
+  };
+
+  if (scene.hasLoaded) setup();
+  else scene.addEventListener('loaded', setup, { once: true });
+};
+
+/**
  * ARActivity — Motor base para actividades de espacio 3D inmersivo.
  * Reemplaza el paradigma "magic window" con cámara por un entorno espacial completo.
- * Las actividades existentes (caza, secuencia, respiracion, trail_making) usan
- * su propio JS standalone y NO instancian esta clase.
+ * Las actividades existentes (secuencia, respiracion, trail_making) usan
+ * su propio JS standalone y NO instancian esta clase — llaman a
+ * window.initARGyroscope() directamente.
  */
 class ARActivity {
   constructor(config) {
@@ -21,6 +93,7 @@ class ARActivity {
 
     this.initSpaceEnvironment();
     this._bindUI();
+    window.initARGyroscope();
   }
 
   initSpaceEnvironment() {
