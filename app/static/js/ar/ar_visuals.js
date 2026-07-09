@@ -5,6 +5,22 @@
 const ARVisuals = {
 
   /**
+   * El raycaster de A-Frame solo detecta objetos cuyo *propio* object3DMap
+   * tenga geometría (no recorre hijos). Cuando "clickable" se agrega a un
+   * a-entity contenedor (sin geometría propia), el raycaster nunca lo ve
+   * aunque el selector `.clickable` matchee el elemento en el DOM.
+   * Este helper refleja la clase en el hijo que sí tiene la geometría.
+   */
+  _mirrorClickable(wrapper, target) {
+    const sync = () => {
+      if (wrapper.classList.contains('clickable')) target.classList.add('clickable');
+      else target.classList.remove('clickable');
+    };
+    sync();
+    new MutationObserver(sync).observe(wrapper, { attributes: true, attributeFilter: ['class'] });
+  },
+
+  /**
    * Crea el skybox espacial: esfera gigante + estrellas + nebulosas
    */
   createSpaceSkybox(scene) {
@@ -133,6 +149,7 @@ const ARVisuals = {
       `property: rotation; to: 360 720 360; loop: true; ` +
       `dur: ${4000 + Math.random() * 3000}; easing: linear`);
 
+    this._mirrorClickable(asteroid, body);
     return asteroid;
   },
 
@@ -157,6 +174,7 @@ const ARVisuals = {
     halo.setAttribute('look-at', '[camera]');
     planet.appendChild(halo);
 
+    this._mirrorClickable(planet, body);
     return planet;
   },
 
@@ -194,6 +212,7 @@ const ARVisuals = {
     sat.setAttribute('animation__rot',
       'property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear');
 
+    this._mirrorClickable(sat, body);
     return sat;
   },
 
