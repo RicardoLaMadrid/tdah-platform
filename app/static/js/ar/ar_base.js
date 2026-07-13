@@ -271,3 +271,320 @@ class ARActivity {
 window.addEventListener('beforeunload', () => {
   if (window.currentARActivity) window.currentARActivity.cleanup();
 });
+
+/* ========================================================
+   MODO VISOR VR ESTEREOSCÓPICO
+   ======================================================== */
+
+let vrModeTimeoutId = null;
+let vrModeStartTime = null;
+const VR_MODE_MAX_DURATION = 10 * 60 * 1000;  // 10 minutos
+
+/**
+ * Activa el modo visor VR: pantalla dividida en 2, fullscreen, cursor 3D
+ */
+async function toggleVRMode() {
+  const scene = document.querySelector('a-scene');
+  if (!scene) return;
+
+  const isInVR = document.body.classList.contains('vr-mode-active');
+
+  if (isInVR) {
+    exitVRMode();
+  } else {
+    await enterVRMode();
+  }
+}
+
+async function enterVRMode() {
+  const scene = document.querySelector('a-scene');
+  if (!scene) return;
+
+  try {
+    // Activar fullscreen
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      await elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) {
+      await elem.webkitRequestFullscreen();
+    }
+
+    // Bloquear orientación en landscape si es posible
+    if (screen.orientation && screen.orientation.lock) {
+      try {
+        await screen.orientation.lock('landscape');
+      } catch (e) {
+        console.log('No se pudo bloquear orientación:', e.message);
+      }
+    }
+
+    // Marcar body para estilos (ANTES de iniciar el mirror: su loop de
+    // rAF se auto-cancela si esta clase no está presente en el primer tick)
+    document.body.classList.add('vr-mode-active');
+
+    // NOTA: scene.enterVR() de A-Frame requiere un runtime WebXR real
+    // (navigator.xr.requestSession('immersive-vr')). Chrome ya no trae
+    // un fallback "cardboard sin hardware", así que en un celular normal
+    // sin visor con sensores propios esa llamada siempre falla con
+    // NotSupportedError. En su lugar, dividimos la pantalla nosotros
+    // mismos con 2 canvas espejo que copian el frame real (sin paralaje,
+    // pero el giroscopio ya mueve la única cámara real que ambos copian).
+    startStereoMirror();
+
+    // Mostrar botón de salir y timer
+    const exitBtn = document.getElementById('ar-vr-exit');
+    const timer = document.getElementById('ar-vr-timer');
+    if (exitBtn) exitBtn.style.display = 'flex';
+    if (timer) timer.style.display = 'flex';
+
+    // Agregar cursor 3D visible en el centro
+    addVRCursor(scene);
+
+    // Iniciar timer de 10 minutos
+    startVRSessionTimer();
+
+    console.log('✅ Modo Visor VR activado');
+
+  } catch (err) {
+    console.error('Error activando modo VR:', err);
+    alert('No se pudo activar el modo visor. Verifica que tu navegador soporte fullscreen.');
+  }
+}
+
+function exitVRMode() {
+  const scene = document.querySelector('a-scene');
+  if (!scene) return;
+
+  // Salir de fullscreen (solo si seguimos en fullscreen — exitVRMode()
+  // también se llama desde el listener de 'fullscreenchange', donde el
+  // navegador ya salió de fullscreen por su cuenta, p.ej. al presionar ESC)
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(e => console.log('Error saliendo fullscreen:', e));
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+  }
+
+  // Desbloquear orientación
+  if (screen.orientation && screen.orientation.unlock) {
+    screen.orientation.unlock();
+  }
+
+  // Detener el split de canvas espejo
+  stopStereoMirror();
+
+  // Quitar marca del body
+  document.body.classList.remove('vr-mode-active');
+
+  // Ocultar botón de salir y timer
+  const exitBtn = document.getElementById('ar-vr-exit');
+  const timer = document.getElementById('ar-vr-timer');
+  if (exitBtn) exitBtn.style.display = 'none';
+  if (timer) timer.style.display = 'none';
+
+  // Quitar cursor 3D
+  removeVRCursor();
+
+  // Detener timer
+  stopVRSessionTimer();
+
+  console.log('🚪 Modo Visor VR desactivado');
+}
+
+/**
+ * Agrega un cursor 3D fijo en el centro de la vista de la cámara
+ */
+function addVRCursor(scene) {
+  // Eliminar cursor anterior si existe
+  removeVRCursor();
+
+  const camera = document.querySelector('a-camera') || document.querySelector('[camera]');
+  if (!camera) return;
+
+  // Crear cursor 3D como hijo de la cámara (siempre en el centro de la vista)
+  const cursor = document.createElement('a-entity');
+  cursor.setAttribute('id', 'vr-3d-cursor');
+  cursor.setAttribute('position', '0 0 -1.5');  // 1.5m frente a la cámara
+
+  // Anillo exterior
+  const ring = document.createElement('a-ring');
+  ring.setAttribute('radius-inner', '0.02');
+  ring.setAttribute('radius-outer', '0.03');
+  ring.setAttribute('material', 'color: #fbbf24; shader: flat; opacity: 0.9; transparent: true');
+  ring.setAttribute('look-at', '[camera]');
+  cursor.appendChild(ring);
+
+  // Punto central
+  const dot = document.createElement('a-sphere');
+  dot.setAttribute('radius', '0.008');
+  dot.setAttribute('material', 'color: #fbbf24; shader: flat; emissive: #fbbf24; emissiveIntensity: 1');
+  cursor.appendChild(dot);
+
+  camera.appendChild(cursor);
+}
+
+function removeVRCursor() {
+  const cursor = document.getElementById('vr-3d-cursor');
+  if (cursor && cursor.parentNode) {
+    cursor.parentNode.removeChild(cursor);
+  }
+}
+
+/* ========================================================
+   SPLIT VISUAL (2 canvas espejo, sin paralaje)
+   ======================================================== */
+
+let vrMirrorRAF = null;
+let vrMirrorResizeHandler = null;
+let vrMirrorInputAttached = false;
+
+/**
+ * Muestra 2 canvas que copian, frame a frame, el contenido del canvas
+ * real de la escena (que sigue existiendo e interactivo, solo tapado
+ * visualmente por este overlay). No hay paralaje: ambos ojos ven
+ * exactamente la misma imagen, pero el giroscopio ya mueve la única
+ * cámara real que ambos copian, así que la vista sí reacciona al
+ * mover la cabeza/celular.
+ */
+function startStereoMirror() {
+  const scene = document.querySelector('a-scene');
+  const realCanvas = scene && scene.canvas;
+  const container   = document.getElementById('ar-vr-stereo-container');
+  const leftCanvas  = document.getElementById('ar-vr-mirror-left');
+  const rightCanvas = document.getElementById('ar-vr-mirror-right');
+  if (!realCanvas || !container || !leftCanvas || !rightCanvas) return;
+
+  container.style.display = 'flex';
+
+  const syncSize = () => {
+    [leftCanvas, rightCanvas].forEach(c => {
+      c.width  = c.clientWidth  * (window.devicePixelRatio || 1);
+      c.height = c.clientHeight * (window.devicePixelRatio || 1);
+    });
+  };
+  syncSize();
+  vrMirrorResizeHandler = syncSize;
+  window.addEventListener('resize', vrMirrorResizeHandler);
+
+  const leftCtx  = leftCanvas.getContext('2d');
+  const rightCtx = rightCanvas.getContext('2d');
+
+  const draw = () => {
+    if (!document.body.classList.contains('vr-mode-active')) return;
+    try {
+      leftCtx.drawImage(realCanvas, 0, 0, leftCanvas.width, leftCanvas.height);
+      rightCtx.drawImage(realCanvas, 0, 0, rightCanvas.width, rightCanvas.height);
+    } catch (e) {
+      // El primer frame puede no estar listo todavía; se reintenta solo
+    }
+    vrMirrorRAF = requestAnimationFrame(draw);
+  };
+  draw();
+
+  attachMirrorInputForwarding(realCanvas, [leftCanvas, rightCanvas]);
+}
+
+function stopStereoMirror() {
+  const container = document.getElementById('ar-vr-stereo-container');
+  if (container) container.style.display = 'none';
+
+  if (vrMirrorRAF) {
+    cancelAnimationFrame(vrMirrorRAF);
+    vrMirrorRAF = null;
+  }
+  if (vrMirrorResizeHandler) {
+    window.removeEventListener('resize', vrMirrorResizeHandler);
+    vrMirrorResizeHandler = null;
+  }
+}
+
+/**
+ * El raycaster de A-Frame ("cursor rayOrigin: mouse") escucha eventos
+ * de mouse sobre el canvas REAL. Como visualmente ese canvas queda
+ * tapado por los 2 espejos, un click ahí nunca llegaría al canvas real.
+ * Esta función reenvía cada evento recibido en un espejo hacia el
+ * canvas real, traduciendo la posición proporcionalmente (cada espejo
+ * muestra una copia completa de la vista, no una mitad recortada).
+ */
+function attachMirrorInputForwarding(realCanvas, mirrorCanvases) {
+  if (vrMirrorInputAttached) return;
+  vrMirrorInputAttached = true;
+
+  const forward = (type) => (e) => {
+    if (!document.body.classList.contains('vr-mode-active')) return;
+
+    const mirror     = e.currentTarget;
+    const mirrorRect = mirror.getBoundingClientRect();
+    const realRect    = realCanvas.getBoundingClientRect();
+
+    const relX = (e.clientX - mirrorRect.left) / mirrorRect.width;
+    const relY = (e.clientY - mirrorRect.top)  / mirrorRect.height;
+
+    const evt = new MouseEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      clientX: realRect.left + relX * realRect.width,
+      clientY: realRect.top  + relY * realRect.height,
+      button: e.button,
+      buttons: e.buttons,
+    });
+    realCanvas.dispatchEvent(evt);
+  };
+
+  mirrorCanvases.forEach(mirror => {
+    ['mousemove', 'mousedown', 'mouseup', 'click'].forEach(type => {
+      mirror.addEventListener(type, forward(type));
+    });
+  });
+}
+
+/**
+ * Timer de sesión VR con countdown visual
+ */
+function startVRSessionTimer() {
+  vrModeStartTime = Date.now();
+  updateVRTimerDisplay();
+
+  vrModeTimeoutId = setInterval(() => {
+    updateVRTimerDisplay();
+
+    const elapsed = Date.now() - vrModeStartTime;
+    if (elapsed >= VR_MODE_MAX_DURATION) {
+      alert('⏱ Tiempo máximo de sesión alcanzado (10 min). Salir del visor para descansar la vista.');
+      exitVRMode();
+    }
+  }, 1000);
+}
+
+function updateVRTimerDisplay() {
+  const timerEl = document.getElementById('ar-vr-timer-value');
+  if (!timerEl || !vrModeStartTime) return;
+
+  const elapsed = Date.now() - vrModeStartTime;
+  const remaining = Math.max(0, VR_MODE_MAX_DURATION - elapsed);
+
+  const minutes = Math.floor(remaining / 60000);
+  const seconds = Math.floor((remaining % 60000) / 1000);
+  timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function stopVRSessionTimer() {
+  if (vrModeTimeoutId) {
+    clearInterval(vrModeTimeoutId);
+    vrModeTimeoutId = null;
+  }
+  vrModeStartTime = null;
+}
+
+// Detectar salida forzada de fullscreen (usuario presionó ESC)
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && document.body.classList.contains('vr-mode-active')) {
+    exitVRMode();
+  }
+});
+
+// Exponer globalmente para que otras actividades puedan usarlo
+window.toggleVRMode = toggleVRMode;
+window.enterVRMode = enterVRMode;
+window.exitVRMode = exitVRMode;
