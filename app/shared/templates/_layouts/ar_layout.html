@@ -11,6 +11,23 @@
 
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <script src="https://unpkg.com/aframe-look-at-component@1.0.0/dist/aframe-look-at-component.min.js"></script>
+  <script>
+    // A-Frame 1.4.0 no expone preserveDrawingBuffer en el atributo
+    // `renderer=`. Sin él, el canvas WebGL no se puede leer vía
+    // drawImage/toDataURL (necesario para el split visual del Modo
+    // Visor). Forzamos el flag en el constructor de THREE.WebGLRenderer
+    // antes de que A-Frame cree su renderer — no toca el resto de la
+    // escena, el raycaster ni la lógica del juego.
+    (function () {
+      var OriginalWebGLRenderer = AFRAME.THREE.WebGLRenderer;
+      AFRAME.THREE.WebGLRenderer = function (params) {
+        params = params || {};
+        params.preserveDrawingBuffer = true;
+        return new OriginalWebGLRenderer(params);
+      };
+      AFRAME.THREE.WebGLRenderer.prototype = OriginalWebGLRenderer.prototype;
+    })();
+  </script>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/ar.css') }}">
@@ -34,6 +51,29 @@
     <span class="ar-exit-icon">✕</span>
     <span class="ar-exit-text">Salir</span>
   </button>
+
+  {# Botón para activar modo visor VR #}
+  <button id="ar-vr-toggle" class="ar-vr-toggle"
+          onclick="toggleVRMode()"
+          aria-label="Activar modo visor VR">
+    <span class="ar-vr-icon">🥽</span>
+    <span class="ar-vr-text">Modo Visor</span>
+  </button>
+
+  {# Botón grande para salir de modo visor (aparece solo en modo VR) #}
+  <button id="ar-vr-exit" class="ar-vr-exit"
+          onclick="exitVRMode()"
+          style="display: none;"
+          aria-label="Salir del modo visor">
+    <span class="ar-vr-exit-icon">✕</span>
+    <span class="ar-vr-exit-text">Salir del Visor</span>
+  </button>
+
+  {# Indicador de tiempo restante en modo visor #}
+  <div id="ar-vr-timer" class="ar-vr-timer" style="display: none;">
+    <span class="ar-vr-timer-icon">⏱</span>
+    <span id="ar-vr-timer-value">10:00</span>
+  </div>
 
   {# HUD de stats durante la actividad #}
   <div id="ar-hud" class="ar-hud">
@@ -83,7 +123,7 @@
            vr-mode-ui="enabled: false"
            xr-mode-ui="enabled: false"
            device-orientation-permission-ui="enabled: false"
-           renderer="alpha: true; antialias: true; logarithmicDepthBuffer: true; colorManagement: true"
+           renderer="alpha: true; antialias: true; logarithmicDepthBuffer: true; colorManagement: true; preserveDrawingBuffer: true"
            background="color: transparent">
 
     <a-camera position="0 1.6 0"
@@ -100,6 +140,14 @@
     {% block ar_scene_content %}{% endblock %}
 
   </a-scene>
+
+  {# Modo Visor: 2 canvas espejo que copian el frame de la escena real.
+     Sin paralaje (mismo contenido en ambos), pero el giroscopio ya
+     mueve la cámara real, así que ambos ojos ven la vista actualizarse. #}
+  <div id="ar-vr-stereo-container" class="ar-vr-stereo-container" style="display: none;">
+    <canvas id="ar-vr-mirror-left" class="ar-vr-mirror-canvas ar-vr-mirror-left"></canvas>
+    <canvas id="ar-vr-mirror-right" class="ar-vr-mirror-canvas ar-vr-mirror-right"></canvas>
+  </div>
 
 </div>
 
