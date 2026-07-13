@@ -674,3 +674,133 @@ a-scene {
 
   .ar-tutorial { padding: 1.5rem 1rem 2rem; }
 }
+
+/* ========================================================
+   MODO VISOR VR (estereoscópico)
+   ======================================================== */
+
+/* Botón para activar modo visor */
+.ar-vr-toggle {
+  position: absolute;
+  top: 1rem;
+  right: 5.5rem;  /* al lado del botón de salir */
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: rgba(139, 92, 246, 0.9);  /* violeta */
+  color: white;
+  padding: 0.625rem 1.25rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.4);
+  touch-action: manipulation;
+}
+
+.ar-vr-toggle:hover, .ar-vr-toggle:active {
+  background: rgba(139, 92, 246, 1);
+  transform: scale(1.05);
+}
+
+/* En móvil, solo el ícono */
+@media (max-width: 640px) {
+  .ar-vr-toggle {
+    right: 3.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+  .ar-vr-text {
+    display: none;
+  }
+}
+
+/* Cuando el body está en modo VR */
+body.vr-mode-active {
+  background: #000 !important;
+  overflow: hidden;
+}
+
+body.vr-mode-active .ar-hud,
+body.vr-mode-active .ar-exit-btn,
+body.vr-mode-active .ar-vr-toggle,
+body.vr-mode-active .ar-instructions,
+body.vr-mode-active .ar-tutorial {
+  display: none !important;
+}
+
+/* Botón grande de salir en modo VR (visible en ambas mitades) */
+.ar-vr-exit {
+  position: fixed;
+  top: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(220, 38, 38, 0.95);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  border: 2px solid white;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Indicador de tiempo en modo visor */
+.ar-vr-timer {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(10, 14, 39, 0.85);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  font-family: monospace;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+
+.ar-vr-timer-icon {
+  color: #fbbf24;
+}
+
+/* Cursor 3D visible en modo VR */
+.ar-vr-cursor {
+  fill: white;
+  fill-opacity: 0.8;
+  stroke: white;
+  stroke-width: 2;
+}
+
+/* Contenedor de las 2 mitades espejo (split visual, sin paralaje) */
+.ar-vr-stereo-container {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  background: #000;
+}
+
+.ar-vr-mirror-canvas {
+  width: 50%;
+  height: 100%;
+  display: block;
+  background: #000;
+}
+
+.ar-vr-mirror-left {
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
