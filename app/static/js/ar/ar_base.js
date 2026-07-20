@@ -337,19 +337,19 @@ async function enterVRMode() {
     if (exitBtn) exitBtn.style.display = 'flex';
     if (timer) timer.style.display = 'flex';
 
-    // Agregar cursor 3D visible en el centro
-    addVRCursor(scene);
-
     // Iniciar timer de 10 minutos
     startVRSessionTimer();
 
     // Habilitar interceptor de volumen del mando como click
     enableVRVolumeClick();
 
+    // Activar cursores sintéticos (uno por ojo)
+    enableVRCursors();
+
     // Mostrar hint sobre el mando por 3 segundos
     const hint = document.createElement('div');
     hint.className = 'ar-vr-hint';
-    hint.innerHTML = '🎮 Usa <strong>V+ del mando</strong> para cazar';
+    hint.innerHTML = '🎮 Mové con joystick · <strong>V+</strong> para cazar';
     document.body.appendChild(hint);
     setTimeout(() => hint.remove(), 3000);
 
@@ -367,6 +367,9 @@ function exitVRMode() {
 
   // Deshabilitar interceptor de volumen del mando
   disableVRVolumeClick();
+
+  // Desactivar cursores sintéticos
+  disableVRCursors();
 
   // Salir de fullscreen (solo si seguimos en fullscreen — exitVRMode()
   // también se llama desde el listener de 'fullscreenchange', donde el
@@ -395,9 +398,6 @@ function exitVRMode() {
   const timer = document.getElementById('ar-vr-timer');
   if (exitBtn) exitBtn.style.display = 'none';
   if (timer) timer.style.display = 'none';
-
-  // Quitar cursor 3D
-  removeVRCursor();
 
   // Detener timer
   stopVRSessionTimer();
@@ -494,44 +494,83 @@ window.enableVRVolumeClick = enableVRVolumeClick;
 window.disableVRVolumeClick = disableVRVolumeClick;
 window.triggerVRClick = triggerVRClick;
 
+/* ========================================================
+   CURSORES SINTÉTICOS PARA MODO VR
+   Dibuja un cursor visible en cada ojo, siguiendo la posición
+   del mouse del sistema (movido por el joystick del mando VR).
+   Reemplaza al cursor del sistema (que solo se ve en un ojo y
+   es la flechita negra de Android).
+   ======================================================== */
+
+let vrCursorHandlerActive = false;
+
+function enableVRCursors() {
+  if (vrCursorHandlerActive) return;
+  vrCursorHandlerActive = true;
+
+  const leftCursor = document.getElementById('vr-cursor-left');
+  const rightCursor = document.getElementById('vr-cursor-right');
+
+  if (leftCursor) leftCursor.style.display = 'block';
+  if (rightCursor) rightCursor.style.display = 'block';
+
+  document.addEventListener('mousemove', updateVRCursors, true);
+
+  // Inicializar en el centro
+  positionVRCursors(window.innerWidth / 2, window.innerHeight / 2);
+
+  console.log('🎯 Cursores sintéticos VR activados');
+}
+
+function disableVRCursors() {
+  if (!vrCursorHandlerActive) return;
+  vrCursorHandlerActive = false;
+
+  const leftCursor = document.getElementById('vr-cursor-left');
+  const rightCursor = document.getElementById('vr-cursor-right');
+
+  if (leftCursor) leftCursor.style.display = 'none';
+  if (rightCursor) rightCursor.style.display = 'none';
+
+  document.removeEventListener('mousemove', updateVRCursors, true);
+  console.log('🎯 Cursores sintéticos VR desactivados');
+}
+
+function updateVRCursors(event) {
+  // Solo activo en modo VR
+  if (!document.body.classList.contains('vr-mode-active')) return;
+
+  positionVRCursors(event.clientX, event.clientY);
+}
+
 /**
- * Agrega un cursor 3D fijo en el centro de la vista de la cámara
+ * Coloca los 2 cursores. Cada ojo ocupa la mitad (50%) de la pantalla;
+ * mostramos el cursor en la posición equivalente dentro de cada mitad,
+ * sin importar en qué mitad esté el mouse del sistema.
  */
-function addVRCursor(scene) {
-  // Eliminar cursor anterior si existe
-  removeVRCursor();
+function positionVRCursors(x, y) {
+  const leftCursor = document.getElementById('vr-cursor-left');
+  const rightCursor = document.getElementById('vr-cursor-right');
+  if (!leftCursor || !rightCursor) return;
 
-  const camera = document.querySelector('a-camera') || document.querySelector('[camera]');
-  if (!camera) return;
+  const halfWidth = window.innerWidth / 2;
 
-  // Crear cursor 3D como hijo de la cámara (siempre en el centro de la vista)
-  const cursor = document.createElement('a-entity');
-  cursor.setAttribute('id', 'vr-3d-cursor');
-  cursor.setAttribute('position', '0 0 -1.5');  // 1.5m frente a la cámara
-
-  // Anillo exterior
-  const ring = document.createElement('a-ring');
-  ring.setAttribute('radius-inner', '0.02');
-  ring.setAttribute('radius-outer', '0.03');
-  ring.setAttribute('material', 'color: #fbbf24; shader: flat; opacity: 0.9; transparent: true');
-  ring.setAttribute('look-at', '[camera]');
-  cursor.appendChild(ring);
-
-  // Punto central
-  const dot = document.createElement('a-sphere');
-  dot.setAttribute('radius', '0.008');
-  dot.setAttribute('material', 'color: #fbbf24; shader: flat; emissive: #fbbf24; emissiveIntensity: 1');
-  cursor.appendChild(dot);
-
-  camera.appendChild(cursor);
-}
-
-function removeVRCursor() {
-  const cursor = document.getElementById('vr-3d-cursor');
-  if (cursor && cursor.parentNode) {
-    cursor.parentNode.removeChild(cursor);
+  if (x < halfWidth) {
+    // Mouse en la mitad izquierda: X real ya cae en el ojo izquierdo
+    leftCursor.style.left = x + 'px';
+    rightCursor.style.left = (x + halfWidth) + 'px';
+  } else {
+    // Mouse en la mitad derecha: X real ya cae en el ojo derecho
+    leftCursor.style.left = (x - halfWidth) + 'px';
+    rightCursor.style.left = x + 'px';
   }
+  leftCursor.style.top = y + 'px';
+  rightCursor.style.top = y + 'px';
 }
+
+// Exponer para debugging
+window.enableVRCursors = enableVRCursors;
+window.disableVRCursors = disableVRCursors;
 
 /* ========================================================
    SPLIT VISUAL (2 canvas espejo, sin paralaje)
