@@ -804,3 +804,27 @@ body.vr-mode-active .ar-tutorial {
 .ar-vr-mirror-left {
   border-right: 1px solid rgba(255, 255, 255, 0.15);
 }
+
+/* Hint del mando VR (aparece 3s al entrar en modo visor) */
+.ar-vr-hint {
+  position: fixed;
+  top: 4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: rgba(139, 92, 246, 0.95);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  animation: ar-hint-fade 3s ease-in-out forwards;
+}
+
+@keyframes ar-hint-fade {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  85%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+}
