@@ -805,6 +805,29 @@ body.vr-mode-active .ar-tutorial {
   border-right: 1px solid rgba(255, 255, 255, 0.15);
 }
 
+/* Cursor sintético para modo VR — visible en cada ojo */
+.vr-eye-cursor {
+  position: fixed;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 191, 36, 1) 0%, rgba(255, 191, 36, 0.6) 60%, rgba(255, 191, 36, 0) 100%);
+  border: 2px solid white;
+  pointer-events: none;
+  z-index: 999;
+  transform: translate(-50%, -50%);
+  box-shadow:
+    0 0 12px rgba(255, 191, 36, 0.8),
+    0 0 24px rgba(255, 191, 36, 0.4);
+  transition: none;
+}
+
+/* Ocultar cursor del sistema en modo VR */
+body.vr-mode-active,
+body.vr-mode-active * {
+  cursor: none !important;
+}
+
 /* Hint del mando VR (aparece 3s al entrar en modo visor) */
 .ar-vr-hint {
   position: fixed;
