@@ -343,6 +343,16 @@ async function enterVRMode() {
     // Iniciar timer de 10 minutos
     startVRSessionTimer();
 
+    // Habilitar interceptor de volumen del mando como click
+    enableVRVolumeClick();
+
+    // Mostrar hint sobre el mando por 3 segundos
+    const hint = document.createElement('div');
+    hint.className = 'ar-vr-hint';
+    hint.innerHTML = '🎮 Usa <strong>V+ del mando</strong> para cazar';
+    document.body.appendChild(hint);
+    setTimeout(() => hint.remove(), 3000);
+
     console.log('✅ Modo Visor VR activado');
 
   } catch (err) {
@@ -354,6 +364,9 @@ async function enterVRMode() {
 function exitVRMode() {
   const scene = document.querySelector('a-scene');
   if (!scene) return;
+
+  // Deshabilitar interceptor de volumen del mando
+  disableVRVolumeClick();
 
   // Salir de fullscreen (solo si seguimos en fullscreen — exitVRMode()
   // también se llama desde el listener de 'fullscreenchange', donde el
@@ -391,6 +404,95 @@ function exitVRMode() {
 
   console.log('🚪 Modo Visor VR desactivado');
 }
+
+/* ========================================================
+   INTERCEPCIÓN DE TECLAS DE VOLUMEN COMO CLICK EN MODO VR
+   Para mandos VR que solo mandan media keys (DESTEK V5 y similares)
+   ======================================================== */
+
+let vrVolumeHandlerActive = false;
+let lastVolumeClickTime = 0;
+const VOLUME_CLICK_COOLDOWN = 200; // ms para evitar dobles clicks
+
+/**
+ * Activa la intercepción de volumen como click.
+ * Se llama automáticamente al entrar en modo VR.
+ */
+function enableVRVolumeClick() {
+  if (vrVolumeHandlerActive) return;
+  vrVolumeHandlerActive = true;
+
+  document.addEventListener('keydown', handleVRVolumeKey, true);
+  console.log('🎮 Volumen del mando VR habilitado como click');
+}
+
+function disableVRVolumeClick() {
+  if (!vrVolumeHandlerActive) return;
+  vrVolumeHandlerActive = false;
+
+  document.removeEventListener('keydown', handleVRVolumeKey, true);
+  console.log('🎮 Volumen del mando VR deshabilitado');
+}
+
+function handleVRVolumeKey(event) {
+  // Solo interceptar si estamos en modo VR
+  if (!document.body.classList.contains('vr-mode-active')) return;
+
+  const isVolumeUp = event.key === 'AudioVolumeUp'
+                  || event.code === 'AudioVolumeUp'
+                  || event.keyCode === 175;
+
+  const isVolumeDown = event.key === 'AudioVolumeDown'
+                    || event.code === 'AudioVolumeDown'
+                    || event.keyCode === 174;
+
+  if (!isVolumeUp && !isVolumeDown) return;
+
+  // Prevenir cambio de volumen del sistema
+  event.preventDefault();
+  event.stopPropagation();
+
+  // Cooldown para evitar dobles clicks accidentales
+  const now = Date.now();
+  if (now - lastVolumeClickTime < VOLUME_CLICK_COOLDOWN) return;
+  lastVolumeClickTime = now;
+
+  // Tanto V+ como V- disparan click (cazar / seleccionar)
+  triggerVRClick();
+}
+
+/**
+ * Dispara un click sobre el objeto que el raycaster está apuntando.
+ *
+ * Nota de arquitectura (ver ar_layout.html): el cursor/raycaster
+ * ("rayOrigin: mouse") es HERMANO de <a-camera>, no hijo, y sigue al
+ * cursor del SISTEMA (que el joystick del mando mueve), no al cursor 3D
+ * dorado central (que es solo visual). Por eso apuntamos con lo que el
+ * raycaster tiene intersectado en este instante.
+ */
+function triggerVRClick() {
+  const rayEl = document.querySelector('[raycaster]');
+  const raycaster = rayEl && rayEl.components && rayEl.components.raycaster;
+  const hits = raycaster && raycaster.intersectedEls;
+
+  if (hits && hits.length > 0) {
+    // El objeto más cercano bajo el rayo. Emitimos con bubbles: true
+    // porque el listener de click suele estar en el wrapper padre
+    // mientras que el raycaster intersecta el hijo con geometría
+    // (ver ARVisuals.syncClickable en ar_visuals.js).
+    const target = hits[0];
+    console.log('🎯 Click VR sobre:', target.tagName, target.className);
+    target.emit('click', {}, true);
+    return;
+  }
+
+  console.log('🎯 Click VR: sin objeto bajo el cursor del mando');
+}
+
+// Exponer para debugging desde consola
+window.enableVRVolumeClick = enableVRVolumeClick;
+window.disableVRVolumeClick = disableVRVolumeClick;
+window.triggerVRClick = triggerVRClick;
 
 /**
  * Agrega un cursor 3D fijo en el centro de la vista de la cámara
