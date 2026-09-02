@@ -1,0 +1,61 @@
+/* ============================================================
+   Instrucciones de actividad — salida del filtro format_instructions.
+   Se carga global desde base.html; solo aplica dentro de
+   .instrucciones-formateadas, así que no afecta otras listas.
+   ============================================================ */
+
+.instrucciones-formateadas ol {
+  counter-reset: paso;
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.instrucciones-formateadas ol li {
+  counter-increment: paso;
+  position: relative;
+  padding-left: 3rem;
+  padding-bottom: 1rem;
+  min-height: 2.5rem;
+  line-height: 1.65;
+  color: #374151;
+}
+
+.instrucciones-formateadas ol li:last-child {
+  padding-bottom: 0;
+}
+
+.instrucciones-formateadas ol li::before {
+  content: counter(paso);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2rem;
+  height: 2rem;
+  background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.3);
+}
+
+/* Fallback sin pasos numerados */
+.instrucciones-formateadas p {
+  color: #374151;
+}
+
+.instrucciones-formateadas p:last-child {
+  margin-bottom: 0;
+}
+
+@media print {
+  .instrucciones-formateadas ol li::before {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

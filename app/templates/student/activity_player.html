@@ -57,7 +57,9 @@
 
   <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-6 text-left">
     <h5 class="font-bold text-[#1F2937] mb-3">Instrucciones:</h5>
-    <pre class="text-sm text-[#374151] whitespace-pre-line leading-relaxed">{{ activity.instructions }}</pre>
+    <div class="instrucciones-formateadas text-sm">
+      {{ activity.instructions|format_instructions }}
+    </div>
   </div>
 
   {% if activity.ar_content and activity.ar_content.enabled %}

@@ -51,6 +51,9 @@ def create_app(config_name='development'):
         from app.shared.context_processors import register_context_processors
         register_context_processors(app)
 
+        from app.shared.filters import register_filters
+        register_filters(app)
+
         @app.route('/favicon.ico')
         def favicon():
             from flask import send_from_directory

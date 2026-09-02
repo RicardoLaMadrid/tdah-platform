@@ -26,7 +26,9 @@
       {# Instrucciones #}
       <div>
         <h5 class="font-bold text-[#1F2937] mb-2">Instrucciones</h5>
-        <pre class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-[#374151] whitespace-pre-line leading-relaxed">{{ activity.instructions }}</pre>
+        <div class="instrucciones-formateadas bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm">
+          {{ activity.instructions|format_instructions }}
+        </div>
       </div>
 
       <hr class="border-slate-200">
