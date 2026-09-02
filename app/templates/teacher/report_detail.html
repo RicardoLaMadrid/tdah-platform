@@ -1,0 +1,182 @@
+{% extends '_layouts/teacher_layout.html' %}
+
+{% block title %}Reporte de {{ student.get_display_name() }}{% endblock %}
+{% block page_title %}Reporte pedagógico{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/reporte.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="reporte-container">
+
+  <!-- ── Header institucional ── -->
+  <div class="reporte-header">
+    <div class="reporte-header-content">
+      <div class="reporte-institucion">
+        <div class="reporte-logo" aria-hidden="true">📚</div>
+        <div>
+          <div class="reporte-institucion-nombre">TDAH Platform</div>
+          <div class="reporte-institucion-sub">Sistema de Apoyo Pedagógico</div>
+        </div>
+      </div>
+      <div class="reporte-fecha">
+        📅 {{ report.created_at.strftime('%d/%m/%Y') if report.created_at else 'Sin fecha' }}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Card estudiante ── -->
+  <div class="reporte-card reporte-estudiante-card">
+    <div class="reporte-card-title">
+      <span aria-hidden="true">👤</span>
+      <span>Estudiante evaluado</span>
+    </div>
+    <div class="reporte-estudiante-info">
+      <div class="reporte-avatar" aria-hidden="true">
+        {{ student.get_display_name()[0]|upper }}
+      </div>
+      <div class="reporte-estudiante-datos">
+        <div class="reporte-estudiante-nombre">{{ student.get_display_name() }}</div>
+        <div class="reporte-estudiante-meta">
+          {% if student.age %}<span>🎂 {{ student.age }} años</span>{% endif %}
+          {% if student.age and student.grade %}<span>·</span>{% endif %}
+          {% if student.grade %}
+            <span>🎓 {{ student.grade }}{% if student.section %} «{{ student.section }}»{% endif %}</span>
+          {% endif %}
+          {% if report.session and report.session.activity %}
+            <span>·</span><span>🎯 {{ report.session.activity.title }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Métricas destacadas ── -->
+  <div class="reporte-metricas-grid">
+    <div class="reporte-metrica-card reporte-perfil-{{ perfil_slug|replace('_', '-') }}">
+      <div class="reporte-metrica-icon" aria-hidden="true">🎯</div>
+      <div class="reporte-metrica-label">Perfil identificado</div>
+      <div class="reporte-metrica-value">{{ perfil_label }}</div>
+    </div>
+    <div class="reporte-metrica-card">
+      <div class="reporte-metrica-icon" aria-hidden="true">📊</div>
+      <div class="reporte-metrica-label">Confianza</div>
+      <div class="reporte-metrica-value">{% if confianza %}{{ confianza }}%{% else %}—{% endif %}</div>
+    </div>
+    <div class="reporte-metrica-card">
+      <div class="reporte-metrica-icon" aria-hidden="true">⏱️</div>
+      <div class="reporte-metrica-label">Sesiones</div>
+      <div class="reporte-metrica-value">{{ num_sesiones or 0 }}</div>
+    </div>
+  </div>
+
+  <!-- ── Contenido del reporte ── -->
+  <div class="reporte-card">
+    <div class="reporte-card-title">
+      <span aria-hidden="true">📝</span>
+      <span>Resumen ejecutivo y observaciones</span>
+    </div>
+    <div class="reporte-card-content">{{ report.content or 'Sin contenido registrado.' }}</div>
+  </div>
+
+  {% if report.recommendations %}
+  <div class="reporte-card reporte-card-highlight">
+    <div class="reporte-card-title">
+      <span aria-hidden="true">💡</span>
+      <span>Recomendaciones pedagógicas</span>
+    </div>
+    <div class="reporte-card-content">{{ report.recommendations }}</div>
+  </div>
+  {% endif %}
+
+  {% if report.parent_comments %}
+  <div class="reporte-card">
+    <div class="reporte-card-title">
+      <span aria-hidden="true">🏠</span>
+      <span>Punto de vista del tutor</span>
+    </div>
+    <div class="reporte-card-content">{{ report.parent_comments }}</div>
+  </div>
+  {% endif %}
+
+  <!-- ── Disclaimer ── -->
+  <div class="reporte-disclaimer">
+    <div class="reporte-disclaimer-icon" aria-hidden="true">⚠️</div>
+    <div>
+      <strong>Aviso importante:</strong> Este reporte es una herramienta
+      de tamizaje orientativo y NO constituye diagnóstico clínico. Los
+      resultados deben ser interpretados por profesionales especializados
+      en salud mental infantil. Ante indicadores significativos, se
+      recomienda derivación a psicopedagogía o psiquiatría infantil.
+    </div>
+  </div>
+
+  <!-- ── Footer ── -->
+  <div class="reporte-footer">
+    <div class="reporte-firma">
+      <div class="reporte-firma-linea"></div>
+      <div class="reporte-firma-nombre">{{ report.teacher.username if report.teacher else current_user.username }}</div>
+      <div class="reporte-firma-cargo">Docente responsable</div>
+    </div>
+    <div class="reporte-generado">
+      🤖 Asistido por Claude Haiku 4.5 · Anthropic
+    </div>
+  </div>
+
+  <!-- ── Acciones ── -->
+  <div class="reporte-actions">
+    <a class="reporte-btn reporte-btn-primary"
+       href="{{ url_for('teacher.report_pdf', report_id=report.id) }}">
+      📄 Descargar PDF
+    </a>
+    <button type="button" class="reporte-btn reporte-btn-secondary"
+            id="reporte-whatsapp-btn" onclick="enviarWhatsApp()">
+      💬 Enviar por WhatsApp
+    </button>
+    <a class="reporte-btn reporte-btn-outline"
+       href="{{ url_for('teacher.reports') }}">
+      ← Volver a reportes
+    </a>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const WHATSAPP_URL = '{{ url_for("teacher.report_send_whatsapp", report_id=report.id) }}';
+
+async function enviarWhatsApp() {
+  const btn = document.getElementById('reporte-whatsapp-btn');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    const resp = await fetch(WHATSAPP_URL, { method: 'POST' });
+    const data = await resp.json();
+    if (!resp.ok || !data.success) throw new Error(data.error || 'Error desconocido');
+    mostrarAviso(data.message || 'Notificación enviada al tutor ✓');
+  } catch (err) {
+    mostrarAviso('No se pudo enviar: ' + err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+function mostrarAviso(msg, esError) {
+  const aviso = document.createElement('div');
+  aviso.className = 'fixed top-4 right-4 z-50 px-4 py-2.5 text-white text-sm font-medium rounded-xl shadow-lg';
+  aviso.style.background = esError ? '#DC2626' : '#059669';
+  aviso.textContent = msg;
+  document.body.appendChild(aviso);
+  setTimeout(() => {
+    aviso.style.transition = 'opacity 0.3s';
+    aviso.style.opacity = '0';
+    setTimeout(() => aviso.remove(), 300);
+  }, 3000);
+}
+</script>
+{% endblock %}

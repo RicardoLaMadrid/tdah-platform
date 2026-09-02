@@ -1,0 +1,443 @@
+/* ============================================================
+   REPORTE PEDAGÓGICO — Estilo dashboard institucional
+   Se carga solo en teacher/report_detail.html (block extra_css).
+   Pensado para verse bien en pantalla Y en impresión (PDF via
+   window.print()), por eso todo el bloque @media print al final.
+   ============================================================ */
+
+.reporte-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding-bottom: 2.5rem;
+  color: #1F2937;
+}
+
+/* ── Header institucional ───────────────────────────────── */
+
+.reporte-header {
+  background: linear-gradient(135deg, #4C1D95 0%, #6D28D9 45%, #A78BFA 100%);
+  border-radius: 1rem 1rem 0 0;
+  padding: 1.75rem 1.75rem 1.5rem;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Franja dorada inferior — el acento institucional */
+.reporte-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #F59E0B 0%, #FCD34D 50%, #F59E0B 100%);
+}
+
+.reporte-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.reporte-institucion {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.reporte-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 0.875rem;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.reporte-institucion-nombre {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.reporte-institucion-sub {
+  font-size: 0.8125rem;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 0.125rem;
+}
+
+.reporte-fecha {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ── Cards genéricas ────────────────────────────────────── */
+
+.reporte-card {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 1rem;
+  padding: 1.375rem 1.5rem;
+  margin-top: 1rem;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+}
+
+/* La primera card se pega al header para leerse como una sola pieza */
+.reporte-estudiante-card {
+  margin-top: 0;
+  border-radius: 0 0 1rem 1rem;
+  border-top: none;
+}
+
+.reporte-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6B7280;
+  margin-bottom: 0.875rem;
+}
+
+.reporte-card-content {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: #374151;
+  /* El contenido viene de un textarea: saltos de línea y bullets "•"
+     ya vienen en el texto, así que los respetamos tal cual. */
+  white-space: pre-line;
+}
+
+/* Card destacada (recomendaciones) */
+.reporte-card-highlight {
+  border-left: 4px solid #6D28D9;
+  background: linear-gradient(180deg, #FAF5FF 0%, #FFFFFF 55%);
+}
+
+/* ── Card estudiante ────────────────────────────────────── */
+
+.reporte-estudiante-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.reporte-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6D28D9 0%, #A78BFA 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.28);
+}
+
+.reporte-estudiante-nombre {
+  font-size: 1.1875rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.25;
+}
+
+.reporte-estudiante-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  color: #6B7280;
+  margin-top: 0.25rem;
+}
+
+/* ── Grid de métricas ───────────────────────────────────── */
+
+.reporte-metricas-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.875rem;
+  margin-top: 1rem;
+}
+
+.reporte-metrica-card {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-top: 3px solid #9CA3AF;
+  border-radius: 0.875rem;
+  padding: 1.125rem 1rem;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+}
+
+.reporte-metrica-icon {
+  font-size: 1.375rem;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.reporte-metrica-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9CA3AF;
+}
+
+.reporte-metrica-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 0.3rem;
+  line-height: 1.3;
+}
+
+/* Color por perfil TDAH detectado.
+   Los slugs salen de Student.tdah_type: typical | inatento |
+   hiperactivo | combinado | sin_determinar */
+
+.reporte-perfil-inatento {
+  border-top-color: #2563EB;
+  background: linear-gradient(180deg, #EFF6FF 0%, #FFFFFF 70%);
+}
+.reporte-perfil-inatento .reporte-metrica-value { color: #1D4ED8; }
+
+.reporte-perfil-hiperactivo {
+  border-top-color: #DC2626;
+  background: linear-gradient(180deg, #FEF2F2 0%, #FFFFFF 70%);
+}
+.reporte-perfil-hiperactivo .reporte-metrica-value { color: #B91C1C; }
+
+.reporte-perfil-combinado {
+  border-top-color: #EA580C;
+  background: linear-gradient(180deg, #FFF7ED 0%, #FFFFFF 70%);
+}
+.reporte-perfil-combinado .reporte-metrica-value { color: #C2410C; }
+
+.reporte-perfil-typical,
+.reporte-perfil-tipico {
+  border-top-color: #059669;
+  background: linear-gradient(180deg, #ECFDF5 0%, #FFFFFF 70%);
+}
+.reporte-perfil-typical .reporte-metrica-value,
+.reporte-perfil-tipico .reporte-metrica-value { color: #047857; }
+
+.reporte-perfil-sin-determinar,
+.reporte-perfil-no-evaluado {
+  border-top-color: #9CA3AF;
+  background: linear-gradient(180deg, #F9FAFB 0%, #FFFFFF 70%);
+}
+.reporte-perfil-sin-determinar .reporte-metrica-value,
+.reporte-perfil-no-evaluado .reporte-metrica-value { color: #4B5563; }
+
+/* ── Disclaimer ─────────────────────────────────────────── */
+
+.reporte-disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-left: 4px solid #F59E0B;
+  border-radius: 0.875rem;
+  padding: 1.125rem 1.25rem;
+  margin-top: 1.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.65;
+  color: #78350F;
+}
+
+.reporte-disclaimer strong { color: #92400E; }
+
+.reporte-disclaimer-icon {
+  font-size: 1.25rem;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+/* ── Footer con firma ───────────────────────────────────── */
+
+.reporte-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #E5E7EB;
+}
+
+.reporte-firma-linea {
+  width: 220px;
+  max-width: 100%;
+  border-bottom: 1.5px solid #9CA3AF;
+  margin-bottom: 0.5rem;
+}
+
+.reporte-firma-nombre {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1F2937;
+}
+
+.reporte-firma-cargo {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  margin-top: 0.1rem;
+}
+
+.reporte-generado {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  background: #F9FAFB;
+  border: 1px solid #F3F4F6;
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+}
+
+/* ── Botones de acción ──────────────────────────────────── */
+
+.reporte-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.reporte-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.65rem 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  text-decoration: none;
+}
+
+.reporte-btn:focus-visible {
+  outline: 2px solid #6D28D9;
+  outline-offset: 2px;
+}
+
+.reporte-btn-primary {
+  background: #6D28D9;
+  color: #fff;
+}
+.reporte-btn-primary:hover { background: #5B21B6; }
+
+.reporte-btn-secondary {
+  background: #059669;
+  color: #fff;
+}
+.reporte-btn-secondary:hover { background: #047857; }
+
+.reporte-btn-outline {
+  background: #fff;
+  color: #4B5563;
+  border-color: #D1D5DB;
+}
+.reporte-btn-outline:hover { background: #F9FAFB; color: #1F2937; }
+
+/* ── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .reporte-header {
+    padding: 1.25rem 1.125rem 1.125rem;
+  }
+
+  .reporte-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.875rem;
+  }
+
+  .reporte-card { padding: 1.125rem 1.125rem; }
+
+  .reporte-metricas-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reporte-estudiante-info { gap: 0.75rem; }
+
+  .reporte-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
+  }
+
+  .reporte-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .reporte-actions .reporte-btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+
+/* ── Impresión / "Descargar PDF" ────────────────────────── */
+
+@media print {
+  /* El layout del docente (sidebar, topbar) no va al papel.
+     Se ocultan por atributo para no depender de sus clases. */
+  aside,
+  header,
+  nav,
+  .reporte-actions {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .reporte-container {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .reporte-header,
+  .reporte-metrica-card,
+  .reporte-card-highlight,
+  .reporte-disclaimer {
+    /* Sin esto Chrome descarta los fondos de color al imprimir */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .reporte-card,
+  .reporte-metrica-card,
+  .reporte-disclaimer,
+  .reporte-footer {
+    box-shadow: none;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

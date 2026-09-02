@@ -288,6 +288,47 @@ def reports():
     
     return render_template('teacher/reports.html', reports=reports)
 
+
+# Etiquetas legibles para los slugs que guarda Student.tdah_type
+TDAH_PERFIL_LABELS = {
+    'typical': 'Típico (sin TDAH)',
+    'inatento': 'TDAH — Inatento',
+    'hiperactivo': 'TDAH — Hiperactivo',
+    'combinado': 'TDAH — Combinado',
+    'sin_determinar': 'En análisis',
+}
+
+
+@teacher_bp.route('/reports/<int:report_id>')
+@teacher_required
+def report_detail(report_id):
+    """Vista de lectura de un reporte, con formato institucional."""
+    report = Report.query.get_or_404(report_id)
+    student = report.student
+
+    if student.teacher_id != current_user.id:
+        flash('No autorizado', 'danger')
+        return redirect(url_for('teacher.reports'))
+
+    # El reporte guarda su propio snapshot del perfil, pero create_report
+    # todavía no lo completa: si viene vacío usamos el del alumno.
+    perfil_slug = report.tipo_tdah
+    if not perfil_slug or perfil_slug == 'sin_determinar':
+        perfil_slug = student.tdah_type or 'sin_determinar'
+
+    confianza = report.confianza or student.tdah_confidence or 0
+
+    return render_template(
+        'teacher/report_detail.html',
+        report=report,
+        student=student,
+        perfil_slug=perfil_slug,
+        perfil_label=TDAH_PERFIL_LABELS.get(perfil_slug, 'En análisis'),
+        confianza=round(confianza) if confianza else None,
+        num_sesiones=student.sessions.count(),
+    )
+
+
 def _build_student_data(student):
     """Arma el dict de contexto del alumno que se pasa a la IA."""
     recent_reports = Report.query.filter_by(
