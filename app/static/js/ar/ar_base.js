@@ -469,8 +469,19 @@ function handleVRVolumeKey(event) {
  * cursor del SISTEMA (que el joystick del mando mueve), no al cursor 3D
  * dorado central (que es solo visual). Por eso apuntamos con lo que el
  * raycaster tiene intersectado en este instante.
+ *
+ * Excepción: si el magnetismo tiene un elemento capturado (el que el
+ * usuario VE con halo), ese gana. El rayo sigue al mouse crudo, que puede
+ * estar unos pixels fuera del objeto justo cuando el cursor ya se enganchó.
  */
 function triggerVRClick() {
+  if (currentCapturedElement && currentCapturedElement.isConnected) {
+    console.log('🎯 Click VR sobre target capturado:',
+      currentCapturedElement.tagName, currentCapturedElement.className);
+    currentCapturedElement.emit('click', {}, true);
+    return;
+  }
+
   const rayEl = document.querySelector('[raycaster]');
   const raycaster = rayEl && rayEl.components && rayEl.components.raycaster;
   const hits = raycaster && raycaster.intersectedEls;
@@ -533,20 +544,211 @@ function disableVRCursors() {
   if (rightCursor) rightCursor.style.display = 'none';
 
   document.removeEventListener('mousemove', updateVRCursors, true);
+  setVRCursorsCapturedState(false, null);
   console.log('🎯 Cursores sintéticos VR desactivados');
 }
+
+/* --- Magnetismo del cursor --------------------------------------------
+   Con el joystick del mando VR es muy difícil frenar justo encima de un
+   asteroide. Cuando el cursor entra en el radio de atracción del
+   clickable más cercano, lo "engancha" interpolando hacia su centro y
+   marca el estado capturado (cursores verdes + halo 3D en el objetivo).
+   ---------------------------------------------------------------------- */
+
+const MAGNET_RADIUS = 80;    // px de radio de atracción (espacio del canvas real)
+const MAGNET_STRENGTH = 0.6; // 0 = sin tirón, 1 = pega al centro
+
+let currentCapturedElement = null;
 
 function updateVRCursors(event) {
   // Solo activo en modo VR
   if (!document.body.classList.contains('vr-mode-active')) return;
 
-  positionVRCursors(event.clientX, event.clientY);
+  // attachMirrorInputForwarding reenvía cada mousemove al canvas real como
+  // evento sintético, así que cada movimiento llega dos veces (crudo +
+  // reenviado, con la X ya duplicada). Nos quedamos solo con el crudo y
+  // hacemos la conversión nosotros para no depender del orden de entrega.
+  if (!event.isTrusted) return;
+
+  const point = mirrorToSceneCoords(event.clientX, event.clientY);
+  let cursorX = point.x;
+  let cursorY = point.y;
+
+  const nearestTarget = findNearestClickableOnScreen(cursorX, cursorY);
+
+  if (nearestTarget && nearestTarget.distance < MAGNET_RADIUS) {
+    // Cuanto más cerca del target, más fuerte tira
+    const proximityFactor = 1 - (nearestTarget.distance / MAGNET_RADIUS);
+    const pullStrength = MAGNET_STRENGTH * proximityFactor;
+
+    cursorX += (nearestTarget.centerX - cursorX) * pullStrength;
+    cursorY += (nearestTarget.centerY - cursorY) * pullStrength;
+
+    setVRCursorsCapturedState(true, nearestTarget.element);
+  } else {
+    setVRCursorsCapturedState(false, null);
+  }
+
+  positionVRCursors(cursorX, cursorY);
 }
 
 /**
- * Coloca los 2 cursores. Cada ojo ocupa la mitad (50%) de la pantalla;
- * mostramos el cursor en la posición equivalente dentro de cada mitad,
- * sin importar en qué mitad esté el mouse del sistema.
+ * Convierte coordenadas de viewport (donde está el mouse físico, encima de
+ * uno de los 2 espejos) al espacio del canvas REAL de la escena.
+ *
+ * Cada espejo mide 50% del ancho y dibuja la vista COMPLETA comprimida
+ * (ver startStereoMirror), así que la X dentro de un espejo vale el doble
+ * en el canvas real. Es el mismo espacio en el que trabaja el raycaster.
+ */
+function mirrorToSceneCoords(clientX, clientY) {
+  const halfWidth = window.innerWidth / 2;
+  const inLeftEye = clientX < halfWidth;
+  return {
+    x: (inLeftEye ? clientX : clientX - halfWidth) * 2,
+    y: clientY,
+  };
+}
+
+/**
+ * Encuentra el elemento .clickable más cercano al cursor en pantalla,
+ * proyectando su posición 3D a coordenadas 2D del canvas real.
+ */
+function findNearestClickableOnScreen(cursorX, cursorY) {
+  const scene = document.querySelector('a-scene');
+  if (!scene || !scene.hasLoaded) return null;
+
+  const camera = scene.camera;
+  const canvas = scene.canvas;
+  if (!camera || !canvas) return null;
+
+  const rect = canvas.getBoundingClientRect();
+
+  // ARVisuals._mirrorClickable copia la clase al hijo con geometría, así
+  // que cada objeto aparece 2 veces. Nos quedamos con el wrapper.
+  const candidates = new Set();
+  document.querySelectorAll('.clickable').forEach(el => {
+    const parent = el.parentElement;
+    candidates.add(parent && parent.classList.contains('clickable') ? parent : el);
+  });
+
+  const worldPos = new THREE.Vector3();
+  const worldScale = new THREE.Vector3();
+
+  let nearest = null;
+  let minDistance = Infinity;
+
+  candidates.forEach(el => {
+    const object3D = el.object3D;
+    if (!object3D || !object3D.visible) return;
+
+    // Ignorar objetos que todavía están apareciendo (scale animado desde 0)
+    object3D.getWorldScale(worldScale);
+    if (Math.max(worldScale.x, worldScale.y, worldScale.z) < 0.05) return;
+
+    object3D.getWorldPosition(worldPos);
+    const screenPos = worldPos.clone().project(camera);
+
+    // Solo elementos frente a la cámara
+    if (screenPos.z > 1) return;
+
+    const canvasX = (screenPos.x + 1) / 2 * rect.width + rect.left;
+    const canvasY = (-screenPos.y + 1) / 2 * rect.height + rect.top;
+
+    const dx = canvasX - cursorX;
+    const dy = canvasY - cursorY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearest = { element: el, centerX: canvasX, centerY: canvasY, distance };
+    }
+  });
+
+  return nearest;
+}
+
+/**
+ * Estado visual de "capturado" (el equivalente a la manito del sistema):
+ * cursores verdes más grandes + halo dorado pulsante sobre el objetivo.
+ */
+function setVRCursorsCapturedState(isCaptured, targetElement) {
+  const target = isCaptured ? targetElement : null;
+  if (target === currentCapturedElement) return;
+
+  const leftCursor = document.getElementById('vr-cursor-left');
+  const rightCursor = document.getElementById('vr-cursor-right');
+  if (leftCursor) leftCursor.classList.toggle('captured', !!target);
+  if (rightCursor) rightCursor.classList.toggle('captured', !!target);
+
+  if (currentCapturedElement) removeTargetHalo(currentCapturedElement);
+
+  if (target) {
+    addTargetHalo(target);
+    // Vibración leve solo al cambiar de objetivo, nunca continua
+    if ('vibrate' in navigator) navigator.vibrate(15);
+  }
+
+  currentCapturedElement = target;
+}
+
+/**
+ * Halo dorado pulsante alrededor del elemento capturado. El radio se
+ * deriva de la geometría real (los asteroides van de 0.2 a 0.4).
+ */
+function addTargetHalo(element) {
+  if (element.querySelector('.vr-target-halo')) return;
+
+  const radius = computeHaloRadius(element);
+
+  const halo = document.createElement('a-ring');
+  halo.classList.add('vr-target-halo');
+  halo.setAttribute('radius-inner', (radius * 1.25).toFixed(3));
+  halo.setAttribute('radius-outer', (radius * 1.6).toFixed(3));
+  halo.setAttribute('material',
+    'shader: flat; color: #fbbf24; opacity: 0.8; transparent: true; side: double');
+  halo.setAttribute('look-at', '[camera]');
+  halo.setAttribute('animation',
+    'property: scale; from: 1 1 1; to: 1.2 1.2 1.2; dur: 800; dir: alternate; loop: true; easing: easeInOutQuad');
+
+  element.appendChild(halo);
+}
+
+function removeTargetHalo(element) {
+  const halo = element.querySelector('.vr-target-halo');
+  if (halo && halo.parentNode) halo.parentNode.removeChild(halo);
+}
+
+/**
+ * Radio del objeto en unidades LOCALES del wrapper. Usamos la boundingSphere
+ * de la geometría (no el bounding box en mundo) para que la animación de
+ * spawn (scale 0 → 1) no achique el halo, que ya hereda esa escala.
+ */
+function computeHaloRadius(element) {
+  const object3D = element.object3D;
+  let maxRadius = 0;
+
+  if (object3D) {
+    object3D.traverse(node => {
+      const geometry = node.geometry;
+      if (!geometry) return;
+      if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+      if (!geometry.boundingSphere) return;
+
+      const nodeScale = Math.max(
+        Math.abs(node.scale.x), Math.abs(node.scale.y), Math.abs(node.scale.z)
+      ) || 1;
+      maxRadius = Math.max(maxRadius, geometry.boundingSphere.radius * nodeScale);
+    });
+  }
+
+  return maxRadius > 0.01 ? maxRadius : 0.4;
+}
+
+/**
+ * Coloca los 2 cursores. Recibe coordenadas del canvas REAL (ancho
+ * completo) y las comprime al 50% de cada ojo, igual que hace el espejo
+ * al dibujar el frame. Así el cursor cae exactamente sobre el punto de la
+ * escena al que apunta el rayo.
  */
 function positionVRCursors(x, y) {
   const leftCursor = document.getElementById('vr-cursor-left');
@@ -554,16 +756,10 @@ function positionVRCursors(x, y) {
   if (!leftCursor || !rightCursor) return;
 
   const halfWidth = window.innerWidth / 2;
+  const eyeX = x * 0.5;
 
-  if (x < halfWidth) {
-    // Mouse en la mitad izquierda: X real ya cae en el ojo izquierdo
-    leftCursor.style.left = x + 'px';
-    rightCursor.style.left = (x + halfWidth) + 'px';
-  } else {
-    // Mouse en la mitad derecha: X real ya cae en el ojo derecho
-    leftCursor.style.left = (x - halfWidth) + 'px';
-    rightCursor.style.left = x + 'px';
-  }
+  leftCursor.style.left = eyeX + 'px';
+  rightCursor.style.left = (eyeX + halfWidth) + 'px';
   leftCursor.style.top = y + 'px';
   rightCursor.style.top = y + 'px';
 }

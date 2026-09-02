@@ -808,18 +808,50 @@ body.vr-mode-active .ar-tutorial {
 /* Cursor sintético para modo VR — visible en cada ojo */
 .vr-eye-cursor {
   position: fixed;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 191, 36, 1) 0%, rgba(255, 191, 36, 0.6) 60%, rgba(255, 191, 36, 0) 100%);
-  border: 2px solid white;
+  background: radial-gradient(circle, rgba(255, 191, 36, 1) 0%, rgba(255, 191, 36, 0.7) 50%, rgba(255, 191, 36, 0) 100%);
+  border: 2px solid rgba(255, 255, 255, 0.9);
   pointer-events: none;
   z-index: 999;
   transform: translate(-50%, -50%);
   box-shadow:
-    0 0 12px rgba(255, 191, 36, 0.8),
-    0 0 24px rgba(255, 191, 36, 0.4);
-  transition: none;
+    0 0 15px rgba(255, 191, 36, 0.9),
+    0 0 30px rgba(255, 191, 36, 0.5);
+  /* Sin transition en left/top: la posición debe seguir al mando sin lag */
+  transition:
+    width 0.15s ease-out,
+    height 0.15s ease-out,
+    background 0.15s ease-out,
+    border-color 0.15s ease-out,
+    box-shadow 0.15s ease-out;
+}
+
+/* Estado "capturado" por el magnetismo — el equivalente a la manito */
+.vr-eye-cursor.captured {
+  width: 44px;
+  height: 44px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 1) 0%, rgba(16, 185, 129, 0.8) 50%, rgba(16, 185, 129, 0) 100%);
+  border-color: white;
+  border-width: 3px;
+  box-shadow:
+    0 0 25px rgba(16, 185, 129, 1),
+    0 0 50px rgba(16, 185, 129, 0.6);
+}
+
+/* Punto central de confirmación cuando hay target capturado */
+.vr-eye-cursor.captured::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 10px white;
 }
 
 /* Ocultar cursor del sistema en modo VR */
