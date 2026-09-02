@@ -12,11 +12,22 @@
 {% block sidebar_mode %}mobile-drawer{% endblock %}
 
 {# ── Sidebar links ──────────────────────────────────────────────────────── #}
-{% macro slink(endpoint, label, icon_path, exact=False) %}
+{#
+  OJO con el <span> de la etiqueta: en modo mobile-drawer la sidebar es
+  siempre w-64 (nunca se colapsa a un riel de iconos), y base.html arranca
+  con sidebarOpen=false en ese modo. Si el label llevara x-show="sidebarOpen"
+  quedaría oculto en desktop y el menú se vería solo con iconos.
+  base.html hace lo mismo con el nombre de la marca.
+#}
+{% macro slink(endpoint, label, icon_path, exact=False, highlight=False) %}
   {% set active = (request.endpoint == endpoint) if exact else (request.endpoint and request.endpoint.startswith(endpoint.split('.')[0] ~ '.')) %}
   <a href="{{ url_for(endpoint) }}"
      class="flex items-center gap-3 px-3 py-3 rounded-xl font-semibold text-base transition-all duration-150
-            {% if active %}
+            {% if highlight %}
+              mt-4 bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] text-white shadow-md
+              hover:from-[#6D28D9] hover:to-[#4338CA]
+              {% if active %}ring-2 ring-[#C4B5FD]{% endif %}
+            {% elif active %}
               bg-[#4F46E5] text-white shadow-md
             {% else %}
               text-[#C7D2FE] hover:bg-[#312E81] hover:text-white
@@ -25,7 +36,7 @@
          stroke="currentColor" stroke-width="2" aria-hidden="true">
       {{ icon_path }}
     </svg>
-    <span x-show="sidebarOpen" x-transition class="truncate">{{ label }}</span>
+    <span class="truncate">{{ label }}</span>
   </a>
 {% endmacro %}
 
@@ -44,7 +55,8 @@
     '<path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>') }}
 
   {{ slink('ar.index', 'Actividades AR',
-    '<path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.876v6.248a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>') }}
+    '<path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.876v6.248a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>',
+    highlight=True) }}
 {% endblock %}
 
 {# ── Topbar personalizado ─────────────────────────────────────────────────── #}
