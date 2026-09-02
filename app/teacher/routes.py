@@ -221,6 +221,61 @@ def create_activity():
         flash(f'Error al crear actividad: {str(e)}', 'danger')
         return redirect(url_for('teacher.create_activity'))
 
+@teacher_bp.route('/activities/<int:activity_id>/edit', methods=['GET', 'POST'])
+@teacher_required
+def edit_activity(activity_id):
+    """Editar una actividad existente."""
+    activity = Activity.query.get_or_404(activity_id)
+
+    if activity.teacher_id != current_user.id:
+        flash('No autorizado', 'danger')
+        return redirect(url_for('teacher.activities'))
+
+    if request.method == 'GET':
+        return render_template('teacher/edit_activity.html', activity=activity)
+
+    data = request.form
+    try:
+        activity.title = data.get('title') or activity.title
+        activity.description = data.get('description')
+        activity.instructions = data.get('instructions')
+        activity.activity_type = data.get('activity_type') or activity.activity_type
+        activity.difficulty_level = int(data.get('difficulty_level') or activity.difficulty_level or 1)
+
+        db.session.commit()
+        flash('Actividad actualizada exitosamente', 'success')
+        return redirect(url_for('teacher.activities'))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al actualizar actividad: {str(e)}', 'danger')
+        return redirect(url_for('teacher.edit_activity', activity_id=activity_id))
+
+
+@teacher_bp.route('/activities/<int:activity_id>/delete', methods=['POST'])
+@teacher_required
+def delete_activity(activity_id):
+    """Elimina una actividad. Las sesiones asociadas quedan huérfanas
+    (Session.activity_id es nullable), no se borra historial del alumno."""
+    activity = Activity.query.get_or_404(activity_id)
+
+    if activity.teacher_id != current_user.id:
+        return jsonify({'success': False, 'error': 'No autorizado'}), 403
+
+    try:
+        Session.query.filter_by(activity_id=activity.id).update(
+            {'activity_id': None}, synchronize_session=False
+        )
+        db.session.delete(activity)
+        db.session.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        db.session.rollback()
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @teacher_bp.route('/activities/generate', methods=['POST'])
 @teacher_required
 def generate_activity():

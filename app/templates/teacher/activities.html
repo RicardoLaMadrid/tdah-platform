@@ -147,6 +147,28 @@
             </button>
             {% endif %}
 
+            {# Editar #}
+            <a href="{{ url_for('teacher.edit_activity', activity_id=activity.id) }}"
+               class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#374151]
+                      hover:bg-[#FFFBEB] hover:text-[#B45309] transition-colors text-left">
+              <svg class="w-4 h-4 text-[#6B7280]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+              </svg>
+              Editar actividad
+            </a>
+
+            {# Eliminar #}
+            <button @click="open=false" type="button"
+                    onclick='confirmarEliminar({{ activity.id }}, {{ activity.title|tojson }})'
+                    class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#DC2626]
+                           hover:bg-[#FEF2F2] transition-colors text-left
+                           border-t border-[#F3F4F6]">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+              Eliminar
+            </button>
+
           </div>
         </div>
       </div>
@@ -164,8 +186,8 @@
             </svg>
           </button>
         </div>
-        <div class="px-6 py-4 text-sm text-[#374151] whitespace-pre-line leading-relaxed max-h-80 overflow-y-auto">
-          {{ activity.instructions }}
+        <div class="instrucciones-formateadas px-6 py-4 text-sm max-h-80 overflow-y-auto">
+          {{ activity.instructions|format_instructions }}
         </div>
         <div class="px-6 pb-4 flex justify-end">
           <button onclick="document.getElementById('inst-{{ activity.id }}').close()"
@@ -208,4 +230,28 @@
   {% endif %}
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// teacher_bp está exento de CSRF (app/__init__.py), por eso el POST no
+// manda token. Si algún día se saca ese exempt, hay que agregarlo acá.
+function confirmarEliminar(activityId, titulo) {
+  if (!confirm(`¿Eliminar la actividad "${titulo}"?\n\nEsta acción no se puede deshacer.`)) return;
+
+  fetch(`/teacher/activities/${activityId}/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+    .then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) throw new Error(data.error || 'Error desconocido');
+      window.location.reload();
+    })
+    .catch((err) => {
+      console.error(err);
+      alert('No se pudo eliminar la actividad: ' + err.message);
+    });
+}
+</script>
 {% endblock %}
