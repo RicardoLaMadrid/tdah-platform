@@ -32,7 +32,7 @@ def create_app(config_name='development'):
             os.makedirs(_path, exist_ok=True)
 
         # Importar modelos para que Flask-Migrate los detecte
-        from app.core.models import user, student, activity, report, parent, notification, badge, active_test_session
+        from app.core.models import user, student, activity, report, parent, notification, badge, active_test_session, pedagogical
 
         # En Railway: crear tablas y seed automático si la BD está vacía
         if os.environ.get('RAILWAY_ENVIRONMENT'):
