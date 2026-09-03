@@ -65,11 +65,16 @@
 
     {% if ps.teacher_guide %}
     <div class="flex flex-wrap gap-3 mt-4 pt-4 border-t border-[#F3F4F6]">
-      <a href="{{ url_for('teacher.pedagogical_session_print', session_id=ps.id) }}"
-         target="_blank" rel="noopener"
+      <a href="{{ url_for('teacher.export_plan_pdf', session_id=ps.id) }}"
          class="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white
                 bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl transition-colors">
-        🖨️ Imprimir material
+        📄 Descargar PDF
+      </a>
+      <a href="{{ url_for('teacher.pedagogical_session_print', session_id=ps.id) }}"
+         target="_blank" rel="noopener"
+         class="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-[#6B7280]
+                bg-white border border-[#E5E7EB] hover:bg-[#F9FAFB] rounded-xl transition-colors">
+        🖨️ Ver para imprimir
       </a>
       <button type="button" id="plan-btn" onclick="generarPlan()"
               class="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-[#6B7280]

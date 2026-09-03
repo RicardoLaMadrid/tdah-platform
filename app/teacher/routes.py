@@ -459,6 +459,63 @@ def pedagogical_session_print(session_id):
     )
 
 
+@teacher_bp.route('/pedagogical/<int:session_id>/export-pdf')
+@teacher_required
+def export_plan_pdf(session_id):
+    """Descarga el plan de sesión como PDF (no la vista de impresión)."""
+    ps = _get_own_session(session_id)
+    if ps is None:
+        flash('No autorizado', 'danger')
+        return redirect(url_for('teacher.activities'))
+
+    if not ps.teacher_guide:
+        flash('Esta sesión todavía no tiene material. Generalo primero.', 'warning')
+        return redirect(url_for('teacher.pedagogical_session_detail', session_id=ps.id))
+
+    try:
+        from app.reports.plan_pdf_generator import generate_session_plan_pdf
+        from flask import send_file
+        import io as _io
+
+        pdf_bytes = generate_session_plan_pdf(
+            ps, ps.student,
+            area_label=AIService.AREAS_PEDAGOGICAS.get(ps.session_area, ps.session_area),
+        )
+
+        if not ps.pdf_generated_at:
+            ps.pdf_generated_at = datetime.utcnow()
+            db.session.commit()
+
+        titulo = (ps.session_title or 'sesion')[:60]
+        alumno = ps.student.get_display_name()
+        nombre = _slug_archivo(f"Plan_{titulo}_{alumno}") + '.pdf'
+
+        return send_file(
+            _io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=nombre,
+        )
+    except Exception as e:
+        db.session.rollback()
+        import traceback; traceback.print_exc()
+        current_app.logger.error(f"Error generando PDF del plan {session_id}: {e}")
+        flash(f'Error al generar el PDF: {e}', 'danger')
+        return redirect(url_for('teacher.pedagogical_session_detail', session_id=ps.id))
+
+
+def _slug_archivo(texto):
+    """Nombre de archivo seguro: sin acentos ni caracteres que rompan la
+    cabecera Content-Disposition en algunos navegadores."""
+    import re
+    import unicodedata
+
+    normalizado = unicodedata.normalize('NFKD', str(texto))
+    ascii_only = normalizado.encode('ascii', 'ignore').decode('ascii')
+    limpio = re.sub(r'[^A-Za-z0-9]+', '_', ascii_only).strip('_')
+    return limpio or 'plan_sesion'
+
+
 @teacher_bp.route('/pedagogical/<int:session_id>/schedule', methods=['POST'])
 @teacher_required
 def schedule_pedagogical_session(session_id):
