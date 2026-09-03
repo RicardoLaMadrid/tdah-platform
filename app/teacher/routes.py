@@ -1,3 +1,5 @@
+import json
+
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from app.models.user import User
@@ -6,6 +8,7 @@ from app.models.activity import Activity, Session
 from app.models.report import Report
 from app.core.models.pedagogical import PedagogicalSession, SessionResult
 from app.reports.ai_generator import AIActivityGenerator
+from app.reports.ai_service import AIService
 from app.extensions import db
 from functools import wraps
 from datetime import datetime, timedelta
@@ -240,6 +243,131 @@ def activities():
                            students_data=students_data, stats=stats)
 
 
+def _resumen_report(report):
+    """Comprime un Report de test/AR a lo que la IA necesita ver."""
+    resumen = {
+        'tipo': TEST_TYPE_LABELS.get(report.report_type, report.report_type),
+        'fecha': report.created_at.strftime('%Y-%m-%d') if report.created_at else None,
+    }
+
+    try:
+        contenido = json.loads(report.content) if report.content else {}
+    except (TypeError, ValueError):
+        contenido = {}
+
+    if isinstance(contenido, dict):
+        if contenido.get('tipo_tdah'):
+            resumen['tipo_tdah'] = contenido['tipo_tdah']
+        if contenido.get('confianza') is not None:
+            resumen['confianza'] = contenido['confianza']
+        # Métricas numéricas sueltas (aciertos, tiempo de reacción, etc.)
+        metricas = {
+            k: v for k, v in (contenido.get('metricas') or contenido).items()
+            if isinstance(v, (int, float))
+        }
+        if metricas:
+            resumen['metricas'] = dict(list(metricas.items())[:8])
+
+    return resumen
+
+
+def _build_pedagogical_context(student):
+    """Arma el contexto que se le pasa a la IA para recomendar una sesión."""
+    tests = Report.query.filter(
+        Report.student_id == student.id,
+        Report.report_type.in_(TEST_REPORT_TYPES),
+    ).order_by(Report.created_at.desc()).limit(5).all()
+
+    ar = Report.query.filter(
+        Report.student_id == student.id,
+        Report.report_type.like('ar_%'),
+    ).order_by(Report.created_at.desc()).limit(5).all()
+
+    previas = PedagogicalSession.query.filter_by(
+        student_id=student.id
+    ).order_by(PedagogicalSession.created_at.desc()).limit(5).all()
+
+    sesiones_previas = []
+    for ps in previas:
+        item = {
+            'area': ps.session_area,
+            'nivel': ps.session_level,
+            'estado': ps.status,
+            'fecha': ps.created_at.strftime('%Y-%m-%d') if ps.created_at else None,
+        }
+        resultado = ps.results.order_by(SessionResult.submitted_at.desc()).first()
+        if resultado:
+            item['puntaje_ia'] = resultado.ai_score
+            item['calificacion'] = resultado.ai_qualitative_grade
+            if resultado.teacher_notes:
+                item['notas_docente'] = resultado.teacher_notes[:300]
+        sesiones_previas.append(item)
+
+    return {
+        'nombre': student.get_display_name(),
+        'edad': student.age,
+        'curso': student.grade,
+        'perfil_tdah': student.get_tipo_tdah_display(),
+        'confianza': round(student.tdah_confidence or 0),
+        'tests': [_resumen_report(r) for r in tests],
+        'ar': [_resumen_report(r) for r in ar],
+        'sesiones_previas': sesiones_previas,
+    }
+
+
+@teacher_bp.route('/students/<int:student_id>/pedagogical/recommend', methods=['POST'])
+@teacher_required
+def generate_pedagogical_recommendation(student_id):
+    """Genera con IA la recomendación de la próxima sesión pedagógica."""
+    student = Student.query.get_or_404(student_id)
+
+    if student.teacher_id != current_user.id:
+        return jsonify({'success': False, 'error': 'No autorizado'}), 403
+
+    try:
+        from app.reports.ai_service import ai_service
+        contexto = _build_pedagogical_context(student)
+        rec = ai_service.generate_pedagogical_recommendation(contexto)
+    except Exception as e:
+        current_app.logger.error(f"Error generando recomendación pedagógica: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'No se pudo generar la recomendación. Revisá que ANTHROPIC_API_KEY '
+                     'esté configurada e intentá de nuevo.'
+        }), 502
+
+    try:
+        # Si la última sesión todavía no se ejecutó, la sobreescribimos en vez
+        # de acumular borradores cada vez que el docente aprieta el botón.
+        sesion = PedagogicalSession.query.filter(
+            PedagogicalSession.student_id == student.id,
+            PedagogicalSession.status.in_(['draft', 'planned']),
+        ).order_by(PedagogicalSession.created_at.desc()).first()
+
+        if sesion is None:
+            sesion = PedagogicalSession(student_id=student.id, teacher_id=current_user.id)
+            db.session.add(sesion)
+
+        sesion.ai_recommendation = rec
+        sesion.recommendation_generated_at = datetime.utcnow()
+        sesion.session_title = rec.get('session_title')
+        sesion.session_area = rec.get('area')
+        sesion.session_level = rec.get('level')
+        sesion.status = 'planned'
+
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error guardando recomendación: {e}")
+        return jsonify({'success': False, 'error': f'Error al guardar: {e}'}), 500
+
+    return jsonify({
+        'success': True,
+        'session_id': sesion.id,
+        'recommendation': rec,
+    })
+
+
 @teacher_bp.route('/activities/library')
 @teacher_required
 def activities_library():
@@ -275,6 +403,14 @@ def student_pedagogical_profile(student_id):
         student_id=student.id
     ).order_by(PedagogicalSession.created_at.desc()).limit(10).all()
 
+    # Recomendación vigente: la última sesión planificada que ya tiene
+    # análisis de la IA. Es la que se muestra en la card de recomendación.
+    active_recommendation = next(
+        (ps for ps in pedagogical_sessions
+         if ps.ai_recommendation and ps.status in ('draft', 'planned')),
+        None
+    )
+
     return render_template(
         'teacher/student_pedagogical_profile.html',
         student=student,
@@ -283,6 +419,8 @@ def student_pedagogical_profile(student_id):
         recent_tests=recent_tests,
         recent_ar_sessions=recent_ar_sessions,
         pedagogical_sessions=pedagogical_sessions,
+        active_recommendation=active_recommendation,
+        area_labels=AIService.AREAS_PEDAGOGICAS,
         type_labels=TEST_TYPE_LABELS,
     )
 

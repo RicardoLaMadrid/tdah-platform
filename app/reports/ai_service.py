@@ -188,6 +188,109 @@ Responde en JSON:
                 "difficulty": "medio"
             }
 
+    # Vocabulario cerrado de áreas. La IA debe elegir de acá y no inventar,
+    # para que el histórico de sesiones sea comparable entre sí.
+    AREAS_PEDAGOGICAS = {
+        'atencion_sostenida': 'Atención sostenida',
+        'atencion_selectiva': 'Atención selectiva',
+        'control_inhibitorio': 'Control inhibitorio',
+        'memoria_trabajo': 'Memoria de trabajo',
+        'flexibilidad_cognitiva': 'Flexibilidad cognitiva',
+        'planificacion': 'Planificación y organización',
+        'autorregulacion': 'Autorregulación emocional',
+    }
+
+    def generate_pedagogical_recommendation(self, context):
+        """Recomienda la próxima sesión pedagógica presencial para un alumno.
+
+        Args:
+            context: dict con perfil del alumno, tests recientes, actividades
+                     AR e historial de sesiones pedagógicas.
+
+        Returns:
+            dict con: area, area_label, level, session_title, activity_type,
+                      rationale, evidence, objectives, duration_min, materials
+        """
+        areas = '\n'.join(
+            f'- {slug}: {label}' for slug, label in self.AREAS_PEDAGOGICAS.items()
+        )
+
+        system_prompt = (
+            "Eres un asistente pedagógico especializado en TDAH infantil que trabaja "
+            "con docentes de primaria en Bolivia. Diseñás sesiones de trabajo "
+            "PRESENCIALES y de bajo costo: papel, lápiz, objetos del aula. NO propongas "
+            "apps, pantallas ni material que haya que comprar. "
+            "NO emitas diagnósticos clínicos y NUNCA sugieras medicación. "
+            "Trabajás con niños de 8 a 12 años. Respondés en español latinoamericano, "
+            "con lenguaje concreto y accionable para el docente."
+        )
+
+        user_prompt = f"""Recomendá la PRÓXIMA sesión pedagógica presencial para este alumno.
+
+## Perfil
+Nombre: {context.get('nombre')}
+Edad: {context.get('edad') or 'no registrada'}
+Curso: {context.get('curso') or 'no registrado'}
+Perfil TDAH detectado: {context.get('perfil_tdah')}
+Confianza del análisis: {context.get('confianza', 0)}%
+
+## Tests cognitivos recientes
+{json.dumps(context.get('tests', []), indent=2, ensure_ascii=False) or 'Sin tests registrados'}
+
+## Actividades AR recientes
+{json.dumps(context.get('ar', []), indent=2, ensure_ascii=False) or 'Sin actividades AR'}
+
+## Sesiones pedagógicas previas
+{json.dumps(context.get('sesiones_previas', []), indent=2, ensure_ascii=False) or 'Ninguna: es la primera sesión'}
+
+## Áreas disponibles (elegí UNA, usá el slug exacto)
+{areas}
+
+## Criterios
+- Si no hay sesiones previas, empezá por el área más débil según los tests, nivel 1 o 2.
+- Si hay sesiones previas evaluadas con buen puntaje (>= 70), subí un nivel o cambiá de área.
+- Si el último puntaje fue bajo (< 50), repetí el área bajando un nivel.
+- El nivel va de 1 (muy guiado) a 5 (autónomo).
+- Justificá con datos concretos del historial, no con generalidades.
+
+Devolvé un JSON con exactamente esta forma:
+{{
+    "area": "slug exacto de la lista",
+    "level": 3,
+    "session_title": "Título corto y concreto de la sesión",
+    "activity_type": "Tipo de actividad en 2-4 palabras",
+    "duration_min": 20,
+    "rationale": "2-3 líneas explicando por qué esta área y este nivel",
+    "evidence": ["dato concreto del historial que justifica la elección"],
+    "objectives": ["objetivo observable de la sesión"],
+    "materials": ["material de aula, barato o reciclable"]
+}}"""
+
+        data = self.chat_json(system_prompt, user_prompt, temperature=0.4, max_tokens=1200)
+
+        # La IA puede devolver un área fuera del vocabulario: la normalizamos
+        # antes de persistirla para no ensuciar el histórico.
+        area = (data.get('area') or '').strip().lower()
+        if area not in self.AREAS_PEDAGOGICAS:
+            area = 'atencion_sostenida'
+        data['area'] = area
+        data['area_label'] = self.AREAS_PEDAGOGICAS[area]
+
+        try:
+            level = int(data.get('level') or 1)
+        except (TypeError, ValueError):
+            level = 1
+        data['level'] = min(5, max(1, level))
+
+        for campo in ('evidence', 'objectives', 'materials'):
+            valor = data.get(campo)
+            if isinstance(valor, str):
+                data[campo] = [valor]
+            elif not isinstance(valor, list):
+                data[campo] = []
+
+        return data
+
     def answer_parent_question(self, question, student_context):
         """
         Responde preguntas de padres sobre TDAH y progreso del hijo.

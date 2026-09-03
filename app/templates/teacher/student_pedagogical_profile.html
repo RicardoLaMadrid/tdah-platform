@@ -40,30 +40,111 @@
     {# ── Columna principal ── #}
     <div class="lg:col-span-2 space-y-6">
 
-      {# Recomendación IA — placeholder, implementación real en Fase 2 #}
+      {# Recomendación IA #}
       <div class="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-6
                   border-2 border-purple-200 shadow-sm">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-2xl" aria-hidden="true">🤖</span>
-          <h3 class="text-lg font-bold text-purple-900">Recomendación de la IA</h3>
+        <div class="flex items-start justify-between gap-3 mb-1">
+          <div class="flex items-center gap-2">
+            <span class="text-2xl" aria-hidden="true">🤖</span>
+            <h3 class="text-lg font-bold text-purple-900">Recomendación de la IA</h3>
+          </div>
+          <button type="button" id="rec-btn" onclick="generarRecomendacion()"
+                  class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white
+                         rounded-xl text-sm font-semibold shadow-md hover:shadow-lg
+                         transition-all disabled:opacity-50 disabled:cursor-not-allowed
+                         flex-shrink-0">
+            <span id="rec-btn-label">🧠 Generar</span>
+          </button>
         </div>
         <p class="text-sm text-purple-700 mb-4">
-          Análisis basado en el desempeño y el perfil del alumno.
+          Sugerencia de la próxima sesión presencial, según los tests y el historial del alumno.
         </p>
 
-        <div class="bg-white rounded-xl p-4 border border-purple-100 text-center py-8">
+        {# Skeleton mientras la IA responde #}
+        <div id="rec-loading" style="display:none;"
+             class="bg-white rounded-xl p-5 border border-purple-100">
+          <div class="animate-pulse space-y-3">
+            <div class="h-3 bg-purple-100 rounded w-1/3"></div>
+            <div class="h-3 bg-purple-100 rounded"></div>
+            <div class="h-3 bg-purple-100 rounded w-5/6"></div>
+            <div class="h-3 bg-purple-100 rounded w-2/3"></div>
+          </div>
+          <p class="text-sm text-purple-700 text-center mt-4">Analizando el historial...</p>
+        </div>
+
+        {# Estado vacío #}
+        <div id="rec-empty" class="bg-white rounded-xl p-4 border border-purple-100 text-center py-8"
+             {% if active_recommendation %}style="display:none;"{% endif %}>
           <div class="text-4xl mb-3" aria-hidden="true">✨</div>
-          <p class="text-sm text-[#6B7280] mb-4">
-            Generá una recomendación personalizada para
-            <strong>{{ student.get_display_name() }}</strong>
+          <p class="text-sm text-[#6B7280]">
+            Todavía no hay una recomendación para
+            <strong>{{ student.get_display_name() }}</strong>.
           </p>
-          <button type="button" disabled
-                  title="Disponible en la próxima actualización"
-                  class="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white
-                         rounded-xl font-semibold shadow-md opacity-50 cursor-not-allowed">
-            🧠 Generar recomendación IA
-          </button>
-          <p class="text-xs text-[#9CA3AF] mt-3">Feature en implementación (Fase 2)</p>
+        </div>
+
+        {# Recomendación #}
+        <div id="rec-content" class="bg-white rounded-xl p-5 border border-purple-100"
+             {% if not active_recommendation %}style="display:none;"{% endif %}>
+          {% set rec = active_recommendation.ai_recommendation if active_recommendation else {} %}
+
+          <div class="flex flex-wrap items-center gap-2 mb-3">
+            <span id="rec-area"
+                  class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-bold">
+              {{ area_labels.get(rec.get('area'), rec.get('area_label') or '—') }}
+            </span>
+            <span id="rec-level"
+                  class="px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">
+              Nivel {{ rec.get('level') or '—' }}
+            </span>
+            <span id="rec-duration"
+                  class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
+              {{ rec.get('duration_min') or '—' }} min
+            </span>
+            <span id="rec-type" class="text-xs text-[#9CA3AF]">
+              {{ rec.get('activity_type') or '' }}
+            </span>
+          </div>
+
+          <h4 id="rec-title" class="text-base font-bold text-[#1F2937] mb-2">
+            {{ rec.get('session_title') or 'Sesión sugerida' }}
+          </h4>
+
+          <p id="rec-rationale" class="text-sm text-[#374151] leading-relaxed mb-4">
+            {{ rec.get('rationale') or '' }}
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div>
+              <div class="text-xs font-bold text-[#9CA3AF] uppercase tracking-wide mb-1">Objetivos</div>
+              <ul id="rec-objectives" class="list-disc list-inside space-y-1 text-[#374151]">
+                {% for o in rec.get('objectives') or [] %}<li>{{ o }}</li>{% endfor %}
+              </ul>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-[#9CA3AF] uppercase tracking-wide mb-1">Materiales</div>
+              <ul id="rec-materials" class="list-disc list-inside space-y-1 text-[#374151]">
+                {% for m in rec.get('materials') or [] %}<li>{{ m }}</li>{% endfor %}
+              </ul>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-purple-100">
+            <div class="text-xs font-bold text-[#9CA3AF] uppercase tracking-wide mb-1">
+              En qué se basa
+            </div>
+            <ul id="rec-evidence" class="list-disc list-inside space-y-1 text-sm text-[#6B7280]">
+              {% for e in rec.get('evidence') or [] %}<li>{{ e }}</li>{% endfor %}
+            </ul>
+          </div>
+
+          <p class="text-xs text-[#9CA3AF] mt-4">
+            <span id="rec-timestamp">
+              {% if active_recommendation and active_recommendation.recommendation_generated_at %}
+                Generada el {{ active_recommendation.recommendation_generated_at.strftime('%d/%m/%Y %H:%M') }}
+              {% endif %}
+            </span>
+            · Sugerencia orientativa, no reemplaza tu criterio docente.
+          </p>
         </div>
       </div>
 
@@ -192,4 +273,92 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const RECOMMEND_URL = '{{ url_for("teacher.generate_pedagogical_recommendation", student_id=student.id) }}';
+const AREA_LABELS = {{ area_labels|tojson }};
+
+function setLista(id, items) {
+  const ul = document.getElementById(id);
+  ul.textContent = '';
+  (items || []).forEach(txt => {
+    const li = document.createElement('li');
+    li.textContent = txt;   // textContent, no innerHTML: el texto viene del modelo
+    ul.appendChild(li);
+  });
+}
+
+function pintarRecomendacion(rec) {
+  document.getElementById('rec-area').textContent =
+    AREA_LABELS[rec.area] || rec.area_label || '—';
+  document.getElementById('rec-level').textContent = 'Nivel ' + (rec.level || '—');
+  document.getElementById('rec-duration').textContent = (rec.duration_min || '—') + ' min';
+  document.getElementById('rec-type').textContent = rec.activity_type || '';
+  document.getElementById('rec-title').textContent = rec.session_title || 'Sesión sugerida';
+  document.getElementById('rec-rationale').textContent = rec.rationale || '';
+
+  setLista('rec-objectives', rec.objectives);
+  setLista('rec-materials', rec.materials);
+  setLista('rec-evidence', rec.evidence);
+
+  const ahora = new Date();
+  document.getElementById('rec-timestamp').textContent =
+    'Generada el ' + ahora.toLocaleDateString('es-BO') + ' ' +
+    ahora.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
+
+  document.getElementById('rec-empty').style.display = 'none';
+  document.getElementById('rec-content').style.display = 'block';
+}
+
+async function generarRecomendacion() {
+  const btn = document.getElementById('rec-btn');
+  const label = document.getElementById('rec-btn-label');
+  const loading = document.getElementById('rec-loading');
+  const empty = document.getElementById('rec-empty');
+  const content = document.getElementById('rec-content');
+
+  btn.disabled = true;
+  label.textContent = 'Generando...';
+  empty.style.display = 'none';
+  content.style.display = 'none';
+  loading.style.display = 'block';
+
+  try {
+    const resp = await fetch(RECOMMEND_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.success) throw new Error(data.error || 'Error desconocido');
+
+    pintarRecomendacion(data.recommendation);
+    avisar('Recomendación generada ✓');
+  } catch (err) {
+    console.error(err);
+    // Si ya había una recomendación previa la dejamos visible
+    const teniaPrevia = document.getElementById('rec-title').textContent.trim() !== '';
+    (teniaPrevia ? content : empty).style.display = 'block';
+    avisar('No se pudo generar: ' + err.message, true);
+  } finally {
+    loading.style.display = 'none';
+    btn.disabled = false;
+    label.textContent = '🧠 Generar';
+  }
+}
+
+function avisar(msg, esError) {
+  const el = document.createElement('div');
+  el.className = 'fixed top-4 right-4 z-50 px-4 py-2.5 text-white text-sm font-medium rounded-xl shadow-lg';
+  el.style.background = esError ? '#DC2626' : '#059669';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.3s';
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 300);
+  }, 3500);
+}
+</script>
 {% endblock %}
