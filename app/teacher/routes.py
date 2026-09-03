@@ -459,6 +459,35 @@ def pedagogical_session_print(session_id):
     )
 
 
+@teacher_bp.route('/pedagogical/<int:session_id>/schedule', methods=['POST'])
+@teacher_required
+def schedule_pedagogical_session(session_id):
+    """Agenda la sesión. Sin fecha el alumno la ve como 'Pendiente' y nunca
+    puede aparecer como vencida."""
+    ps = _get_own_session(session_id)
+    if ps is None:
+        flash('No autorizado', 'danger')
+        return redirect(url_for('teacher.activities'))
+
+    fecha = (request.form.get('scheduled_for') or '').strip()
+
+    if not fecha:
+        ps.scheduled_for = None
+        db.session.commit()
+        flash('Se quitó la fecha de la sesión', 'success')
+        return redirect(url_for('teacher.pedagogical_session_detail', session_id=ps.id))
+
+    try:
+        ps.scheduled_for = datetime.strptime(fecha, '%Y-%m-%d')
+        db.session.commit()
+        flash(f'Sesión agendada para el {ps.scheduled_for.strftime("%d/%m/%Y")}', 'success')
+    except ValueError:
+        db.session.rollback()
+        flash('Fecha inválida', 'danger')
+
+    return redirect(url_for('teacher.pedagogical_session_detail', session_id=ps.id))
+
+
 @teacher_bp.route('/pedagogical/<int:session_id>/result', methods=['POST'])
 @teacher_required
 def submit_pedagogical_result(session_id):

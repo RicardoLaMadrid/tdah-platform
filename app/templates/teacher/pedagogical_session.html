@@ -42,6 +42,27 @@
       {% if ps.created_at %} · creada el {{ ps.created_at.strftime('%d/%m/%Y') }}{% endif %}
     </p>
 
+    {# Agendar: sin fecha, el alumno la ve como "Pendiente" y nunca vence #}
+    <form method="POST"
+          action="{{ url_for('teacher.schedule_pedagogical_session', session_id=ps.id) }}"
+          class="flex flex-wrap items-end gap-2 mt-4 pt-4 border-t border-[#F3F4F6]">
+      <div>
+        <label for="scheduled_for" class="block text-xs font-medium text-[#6B7280] mb-1">
+          Fecha para hacerla con el alumno
+        </label>
+        <input type="date" id="scheduled_for" name="scheduled_for"
+               value="{{ ps.scheduled_for.strftime('%Y-%m-%d') if ps.scheduled_for else '' }}"
+               class="px-3 py-2 rounded-lg border border-[#D1D5DB] text-sm
+                      focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+      </div>
+      <button type="submit"
+              class="px-4 py-2 text-sm font-semibold text-[#374151] bg-white border
+                     border-[#E5E7EB] hover:bg-[#F9FAFB] rounded-lg transition-colors">
+        {% if ps.scheduled_for %}Actualizar fecha{% else %}Agendar{% endif %}
+      </button>
+      <span class="text-xs text-[#9CA3AF] pb-2">El alumno la ve en «Mis Actividades».</span>
+    </form>
+
     {% if ps.teacher_guide %}
     <div class="flex flex-wrap gap-3 mt-4 pt-4 border-t border-[#F3F4F6]">
       <a href="{{ url_for('teacher.pedagogical_session_print', session_id=ps.id) }}"

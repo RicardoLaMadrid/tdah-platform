@@ -186,8 +186,69 @@ def activities():
             'last_session': last_session
         })
     
-    return render_template('student/activities.html', 
-                        activities_data=activities_data)
+    return render_template('student/activities.html',
+                        activities_data=activities_data,
+                        pedagogical_data=_build_pedagogical_cards(student_profile))
+
+
+def _build_pedagogical_cards(student_profile):
+    """Sesiones pedagógicas presenciales que el docente le preparó al alumno.
+
+    Son distintas de Activity: el alumno NO las hace en el dispositivo, las
+    trabaja cara a cara con su profe sobre una hoja impresa. Por eso acá solo
+    se muestran (qué viene, qué ya hizo, cómo le fue) y no hay botón de
+    "comenzar".
+
+    OJO con el filtro: student_id apunta a students.id, no a users.id.
+    Filtrar por current_user.id devuelve siempre vacío.
+    """
+    from app.core.models.pedagogical import PedagogicalSession, SessionResult
+
+    if not student_profile:
+        return []
+
+    sesiones = PedagogicalSession.query.filter_by(
+        student_id=student_profile.id
+    ).filter(
+        # Un borrador todavía no se lo asignaron: no debe verlo el alumno.
+        PedagogicalSession.status != 'draft'
+    ).order_by(
+        # MariaDB no soporta NULLS LAST: ordenar primero por "es null"
+        # (False=0 va antes) da el mismo resultado y es portable.
+        PedagogicalSession.scheduled_for.is_(None),
+        PedagogicalSession.scheduled_for.desc(),
+        PedagogicalSession.created_at.desc(),
+    ).all()
+
+    ahora = datetime.utcnow()
+    tarjetas = []
+
+    for ps in sesiones:
+        resultado = ps.results.order_by(SessionResult.submitted_at.desc()).first()
+
+        if ps.status in ('completed', 'evaluated'):
+            estado, etiqueta, color = 'completada', 'Completada', 'green'
+        elif ps.status == 'in_progress':
+            estado, etiqueta, color = 'en_curso', 'En curso', 'yellow'
+        elif ps.scheduled_for and ps.scheduled_for < ahora:
+            dias = (ahora - ps.scheduled_for).days
+            etiqueta = 'Vencida' if dias else 'Vence hoy'
+            estado, color = 'vencida', 'red'
+        elif ps.scheduled_for:
+            estado, etiqueta, color = 'activa', 'Agendada', 'blue'
+        else:
+            estado, etiqueta, color = 'activa', 'Pendiente', 'blue'
+
+        tarjetas.append({
+            'sesion': ps,
+            'resultado': resultado,
+            'estado': estado,
+            'etiqueta': etiqueta,
+            'color': color,
+            'docente': ps.teacher.username if ps.teacher else None,
+        })
+
+    return tarjetas
 
 @student_bp.route('/activities/<int:activity_id>')
 @student_required
