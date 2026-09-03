@@ -137,7 +137,19 @@
             </ul>
           </div>
 
-          <p class="text-xs text-[#9CA3AF] mt-4">
+          <div class="mt-4 pt-4 border-t border-purple-100 flex flex-wrap items-center gap-3">
+            <a id="rec-preparar"
+               href="{% if active_recommendation %}{{ url_for('teacher.pedagogical_session_detail', session_id=active_recommendation.id) }}{% else %}#{% endif %}"
+               class="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white
+                      rounded-xl text-sm font-semibold shadow-md hover:shadow-lg transition-all">
+              📝 Preparar la sesión →
+            </a>
+            <span class="text-xs text-[#9CA3AF]">
+              Genera la guía, la hoja del alumno y la rúbrica.
+            </span>
+          </div>
+
+          <p class="text-xs text-[#9CA3AF] mt-3">
             <span id="rec-timestamp">
               {% if active_recommendation and active_recommendation.recommendation_generated_at %}
                 Generada el {{ active_recommendation.recommendation_generated_at.strftime('%d/%m/%Y %H:%M') }}
@@ -158,7 +170,9 @@
         {% if pedagogical_sessions %}
         <div class="space-y-3">
           {% for ps in pedagogical_sessions %}
-          <div class="p-4 border border-[#E5E7EB] rounded-xl hover:bg-[#F9FAFB] transition-colors">
+          <a href="{{ url_for('teacher.pedagogical_session_detail', session_id=ps.id) }}"
+             class="block p-4 border border-[#E5E7EB] rounded-xl hover:bg-[#F9FAFB]
+                    hover:border-indigo-300 transition-colors">
             <div class="flex items-center justify-between gap-3 mb-1">
               <div class="font-semibold text-[#1F2937] truncate">
                 {{ ps.session_title or 'Sesión sin título' }}
@@ -175,7 +189,7 @@
               {{ area_labels.get(ps.session_area, ps.session_area or 'General') }} · Nivel {{ ps.session_level or '—' }}
               <span class="text-xs text-[#9CA3AF]">· {{ ps.created_at.strftime('%d/%m/%Y') }}</span>
             </div>
-          </div>
+          </a>
           {% endfor %}
         </div>
         {% else %}
@@ -290,7 +304,10 @@ function setLista(id, items) {
   });
 }
 
-function pintarRecomendacion(rec) {
+function pintarRecomendacion(rec, sessionId) {
+  if (sessionId) {
+    document.getElementById('rec-preparar').href = '/teacher/pedagogical/' + sessionId;
+  }
   document.getElementById('rec-area').textContent =
     AREA_LABELS[rec.area] || rec.area_label || '—';
   document.getElementById('rec-level').textContent = 'Nivel ' + (rec.level || '—');
@@ -333,7 +350,7 @@ async function generarRecomendacion() {
     const data = await resp.json();
     if (!resp.ok || !data.success) throw new Error(data.error || 'Error desconocido');
 
-    pintarRecomendacion(data.recommendation);
+    pintarRecomendacion(data.recommendation, data.session_id);
     avisar('Recomendación generada ✓');
   } catch (err) {
     console.error(err);

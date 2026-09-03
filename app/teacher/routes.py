@@ -369,6 +369,196 @@ def generate_pedagogical_recommendation(student_id):
     })
 
 
+def _get_own_session(session_id):
+    """Devuelve la PedagogicalSession si es del docente logueado, o None."""
+    ps = PedagogicalSession.query.get_or_404(session_id)
+    return ps if ps.teacher_id == current_user.id else None
+
+
+@teacher_bp.route('/pedagogical/<int:session_id>/plan', methods=['POST'])
+@teacher_required
+def generate_pedagogical_plan(session_id):
+    """Convierte la recomendación en guía docente + hoja del alumno + rúbrica."""
+    ps = _get_own_session(session_id)
+    if ps is None:
+        return jsonify({'success': False, 'error': 'No autorizado'}), 403
+
+    if not ps.ai_recommendation:
+        return jsonify({
+            'success': False,
+            'error': 'Esta sesión todavía no tiene recomendación. Generala primero.'
+        }), 400
+
+    try:
+        from app.reports.ai_service import ai_service
+        contexto = _build_pedagogical_context(ps.student)
+        plan = ai_service.generate_session_plan(contexto, ps.ai_recommendation)
+    except Exception as e:
+        current_app.logger.error(f"Error generando plan de sesión {session_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'No se pudo generar el plan. Revisá ANTHROPIC_API_KEY e intentá de nuevo.'
+        }), 502
+
+    try:
+        ps.teacher_guide = plan.get('teacher_guide')
+        ps.student_worksheet = plan.get('student_worksheet')
+        ps.rubric = plan.get('rubric')
+        if ps.status == 'draft':
+            ps.status = 'planned'
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error guardando plan: {e}")
+        return jsonify({'success': False, 'error': f'Error al guardar: {e}'}), 500
+
+    return jsonify({
+        'success': True,
+        'redirect': url_for('teacher.pedagogical_session_detail', session_id=ps.id),
+    })
+
+
+@teacher_bp.route('/pedagogical/<int:session_id>')
+@teacher_required
+def pedagogical_session_detail(session_id):
+    """Detalle de la sesión: guía, hoja del alumno, rúbrica y resultado."""
+    ps = _get_own_session(session_id)
+    if ps is None:
+        flash('No autorizado', 'danger')
+        return redirect(url_for('teacher.activities'))
+
+    resultado = ps.results.order_by(SessionResult.submitted_at.desc()).first()
+
+    return render_template(
+        'teacher/pedagogical_session.html',
+        ps=ps,
+        student=ps.student,
+        resultado=resultado,
+        area_labels=AIService.AREAS_PEDAGOGICAS,
+    )
+
+
+@teacher_bp.route('/pedagogical/<int:session_id>/print')
+@teacher_required
+def pedagogical_session_print(session_id):
+    """Versión imprimible: guía del docente + hoja del alumno + rúbrica."""
+    ps = _get_own_session(session_id)
+    if ps is None:
+        flash('No autorizado', 'danger')
+        return redirect(url_for('teacher.activities'))
+
+    if not ps.pdf_generated_at:
+        ps.pdf_generated_at = datetime.utcnow()
+        db.session.commit()
+
+    return render_template(
+        'teacher/pedagogical_session_print.html',
+        ps=ps,
+        student=ps.student,
+        area_labels=AIService.AREAS_PEDAGOGICAS,
+    )
+
+
+@teacher_bp.route('/pedagogical/<int:session_id>/result', methods=['POST'])
+@teacher_required
+def submit_pedagogical_result(session_id):
+    """El docente registra cómo salió la sesión y la IA lo analiza."""
+    ps = _get_own_session(session_id)
+    if ps is None:
+        flash('No autorizado', 'danger')
+        return redirect(url_for('teacher.activities'))
+
+    notas = (request.form.get('teacher_notes') or '').strip()
+    if not notas:
+        flash('Escribí cómo salió la sesión antes de guardar', 'warning')
+        return redirect(url_for('teacher.pedagogical_session_detail', session_id=ps.id))
+
+    # Las métricas llegan como pares metrica_nombre / metrica_valor
+    metricas = {}
+    for nombre, valor in zip(request.form.getlist('metrica_nombre'),
+                             request.form.getlist('metrica_valor')):
+        nombre = (nombre or '').strip()
+        valor = (valor or '').strip()
+        if not nombre or not valor:
+            continue
+        try:
+            metricas[nombre] = float(valor) if '.' in valor else int(valor)
+        except ValueError:
+            metricas[nombre] = valor
+
+    try:
+        resultado = SessionResult(
+            session_id=ps.id,
+            teacher_notes=notas,
+            objective_metrics=metricas or None,
+        )
+        db.session.add(resultado)
+        ps.status = 'completed'
+        ps.completed_at = datetime.utcnow()
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error guardando resultado: {e}")
+        flash(f'Error al guardar el resultado: {e}', 'danger')
+        return redirect(url_for('teacher.pedagogical_session_detail', session_id=ps.id))
+
+    # El análisis de IA es un extra: si falla, el resultado ya quedó guardado.
+    try:
+        from app.reports.ai_service import ai_service
+        contexto = _build_pedagogical_context(ps.student)
+        analisis = ai_service.analyze_session_result(contexto, ps, notas, metricas)
+
+        resultado.ai_analysis = analisis.get('analysis')
+        resultado.ai_score = analisis.get('score')
+        resultado.ai_qualitative_grade = analisis.get('grade')
+        resultado.ai_next_recommendation = analisis.get('next_recommendation')
+        resultado.ai_analyzed_at = datetime.utcnow()
+        ps.status = 'evaluated'
+        db.session.commit()
+        flash('Resultado registrado y analizado por la IA', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error analizando resultado {resultado.id}: {e}")
+        flash('Resultado guardado, pero el análisis de IA falló. '
+              'Podés reintentarlo desde la sesión.', 'warning')
+
+    return redirect(url_for('teacher.pedagogical_session_detail', session_id=ps.id))
+
+
+@teacher_bp.route('/pedagogical/<int:session_id>/reanalyze', methods=['POST'])
+@teacher_required
+def reanalyze_pedagogical_result(session_id):
+    """Reintenta el análisis de IA sobre un resultado ya cargado."""
+    ps = _get_own_session(session_id)
+    if ps is None:
+        return jsonify({'success': False, 'error': 'No autorizado'}), 403
+
+    resultado = ps.results.order_by(SessionResult.submitted_at.desc()).first()
+    if resultado is None:
+        return jsonify({'success': False, 'error': 'La sesión no tiene resultado cargado'}), 400
+
+    try:
+        from app.reports.ai_service import ai_service
+        contexto = _build_pedagogical_context(ps.student)
+        analisis = ai_service.analyze_session_result(
+            contexto, ps, resultado.teacher_notes, resultado.objective_metrics
+        )
+
+        resultado.ai_analysis = analisis.get('analysis')
+        resultado.ai_score = analisis.get('score')
+        resultado.ai_qualitative_grade = analisis.get('grade')
+        resultado.ai_next_recommendation = analisis.get('next_recommendation')
+        resultado.ai_analyzed_at = datetime.utcnow()
+        ps.status = 'evaluated'
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error reanalizando resultado: {e}")
+        return jsonify({'success': False, 'error': 'No se pudo analizar. Intentá de nuevo.'}), 502
+
+    return jsonify({'success': True})
+
+
 @teacher_bp.route('/activities/library')
 @teacher_required
 def activities_library():

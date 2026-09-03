@@ -1,0 +1,363 @@
+{% extends "_layouts/teacher_layout.html" %}
+
+{% block title %}{{ ps.session_title or 'Sesión' }} — {{ student.get_display_name() }}{% endblock %}
+{% block page_title %}Sesión pedagógica{% endblock %}
+
+{% block topbar_actions %}
+<a href="{{ url_for('teacher.student_pedagogical_profile', student_id=student.id) }}"
+   class="flex items-center gap-1.5 text-sm text-[#6B7280] hover:text-[#1F2937] transition-colors">
+  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+  </svg>
+  Volver al perfil
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+  {# ── Cabecera ── #}
+  <div class="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm p-6 mb-5">
+    <div class="flex flex-wrap items-center gap-2 mb-2">
+      <span class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-bold">
+        {{ area_labels.get(ps.session_area, ps.session_area or 'General') }}
+      </span>
+      <span class="px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">
+        Nivel {{ ps.session_level or '—' }}
+      </span>
+      <span class="px-2.5 py-1 rounded-full text-xs font-bold
+        {% if ps.status == 'evaluated' %}bg-emerald-100 text-emerald-700
+        {% elif ps.status == 'completed' %}bg-blue-100 text-blue-700
+        {% elif ps.status == 'planned' %}bg-amber-100 text-amber-700
+        {% else %}bg-slate-100 text-slate-600{% endif %}">
+        {{ ps.status_label() }}
+      </span>
+    </div>
+
+    <h2 class="text-xl font-bold text-[#1F2937] mb-1">
+      {{ ps.session_title or 'Sesión sin título' }}
+    </h2>
+    <p class="text-sm text-[#6B7280]">
+      {{ student.get_display_name() }}
+      {% if ps.created_at %} · creada el {{ ps.created_at.strftime('%d/%m/%Y') }}{% endif %}
+    </p>
+
+    {% if ps.teacher_guide %}
+    <div class="flex flex-wrap gap-3 mt-4 pt-4 border-t border-[#F3F4F6]">
+      <a href="{{ url_for('teacher.pedagogical_session_print', session_id=ps.id) }}"
+         target="_blank" rel="noopener"
+         class="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white
+                bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl transition-colors">
+        🖨️ Imprimir material
+      </a>
+      <button type="button" id="plan-btn" onclick="generarPlan()"
+              class="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-[#6B7280]
+                     bg-white border border-[#E5E7EB] hover:bg-[#F9FAFB] rounded-xl transition-colors">
+        <span id="plan-btn-label">🔄 Regenerar material</span>
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Sin plan todavía ── #}
+  {% if not ps.teacher_guide %}
+  <div class="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-6
+              border-2 border-purple-200 shadow-sm text-center">
+    <div class="text-4xl mb-3" aria-hidden="true">📝</div>
+    <h3 class="text-lg font-bold text-purple-900 mb-1">Falta el material de la sesión</h3>
+    <p class="text-sm text-purple-700 mb-5">
+      La IA convierte esta recomendación en una guía paso a paso para vos,
+      una hoja lista para imprimir para el alumno, y una rúbrica de evaluación.
+    </p>
+    <button type="button" id="plan-btn" onclick="generarPlan()"
+            class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white
+                   rounded-xl font-semibold shadow-md hover:shadow-lg transition-all
+                   disabled:opacity-50 disabled:cursor-not-allowed">
+      <span id="plan-btn-label">✨ Generar material</span>
+    </button>
+    <p id="plan-hint" class="text-xs text-purple-600 mt-3" style="display:none;">
+      Esto tarda unos segundos...
+    </p>
+  </div>
+  {% endif %}
+
+  {# ── Guía del docente ── #}
+  {% if ps.teacher_guide %}
+  <div class="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm p-6 mb-5">
+    <h3 class="text-base font-bold text-[#1F2937] mb-4 flex items-center gap-2">
+      <span aria-hidden="true">🧑‍🏫</span><span>Guía para el docente</span>
+    </h3>
+    <div class="instrucciones-formateadas text-sm">
+      {{ ps.teacher_guide|format_instructions }}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Hoja del alumno ── #}
+  {% if ps.student_worksheet %}
+  <div class="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm p-6 mb-5">
+    <h3 class="text-base font-bold text-[#1F2937] mb-1 flex items-center gap-2">
+      <span aria-hidden="true">📄</span><span>Hoja del alumno</span>
+    </h3>
+    <p class="text-xs text-[#9CA3AF] mb-4">Esto es lo que se imprime y se le entrega al niño.</p>
+    {# Monoespaciado a propósito: la IA dibuja casilleros y tablas con caracteres #}
+    <pre class="bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl p-4 text-sm text-[#374151]
+                whitespace-pre-wrap font-mono leading-relaxed overflow-x-auto">{{ ps.student_worksheet }}</pre>
+  </div>
+  {% endif %}
+
+  {# ── Rúbrica ── #}
+  {% if ps.rubric and ps.rubric.get('criterios') %}
+  <div class="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm p-6 mb-5">
+    <h3 class="text-base font-bold text-[#1F2937] mb-4 flex items-center gap-2">
+      <span aria-hidden="true">📊</span><span>Rúbrica de evaluación</span>
+    </h3>
+    <div class="space-y-4">
+      {% for c in ps.rubric.get('criterios') %}
+      <div class="border border-[#E5E7EB] rounded-xl p-4">
+        <div class="font-semibold text-[#1F2937] text-sm">{{ c.get('nombre') }}</div>
+        <p class="text-xs text-[#6B7280] mt-0.5 mb-3">{{ c.get('descripcion') }}</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+          {% for clave, etiqueta, color in [
+              ('logrado', 'Logrado', 'emerald'),
+              ('en_proceso', 'En proceso', 'amber'),
+              ('inicial', 'Inicial', 'slate')] %}
+          <div class="rounded-lg p-2.5
+            {% if color == 'emerald' %}bg-emerald-50 border border-emerald-100
+            {% elif color == 'amber' %}bg-amber-50 border border-amber-100
+            {% else %}bg-slate-50 border border-slate-100{% endif %}">
+            <div class="font-bold mb-0.5
+              {% if color == 'emerald' %}text-emerald-700
+              {% elif color == 'amber' %}text-amber-700
+              {% else %}text-slate-600{% endif %}">{{ etiqueta }}</div>
+            <div class="text-[#374151]">{{ (c.get('niveles') or {}).get(clave) or '—' }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Resultado ── #}
+  {% if resultado %}
+  <div class="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm p-6 mb-5">
+    <h3 class="text-base font-bold text-[#1F2937] mb-4 flex items-center gap-2">
+      <span aria-hidden="true">✅</span><span>Resultado de la sesión</span>
+    </h3>
+
+    {% if resultado.ai_score is not none %}
+    <div class="flex flex-wrap items-center gap-4 mb-5 pb-5 border-b border-[#F3F4F6]">
+      <div class="text-center">
+        <div class="text-3xl font-bold
+          {% if resultado.ai_score >= 85 %}text-emerald-600
+          {% elif resultado.ai_score >= 70 %}text-blue-600
+          {% elif resultado.ai_score >= 50 %}text-amber-600
+          {% else %}text-red-600{% endif %}">{{ resultado.ai_score|round|int }}</div>
+        <div class="text-xs text-[#9CA3AF]">de 100</div>
+      </div>
+      <div>
+        <div class="font-bold text-[#1F2937]">{{ resultado.ai_qualitative_grade }}</div>
+        <div class="text-xs text-[#9CA3AF]">
+          Analizado por la IA{% if resultado.ai_analyzed_at %}
+          el {{ resultado.ai_analyzed_at.strftime('%d/%m/%Y %H:%M') }}{% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="mb-4">
+      <div class="text-xs font-bold text-[#9CA3AF] uppercase tracking-wide mb-1">
+        Lo que reportaste
+      </div>
+      <p class="text-sm text-[#374151] leading-relaxed whitespace-pre-line">{{ resultado.teacher_notes }}</p>
+    </div>
+
+    {% if resultado.objective_metrics %}
+    <div class="mb-4">
+      <div class="text-xs font-bold text-[#9CA3AF] uppercase tracking-wide mb-1">Métricas</div>
+      <div class="flex flex-wrap gap-2">
+        {% for k, v in resultado.objective_metrics.items() %}
+        <span class="px-2.5 py-1 rounded-lg bg-[#F3F4F6] text-xs text-[#374151]">
+          <strong>{{ k }}:</strong> {{ v }}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if resultado.ai_analysis %}
+    <div class="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-4">
+      <div class="text-xs font-bold text-purple-900 uppercase tracking-wide mb-1">
+        🤖 Análisis de la IA
+      </div>
+      <p class="text-sm text-[#374151] leading-relaxed mb-3">{{ resultado.ai_analysis }}</p>
+      {% if resultado.ai_next_recommendation %}
+      <div class="text-xs font-bold text-purple-900 uppercase tracking-wide mb-1">
+        Para la próxima sesión
+      </div>
+      <p class="text-sm text-[#374151] leading-relaxed">{{ resultado.ai_next_recommendation }}</p>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+      <span class="text-lg" aria-hidden="true">⚠</span>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-amber-900">El análisis de IA no se completó</p>
+        <p class="text-xs text-amber-700 mt-0.5 mb-2">
+          Tu reporte está guardado. Podés reintentar el análisis.
+        </p>
+        <button type="button" id="reanalyze-btn" onclick="reanalizar()"
+                class="px-4 py-1.5 text-xs font-semibold text-white bg-amber-600
+                       hover:bg-amber-700 rounded-lg transition-colors">
+          <span id="reanalyze-label">Reintentar análisis</span>
+        </button>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Formulario de resultado ── #}
+  {% elif ps.teacher_guide %}
+  <div class="bg-white rounded-2xl border border-[#E5E7EB] shadow-sm p-6">
+    <h3 class="text-base font-bold text-[#1F2937] mb-1 flex items-center gap-2">
+      <span aria-hidden="true">📋</span><span>Registrar cómo salió</span>
+    </h3>
+    <p class="text-xs text-[#9CA3AF] mb-5">
+      Completalo después de hacer la sesión con el alumno. La IA lo analiza y sugiere el próximo paso.
+    </p>
+
+    <form method="POST" action="{{ url_for('teacher.submit_pedagogical_result', session_id=ps.id) }}"
+          class="space-y-5">
+
+      <div>
+        <label for="teacher_notes" class="block text-sm font-medium text-[#374151] mb-1.5">
+          ¿Cómo salió la sesión? *
+        </label>
+        <textarea id="teacher_notes" name="teacher_notes" rows="6" required
+                  placeholder="Contá qué hizo el alumno, qué le costó, en qué momento se desenganchó, qué te llamó la atención..."
+                  class="w-full px-4 py-3 rounded-xl border border-[#D1D5DB] text-sm resize-none
+                         focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent"></textarea>
+      </div>
+
+      <div>
+        <div class="block text-sm font-medium text-[#374151] mb-1.5">
+          Métricas <span class="font-normal text-[#9CA3AF]">(opcional)</span>
+        </div>
+        {% set sugeridas = (ps.rubric or {}).get('metricas_a_registrar') or [] %}
+        <div class="space-y-2">
+          {% for i in range(3) %}
+          <div class="flex gap-2">
+            <input type="text" name="metrica_nombre"
+                   value="{{ sugeridas[i] if i < sugeridas|length else '' }}"
+                   placeholder="Qué mediste"
+                   class="flex-1 px-3 py-2 rounded-lg border border-[#D1D5DB] text-sm
+                          focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+            <input type="text" name="metrica_valor" placeholder="Valor"
+                   class="w-32 px-3 py-2 rounded-lg border border-[#D1D5DB] text-sm
+                          focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:border-transparent">
+          </div>
+          {% endfor %}
+        </div>
+        {% if sugeridas %}
+        <p class="text-xs text-[#9CA3AF] mt-1.5">
+          Los nombres vienen de la rúbrica. Podés cambiarlos.
+        </p>
+        {% endif %}
+      </div>
+
+      <div class="pt-4 border-t border-[#E5E7EB]">
+        <button type="submit" id="result-submit"
+                class="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white
+                       bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors
+                       disabled:opacity-60 disabled:cursor-not-allowed">
+          <span id="result-label">Guardar y analizar con IA</span>
+        </button>
+        <p class="text-xs text-[#9CA3AF] mt-2">El análisis tarda unos segundos.</p>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PLAN_URL = '{{ url_for("teacher.generate_pedagogical_plan", session_id=ps.id) }}';
+const REANALYZE_URL = '{{ url_for("teacher.reanalyze_pedagogical_result", session_id=ps.id) }}';
+
+async function generarPlan() {
+  const btn = document.getElementById('plan-btn');
+  const label = document.getElementById('plan-btn-label');
+  const hint = document.getElementById('plan-hint');
+
+  btn.disabled = true;
+  label.textContent = 'Generando material...';
+  if (hint) hint.style.display = 'block';
+
+  try {
+    const resp = await fetch(PLAN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.success) throw new Error(data.error || 'Error desconocido');
+    window.location.href = data.redirect;
+  } catch (err) {
+    console.error(err);
+    avisar('No se pudo generar el material: ' + err.message, true);
+    btn.disabled = false;
+    label.textContent = '✨ Generar material';
+    if (hint) hint.style.display = 'none';
+  }
+}
+
+async function reanalizar() {
+  const btn = document.getElementById('reanalyze-btn');
+  const label = document.getElementById('reanalyze-label');
+  btn.disabled = true;
+  label.textContent = 'Analizando...';
+
+  try {
+    const resp = await fetch(REANALYZE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.success) throw new Error(data.error || 'Error desconocido');
+    window.location.reload();
+  } catch (err) {
+    console.error(err);
+    avisar('No se pudo analizar: ' + err.message, true);
+    btn.disabled = false;
+    label.textContent = 'Reintentar análisis';
+  }
+}
+
+// El análisis de IA tarda: evitamos el doble submit del formulario
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.querySelector('form[action*="/result"]');
+  if (!form) return;
+  form.addEventListener('submit', () => {
+    const btn = document.getElementById('result-submit');
+    btn.disabled = true;
+    document.getElementById('result-label').textContent = 'Analizando con IA...';
+  });
+});
+
+function avisar(msg, esError) {
+  const el = document.createElement('div');
+  el.className = 'fixed top-4 right-4 z-50 px-4 py-2.5 text-white text-sm font-medium rounded-xl shadow-lg';
+  el.style.background = esError ? '#DC2626' : '#059669';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.3s';
+    el.style.opacity = '0';
+    setTimeout(() => el.remove(), 300);
+  }, 4000);
+}
+</script>
+{% endblock %}

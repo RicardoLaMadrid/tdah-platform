@@ -291,6 +291,151 @@ Devolvé un JSON con exactamente esta forma:
 
         return data
 
+    def generate_session_plan(self, context, recommendation):
+        """Convierte una recomendación en el material concreto de la sesión.
+
+        Returns:
+            dict con: teacher_guide (markdown-ish en texto plano),
+                      student_worksheet (texto de la hoja del niño),
+                      rubric {criterios: [{nombre, descripcion, niveles}]}
+        """
+        system_prompt = (
+            "Eres un asistente pedagógico especializado en TDAH infantil que prepara "
+            "material PRESENCIAL para docentes de primaria en Bolivia. Escribís guías "
+            "que un docente puede seguir sin formación clínica previa, y hojas de "
+            "trabajo que se imprimen en blanco y negro en una fotocopiadora común. "
+            "Solo papel, lápiz y objetos del aula: nada de pantallas ni material que "
+            "haya que comprar. NO emitas diagnósticos clínicos ni menciones medicación. "
+            "Respondés en español latinoamericano."
+        )
+
+        user_prompt = f"""Preparás el material para esta sesión con {context.get('nombre')}
+(edad {context.get('edad') or 'primaria'}, perfil {context.get('perfil_tdah')}).
+
+## Sesión a preparar
+Título: {recommendation.get('session_title')}
+Área: {recommendation.get('area_label')}
+Nivel: {recommendation.get('level')} de 5
+Duración: {recommendation.get('duration_min')} minutos
+Tipo: {recommendation.get('activity_type')}
+Objetivos: {json.dumps(recommendation.get('objectives', []), ensure_ascii=False)}
+Materiales: {json.dumps(recommendation.get('materials', []), ensure_ascii=False)}
+
+Devolvé un JSON con esta forma exacta:
+{{
+    "teacher_guide": "Guía paso a paso para el docente. Usá pasos numerados '1. ' '2. '. Incluí: preparación previa, consigna textual para decirle al niño, desarrollo por etapas con tiempos, qué observar, y qué hacer si el niño se frustra o se desregula.",
+    "student_worksheet": "Contenido EXACTO de la hoja del niño, lista para imprimir. Consignas cortas y en segunda persona. Si la actividad necesita casilleros, tablas o espacios para marcar, dibujalos con caracteres de texto.",
+    "rubric": {{
+        "criterios": [
+            {{
+                "nombre": "Nombre corto del criterio",
+                "descripcion": "Qué observa el docente",
+                "niveles": {{
+                    "logrado": "Qué se ve cuando está logrado",
+                    "en_proceso": "Qué se ve cuando está en proceso",
+                    "inicial": "Qué se ve cuando recién empieza"
+                }}
+            }}
+        ],
+        "metricas_a_registrar": ["nombre de un dato numérico que el docente debe contar durante la sesión"]
+    }}
+}}"""
+
+        # 16k: la guía + la hoja del alumno + la rúbrica en un solo JSON se pasan
+        # largo. Con 3000 la respuesta se cortaba a la mitad y el JSON no parseaba.
+        data = self.chat_json(system_prompt, user_prompt, temperature=0.4, max_tokens=16000)
+
+        rubric = data.get('rubric')
+        if not isinstance(rubric, dict):
+            rubric = {}
+        if not isinstance(rubric.get('criterios'), list):
+            rubric['criterios'] = []
+        if not isinstance(rubric.get('metricas_a_registrar'), list):
+            rubric['metricas_a_registrar'] = []
+        data['rubric'] = rubric
+
+        for campo in ('teacher_guide', 'student_worksheet'):
+            if not isinstance(data.get(campo), str):
+                data[campo] = ''
+
+        return data
+
+    GRADES = ['Necesita apoyo', 'Regular', 'Bueno', 'Excelente']
+
+    def analyze_session_result(self, context, session, teacher_notes, objective_metrics):
+        """Analiza lo que el docente reportó después de la sesión presencial.
+
+        Returns:
+            dict con: analysis, score (0-100), grade, next_recommendation
+        """
+        system_prompt = (
+            "Eres un asistente pedagógico especializado en TDAH infantil. Analizás el "
+            "reporte que un docente escribió después de una sesión presencial y devolvés "
+            "una lectura útil y honesta: qué funcionó, qué no, y qué conviene hacer la "
+            "próxima vez. Sos concreto y no adulás: si el resultado fue pobre, decilo con "
+            "respeto y proponé un ajuste. NO emitas diagnósticos clínicos ni menciones "
+            "medicación. Respondés en español latinoamericano."
+        )
+
+        user_prompt = f"""Analizá el resultado de esta sesión.
+
+## Alumno
+{context.get('nombre')} · {context.get('perfil_tdah')} · confianza {context.get('confianza', 0)}%
+
+## Sesión realizada
+Título: {session.session_title}
+Área: {session.session_area}
+Nivel: {session.session_level} de 5
+Objetivos que se buscaban: {json.dumps((session.ai_recommendation or {}).get('objectives', []), ensure_ascii=False)}
+Rúbrica: {json.dumps((session.rubric or {}).get('criterios', []), indent=2, ensure_ascii=False)}
+
+## Lo que reportó el docente
+{teacher_notes}
+
+## Métricas objetivas registradas
+{json.dumps(objective_metrics or {}, indent=2, ensure_ascii=False) or 'No se registraron métricas numéricas'}
+
+## Criterios de puntaje
+- 85-100 Excelente: cumplió los objetivos con autonomía.
+- 70-84 Bueno: los cumplió con apoyo puntual.
+- 50-69 Regular: los cumplió parcialmente, necesitó apoyo sostenido.
+- 0-49 Necesita apoyo: no llegó a los objetivos; hay que bajar el nivel o cambiar el abordaje.
+
+Devolvé un JSON con esta forma exacta:
+{{
+    "analysis": "3-5 líneas leyendo el desempeño contra los objetivos y la rúbrica. Citá los datos que reportó el docente.",
+    "score": 72,
+    "grade": "uno de: Excelente / Bueno / Regular / Necesita apoyo",
+    "next_recommendation": "2-3 líneas: qué hacer en la próxima sesión y por qué (subir nivel, repetir area, cambiar de area)."
+}}"""
+
+        data = self.chat_json(system_prompt, user_prompt, temperature=0.3, max_tokens=1500)
+
+        try:
+            score = float(data.get('score'))
+        except (TypeError, ValueError):
+            score = 0.0
+        data['score'] = min(100.0, max(0.0, score))
+
+        grade = (data.get('grade') or '').strip()
+        if grade not in self.GRADES:
+            # Derivamos la calificación del puntaje si el modelo devolvió otra cosa
+            if score >= 85:
+                grade = 'Excelente'
+            elif score >= 70:
+                grade = 'Bueno'
+            elif score >= 50:
+                grade = 'Regular'
+            else:
+                grade = 'Necesita apoyo'
+        data['grade'] = grade
+
+        for campo in ('analysis', 'next_recommendation'):
+            if not isinstance(data.get(campo), str):
+                data[campo] = ''
+
+        return data
+
     def answer_parent_question(self, question, student_context):
         """
         Responde preguntas de padres sobre TDAH y progreso del hijo.

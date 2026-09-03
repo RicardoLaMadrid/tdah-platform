@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ ps.session_title or 'Sesión' }} — {{ student.get_display_name() }}</title>
+  {#
+    Página autónoma a propósito: no extiende el layout del docente porque
+    esto se imprime. Sin sidebar, sin topbar, sin Tailwind: solo lo que va
+    al papel. La hoja del alumno arranca en una página nueva.
+  #}
+  <style>
+    :root { color-scheme: light; }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 2rem 1.5rem;
+      max-width: 800px;
+      margin-inline: auto;
+      font-family: Inter, Arial, sans-serif;
+      color: #1F2937;
+      background: #fff;
+      line-height: 1.6;
+    }
+
+    .barra-acciones {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 0.6rem 1.2rem;
+      border-radius: 0.6rem;
+      border: 1px solid #D1D5DB;
+      background: #fff;
+      color: #374151;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn-primary { background: #4F46E5; border-color: #4F46E5; color: #fff; }
+
+    .encabezado {
+      border-bottom: 3px solid #4F46E5;
+      padding-bottom: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+    .institucion { font-size: 0.8rem; color: #6B7280; letter-spacing: 0.04em; text-transform: uppercase; }
+    h1 { font-size: 1.4rem; margin: 0.3rem 0 0.4rem; }
+    .meta { font-size: 0.85rem; color: #4B5563; }
+    .meta strong { color: #1F2937; }
+
+    h2 {
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #4F46E5;
+      border-bottom: 1px solid #E5E7EB;
+      padding-bottom: 0.35rem;
+      margin: 2rem 0 0.9rem;
+    }
+
+    ol { padding-left: 1.3rem; margin: 0; }
+    ol li { margin-bottom: 0.6rem; }
+    p { margin: 0 0 0.6rem; }
+
+    .hoja-alumno {
+      white-space: pre-wrap;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      border: 1px solid #D1D5DB;
+      border-radius: 0.5rem;
+      padding: 1.2rem;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th, td { border: 1px solid #D1D5DB; padding: 0.5rem 0.6rem; text-align: left; vertical-align: top; }
+    th { background: #F3F4F6; font-weight: 600; }
+    .criterio { font-weight: 600; }
+
+    .firma {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid #E5E7EB;
+      display: flex;
+      justify-content: space-between;
+      gap: 1.5rem;
+      font-size: 0.78rem;
+      color: #9CA3AF;
+    }
+    .firma-linea { width: 220px; border-bottom: 1px solid #9CA3AF; margin-bottom: 0.4rem; }
+
+    .aviso {
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-left: 4px solid #F59E0B;
+      border-radius: 0.5rem;
+      padding: 0.9rem 1rem;
+      font-size: 0.78rem;
+      color: #78350F;
+      margin-top: 1.5rem;
+    }
+
+    .salto { break-before: page; page-break-before: always; }
+
+    @media print {
+      body { padding: 0; }
+      .barra-acciones { display: none; }
+      h2 { break-after: avoid; page-break-after: avoid; }
+      ol li, tr { break-inside: avoid; page-break-inside: avoid; }
+      .encabezado, .hoja-alumno { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="barra-acciones">
+    <button type="button" class="btn btn-primary" onclick="window.print()">🖨️ Imprimir</button>
+    <a class="btn" href="{{ url_for('teacher.pedagogical_session_detail', session_id=ps.id) }}">← Volver</a>
+  </div>
+
+  <div class="encabezado">
+    <div class="institucion">TDAH Platform · Sistema de Apoyo Pedagógico</div>
+    <h1>{{ ps.session_title or 'Sesión pedagógica' }}</h1>
+    <div class="meta">
+      <strong>{{ student.get_display_name() }}</strong>
+      {% if student.grade %} · {{ student.grade }}{% if student.section %} «{{ student.section }}»{% endif %}{% endif %}
+      · {{ area_labels.get(ps.session_area, ps.session_area or 'General') }}
+      · Nivel {{ ps.session_level or '—' }}
+      {% set rec = ps.ai_recommendation or {} %}
+      {% if rec.get('duration_min') %} · {{ rec.get('duration_min') }} min{% endif %}
+    </div>
+  </div>
+
+  {% if rec.get('objectives') %}
+  <h2>Objetivos</h2>
+  <ol>
+    {% for o in rec.get('objectives') %}<li>{{ o }}</li>{% endfor %}
+  </ol>
+  {% endif %}
+
+  {% if rec.get('materials') %}
+  <h2>Materiales</h2>
+  <ol>
+    {% for m in rec.get('materials') %}<li>{{ m }}</li>{% endfor %}
+  </ol>
+  {% endif %}
+
+  {% if ps.teacher_guide %}
+  <h2>Guía para el docente</h2>
+  <div class="instrucciones-print">{{ ps.teacher_guide|format_instructions }}</div>
+  {% endif %}
+
+  {% if ps.rubric and ps.rubric.get('criterios') %}
+  <h2>Rúbrica de evaluación</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%">Criterio</th>
+        <th>Logrado</th>
+        <th>En proceso</th>
+        <th>Inicial</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in ps.rubric.get('criterios') %}
+      <tr>
+        <td>
+          <div class="criterio">{{ c.get('nombre') }}</div>
+          <div style="color:#6B7280">{{ c.get('descripcion') }}</div>
+        </td>
+        <td>{{ (c.get('niveles') or {}).get('logrado') or '—' }}</td>
+        <td>{{ (c.get('niveles') or {}).get('en_proceso') or '—' }}</td>
+        <td>{{ (c.get('niveles') or {}).get('inicial') or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <div class="aviso">
+    <strong>Aviso:</strong> Este material es una sugerencia orientativa generada con
+    asistencia de IA y no constituye diagnóstico clínico. Adaptalo a tu criterio docente
+    y al momento del alumno.
+  </div>
+
+  <div class="firma">
+    <div>
+      <div class="firma-linea"></div>
+      <div>{{ ps.teacher.username if ps.teacher else '' }} · Docente responsable</div>
+    </div>
+    <div>🤖 Asistido por Claude · Anthropic</div>
+  </div>
+
+  {# ── Hoja del alumno: hoja aparte ── #}
+  {% if ps.student_worksheet %}
+  <div class="salto">
+    <div class="encabezado">
+      <div class="institucion">Hoja de trabajo</div>
+      <h1>{{ ps.session_title or 'Actividad' }}</h1>
+      <div class="meta">
+        Nombre: ______________________________________ &nbsp;&nbsp; Fecha: ____ / ____ / ______
+      </div>
+    </div>
+    <div class="hoja-alumno">{{ ps.student_worksheet }}</div>
+  </div>
+  {% endif %}
+
+</body>
+</html>
