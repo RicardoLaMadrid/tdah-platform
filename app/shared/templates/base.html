@@ -11,6 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
+  {# Utilidades que faltan en el build congelado de output.css — ver el archivo #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tw-faltantes.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/instrucciones.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">

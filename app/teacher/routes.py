@@ -240,7 +240,8 @@ def activities():
     }
 
     return render_template('teacher/students_pedagogical.html',
-                           students_data=students_data, stats=stats)
+                           students_data=students_data, stats=stats,
+                           area_labels=AIService.AREAS_PEDAGOGICAS)
 
 
 def _resumen_report(report):

@@ -93,7 +93,7 @@
       {% if data.last_session %}
       <div class="text-sm text-[#6B7280]">
         <span class="font-semibold">Última sesión:</span>
-        {{ data.last_session.session_area or 'General' }}
+        {{ area_labels.get(data.last_session.session_area, data.last_session.session_area or 'General') }}
         <span class="text-xs text-[#9CA3AF]">· {{ data.last_session.created_at.strftime('%d/%m/%Y') }}</span>
       </div>
       {% else %}

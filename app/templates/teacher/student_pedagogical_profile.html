@@ -172,7 +172,7 @@
               </span>
             </div>
             <div class="text-sm text-[#6B7280]">
-              {{ ps.session_area or 'General' }} · Nivel {{ ps.session_level or '—' }}
+              {{ area_labels.get(ps.session_area, ps.session_area or 'General') }} · Nivel {{ ps.session_level or '—' }}
               <span class="text-xs text-[#9CA3AF]">· {{ ps.created_at.strftime('%d/%m/%Y') }}</span>
             </div>
           </div>
