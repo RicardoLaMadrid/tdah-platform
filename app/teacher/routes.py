@@ -4,6 +4,7 @@ from app.models.user import User
 from app.models.student import Student
 from app.models.activity import Activity, Session
 from app.models.report import Report
+from app.core.models.pedagogical import PedagogicalSession, SessionResult
 from app.reports.ai_generator import AIActivityGenerator
 from app.extensions import db
 from functools import wraps
@@ -169,15 +170,121 @@ def student_detail(student_id):
                          reports=reports,
                          stats=stats)
 
+# Tipos de Report que corresponden a tests cognitivos y a actividades AR.
+# Los tests guardan su resultado como Report (ver app/assessments/*/routes.py)
+# y AR hace lo mismo con prefijo ar_ (ver app/ar/routes.py).
+TEST_REPORT_TYPES = ['vision_test', 'audio_test', 'stroop_test', 'gonogo_test']
+
+TEST_TYPE_LABELS = {
+    'vision_test': 'Atención visual',
+    'audio_test': 'Atención auditiva',
+    'stroop_test': 'Stroop',
+    'gonogo_test': 'Go/No-Go',
+    'ar_caza': 'AR — Caza de objetos',
+    'ar_secuencia': 'AR — Secuencia de luces',
+    'ar_respiracion': 'AR — Respiración',
+    'ar_trail': 'AR — Trail Making',
+}
+
+
+def _pedagogical_status(last_session):
+    """Estado visual del alumno según su última sesión pedagógica."""
+    if not last_session:
+        return ('new', 'Nuevo', 'blue')
+
+    if last_session.status == 'evaluated':
+        ref = last_session.completed_at or last_session.created_at
+        days = (datetime.utcnow() - ref).days if ref else 0
+        if days > 7:
+            return ('overdue', f'Hace {days} días', 'orange')
+        return ('up_to_date', 'Al día', 'green')
+
+    return ('in_progress', 'En progreso', 'yellow')
+
+
 @teacher_bp.route('/activities')
 @teacher_required
 def activities():
-    """Lista de actividades creadas"""
+    """Lista de alumnos del maestro con su resumen pedagógico."""
+    students = Student.query.filter_by(
+        teacher_id=current_user.id
+    ).order_by(Student.full_name).all()
+
+    students_data = []
+    for student in students:
+        last_session = PedagogicalSession.query.filter_by(
+            student_id=student.id
+        ).order_by(PedagogicalSession.created_at.desc()).first()
+
+        status, status_label, status_color = _pedagogical_status(last_session)
+
+        students_data.append({
+            'student': student,
+            'tdah_profile': student.get_tipo_tdah_display(),
+            'confidence': round(student.tdah_confidence or 0),
+            'last_session': last_session,
+            'status': status,
+            'status_label': status_label,
+            'status_color': status_color,
+        })
+
+    stats = {
+        'total': len(students_data),
+        'up_to_date': sum(1 for d in students_data if d['status'] == 'up_to_date'),
+        'overdue': sum(1 for d in students_data if d['status'] == 'overdue'),
+        'new': sum(1 for d in students_data if d['status'] == 'new'),
+        'in_progress': sum(1 for d in students_data if d['status'] == 'in_progress'),
+    }
+
+    return render_template('teacher/students_pedagogical.html',
+                           students_data=students_data, stats=stats)
+
+
+@teacher_bp.route('/activities/library')
+@teacher_required
+def activities_library():
+    """Catálogo de actividades creadas (era la vista de /activities)."""
     activities = Activity.query.filter_by(
         teacher_id=current_user.id
     ).order_by(Activity.created_at.desc()).all()
-    
+
     return render_template('teacher/activities.html', activities=activities)
+
+
+@teacher_bp.route('/students/<int:student_id>/pedagogical')
+@teacher_required
+def student_pedagogical_profile(student_id):
+    """Perfil pedagógico detallado del alumno."""
+    student = Student.query.get_or_404(student_id)
+
+    if student.teacher_id != current_user.id:
+        flash('No autorizado', 'danger')
+        return redirect(url_for('teacher.activities'))
+
+    recent_tests = Report.query.filter(
+        Report.student_id == student.id,
+        Report.report_type.in_(TEST_REPORT_TYPES),
+    ).order_by(Report.created_at.desc()).limit(5).all()
+
+    recent_ar_sessions = Report.query.filter(
+        Report.student_id == student.id,
+        Report.report_type.like('ar_%'),
+    ).order_by(Report.created_at.desc()).limit(5).all()
+
+    pedagogical_sessions = PedagogicalSession.query.filter_by(
+        student_id=student.id
+    ).order_by(PedagogicalSession.created_at.desc()).limit(10).all()
+
+    return render_template(
+        'teacher/student_pedagogical_profile.html',
+        student=student,
+        tdah_profile=student.get_tipo_tdah_display(),
+        confidence=round(student.tdah_confidence or 0),
+        recent_tests=recent_tests,
+        recent_ar_sessions=recent_ar_sessions,
+        pedagogical_sessions=pedagogical_sessions,
+        type_labels=TEST_TYPE_LABELS,
+    )
 
 @teacher_bp.route('/activities/create', methods=['GET', 'POST'])
 @teacher_required
@@ -214,7 +321,7 @@ def create_activity():
         db.session.commit()
         
         flash('Actividad creada exitosamente', 'success')
-        return redirect(url_for('teacher.activities'))
+        return redirect(url_for('teacher.activities_library'))
         
     except Exception as e:
         db.session.rollback()
@@ -229,7 +336,7 @@ def edit_activity(activity_id):
 
     if activity.teacher_id != current_user.id:
         flash('No autorizado', 'danger')
-        return redirect(url_for('teacher.activities'))
+        return redirect(url_for('teacher.activities_library'))
 
     if request.method == 'GET':
         return render_template('teacher/edit_activity.html', activity=activity)
@@ -244,7 +351,7 @@ def edit_activity(activity_id):
 
         db.session.commit()
         flash('Actividad actualizada exitosamente', 'success')
-        return redirect(url_for('teacher.activities'))
+        return redirect(url_for('teacher.activities_library'))
 
     except Exception as e:
         db.session.rollback()
