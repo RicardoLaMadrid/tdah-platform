@@ -55,36 +55,69 @@ class AIService:
             current_app.logger.error(f"Error llamando a Claude: {e}")
             raise
 
+    JSON_INSTRUCTION = (
+        "\n\nIMPORTANTE: Responde ÚNICAMENTE con un objeto JSON válido. "
+        "Sin texto antes ni después del JSON. Sin bloques de código markdown. "
+        "Solo el JSON crudo."
+    )
+
+    # Cuando un campo del JSON lleva texto largo con comillas y saltos de línea
+    # (guías, hojas de trabajo), el modelo a veces rompe el escapado. Este
+    # recordatorio se agrega solo en el reintento.
+    JSON_ESCAPE_REMINDER = (
+        "\n\nEl intento anterior devolvió JSON inválido. Prestá especial atención "
+        "al escapado DENTRO de los strings: los saltos de línea van como \\n "
+        "(nunca un salto real), las comillas dobles internas van como \\\" (o usá "
+        "comillas simples), y la barra invertida como \\\\. Verificá que el JSON "
+        "cierre bien antes de responder."
+    )
+
+    @staticmethod
+    def _strip_fences(raw):
+        limpio = raw.strip()
+        if limpio.startswith('```json'):
+            limpio = limpio[7:]
+        if limpio.startswith('```'):
+            limpio = limpio[3:]
+        if limpio.endswith('```'):
+            limpio = limpio[:-3]
+        return limpio.strip()
+
     def chat_json(self, system_prompt, user_prompt, temperature=None, max_tokens=None):
         """
         Igual que chat() pero garantiza que la respuesta sea JSON válido.
 
+        Si el primer intento devuelve JSON malformado, reintenta UNA vez
+        recordándole las reglas de escapado. Es un fallo intermitente y real:
+        con guías largas llenas de consignas entrecomilladas el modelo a veces
+        mete un salto de línea crudo dentro de un string.
+
         Returns:
             dict: respuesta parseada
         """
-        json_instruction = (
-            "\n\nIMPORTANTE: Responde ÚNICAMENTE con un objeto JSON válido. "
-            "Sin texto antes ni después del JSON. Sin bloques de código markdown. "
-            "Solo el JSON crudo."
-        )
-        raw = self.chat(system_prompt + json_instruction, user_prompt, temperature, max_tokens)
+        ultimo_error = None
 
-        cleaned = raw.strip()
-        if cleaned.startswith('```json'):
-            cleaned = cleaned[7:]
-        if cleaned.startswith('```'):
-            cleaned = cleaned[3:]
-        if cleaned.endswith('```'):
-            cleaned = cleaned[:-3]
-        cleaned = cleaned.strip()
+        for intento in (1, 2):
+            sistema = system_prompt + self.JSON_INSTRUCTION
+            if intento == 2:
+                sistema += self.JSON_ESCAPE_REMINDER
 
-        try:
-            return json.loads(cleaned)
-        except json.JSONDecodeError as e:
-            current_app.logger.error(
-                f"JSON inválido de Claude: {e}\nRespuesta cruda: {raw}"
-            )
-            raise ValueError(f"Claude devolvió JSON inválido: {e}")
+            raw = self.chat(sistema, user_prompt, temperature, max_tokens)
+
+            try:
+                return json.loads(self._strip_fences(raw))
+            except json.JSONDecodeError as e:
+                ultimo_error = e
+                current_app.logger.warning(
+                    f"JSON inválido de Claude (intento {intento}/2): {e}"
+                )
+                if intento == 1:
+                    continue
+                current_app.logger.error(
+                    f"JSON inválido de Claude tras 2 intentos: {e}\nRespuesta cruda: {raw}"
+                )
+
+        raise ValueError(f"Claude devolvió JSON inválido: {ultimo_error}")
 
     # ── Métodos de dominio ────────────────────────────────────────────────────
 
