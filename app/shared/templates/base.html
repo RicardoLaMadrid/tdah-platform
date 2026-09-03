@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/instrucciones.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
   <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
   {% block extra_css %}{% endblock %}
 </head>
@@ -62,7 +63,7 @@
         :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
         class="fixed lg:sticky inset-y-0 lg:inset-y-auto lg:top-0 left-0 z-40 w-64 h-full lg:h-screen bg-[#1E1B4B] text-[#C7D2FE] flex flex-col transition-transform duration-200 ease-in-out"
       {% else %}
-        :class="sidebarOpen ? 'w-56' : 'w-16'"
+        :class="sidebarOpen ? 'w-56' : 'w-16 sidebar-collapsed'"
         class="flex-shrink-0 bg-[#1E1B4B] text-[#C7D2FE] flex flex-col transition-all duration-200"
       {% endif %}
       aria-label="Menú principal">

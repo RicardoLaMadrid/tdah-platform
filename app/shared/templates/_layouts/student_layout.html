@@ -12,51 +12,25 @@
 {% block sidebar_mode %}mobile-drawer{% endblock %}
 
 {# ── Sidebar links ──────────────────────────────────────────────────────── #}
-{#
-  OJO con el <span> de la etiqueta: en modo mobile-drawer la sidebar es
-  siempre w-64 (nunca se colapsa a un riel de iconos), y base.html arranca
-  con sidebarOpen=false en ese modo. Si el label llevara x-show="sidebarOpen"
-  quedaría oculto en desktop y el menú se vería solo con iconos.
-  base.html hace lo mismo con el nombre de la marca.
-#}
-{% macro slink(endpoint, label, icon_path, exact=False, highlight=False) %}
-  {% set active = (request.endpoint == endpoint) if exact else (request.endpoint and request.endpoint.startswith(endpoint.split('.')[0] ~ '.')) %}
-  <a href="{{ url_for(endpoint) }}"
-     class="flex items-center gap-3 px-3 py-3 rounded-xl font-semibold text-base transition-all duration-150
-            {% if highlight %}
-              mt-4 bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] text-white shadow-md
-              hover:from-[#6D28D9] hover:to-[#4338CA]
-              {% if active %}ring-2 ring-[#C4B5FD]{% endif %}
-            {% elif active %}
-              bg-[#4F46E5] text-white shadow-md
-            {% else %}
-              text-[#C7D2FE] hover:bg-[#312E81] hover:text-white
-            {% endif %}">
-    <svg class="w-6 h-6 flex-shrink-0" viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" stroke-width="2" aria-hidden="true">
-      {{ icon_path }}
-    </svg>
-    <span class="truncate">{{ label }}</span>
-  </a>
-{% endmacro %}
+{% from "_macros/sidebar.html" import sidebar_link %}
 
 {% block sidebar_nav %}
-  {{ slink('student.index', 'Inicio',
-    '<path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>',
-    exact=True) }}
+  {# drawer=True: en mobile-drawer el aside es siempre w-64, así que los
+     labels no pueden depender de sidebarOpen (arranca en false). #}
+  {{ sidebar_link('student.index', 'Mi Inicio', '🏠', drawer=True) }}
 
-  {{ slink('student.tests_index', 'Mis Tests',
-    '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>') }}
+  {{ sidebar_link('student.tests_index', 'Mis Tests', '🧠', drawer=True,
+     match=['student.tests_index', 'vision.', 'audio.', 'stroop.', 'gonogo.']) }}
 
-  {{ slink('student.activities', 'Mis Actividades',
-    '<path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>') }}
+  {{ sidebar_link('student.activities', 'Mis Actividades', '📝', drawer=True,
+     match=['student.activities', 'student.activity_detail',
+            'student.start_activity', 'student.session_detail']) }}
 
-  {{ slink('student.progress', 'Mi Progreso',
-    '<path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>') }}
+  {{ sidebar_link('student.progress', 'Mi Progreso', '📊', drawer=True,
+     match=['student.progress']) }}
 
-  {{ slink('ar.index', 'Actividades AR',
-    '<path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.876v6.248a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>',
-    highlight=True) }}
+  {{ sidebar_link('ar.index', 'Actividades AR', '🥽', drawer=True,
+     match=['ar.'], featured=True) }}
 {% endblock %}
 
 {# ── Topbar personalizado ─────────────────────────────────────────────────── #}

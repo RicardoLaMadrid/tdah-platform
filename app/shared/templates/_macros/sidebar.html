@@ -1,0 +1,35 @@
+{#
+  Macro compartido por student_layout / teacher_layout / admin_layout.
+  Todos los links del sidebar salen de acá para que los 3 roles se vean
+  igual. Los estilos viven en static/css/sidebar.css.
+
+  Parámetros:
+    endpoint  — endpoint Flask del link (url_for)
+    label     — texto visible
+    icon      — emoji
+    match     — lista de prefijos de endpoint que también marcan activo
+                este link (ej: 'teacher.student_detail' para "Estudiantes").
+                Vacío = solo coincidencia exacta con `endpoint`.
+    drawer    — True en layouts con sidebar_mode=mobile-drawer.
+                En ese modo el aside es siempre w-64 y base.html arranca
+                con sidebarOpen=false, así que el label NO puede depender
+                de sidebarOpen o se ve solo el icono en desktop.
+                En modo desktop sí depende: el botón "Colapsar" de
+                base.html achica el aside a w-16 y el texto no entra.
+    featured  — resalta el link (Actividades AR)
+#}
+{% macro sidebar_link(endpoint, label, icon, match=[], drawer=False, featured=False) %}
+  {%- set ep = request.endpoint or '' -%}
+  {%- set ns = namespace(active = (ep == endpoint)) -%}
+  {%- for prefix in match -%}
+    {%- if ep.startswith(prefix) -%}{%- set ns.active = True -%}{%- endif -%}
+  {%- endfor -%}
+  {%- set active = ns.active -%}
+  <a href="{{ url_for(endpoint) }}"
+     class="sidebar-link{% if active %} sidebar-link-active{% endif %}{% if featured %} sidebar-link-featured{% endif %}"
+     {% if active %}aria-current="page"{% endif %}>
+    <span class="sidebar-link-icon" aria-hidden="true">{{ icon }}</span>
+    <span class="sidebar-link-label"
+          {% if not drawer %}x-show="sidebarOpen" x-transition{% endif %}>{{ label }}</span>
+  </a>
+{% endmacro %}
