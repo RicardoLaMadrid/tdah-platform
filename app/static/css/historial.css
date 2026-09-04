@@ -1,0 +1,233 @@
+/* ==========================================================
+   HISTORIAL DE SESIONES — perfil pedagógico del alumno
+
+   CSS propio en vez de clases de Tailwind: output.css es un build
+   congelado (ver tw-faltantes.css) y las variantes de color por estado
+   no están compiladas. Así el color por estado no depende de eso.
+   ========================================================== */
+
+/* ── Métricas ───────────────────────────────────────────── */
+
+.hist-metricas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.875rem;
+  margin-bottom: 1.25rem;
+}
+
+.hist-metrica {
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-radius: 0.875rem;
+  padding: 1rem;
+}
+
+.hist-metrica-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9CA3AF;
+  margin-bottom: 0.4rem;
+}
+
+.hist-metrica-valor {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.1;
+}
+
+.hist-metrica-sub {
+  font-size: 0.75rem;
+  color: #6B7280;
+  margin-top: 0.2rem;
+}
+
+/* Barra de % completadas */
+.hist-barra {
+  height: 8px;
+  background: #E5E7EB;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.hist-barra-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366F1 0%, #8B5CF6 100%);
+  border-radius: 999px;
+}
+
+/* Tendencia */
+.hist-tendencia-mejora   { color: #059669; }
+.hist-tendencia-baja     { color: #DC2626; }
+.hist-tendencia-estable  { color: #D97706; }
+.hist-tendencia-sin_datos { color: #9CA3AF; font-size: 0.9375rem; }
+
+/* Sparkline de los puntajes */
+.hist-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 34px;
+  margin-top: 0.5rem;
+}
+
+.hist-spark-bar {
+  flex: 1;
+  min-width: 6px;
+  border-radius: 2px 2px 0 0;
+  background: #C7D2FE;
+}
+
+.hist-spark-bar.es-ultimo { background: #6366F1; }
+
+/* ── Filtros ────────────────────────────────────────────── */
+
+.hist-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.hist-chip {
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid #E5E7EB;
+  background: #fff;
+  color: #4B5563;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.hist-chip:hover { background: #F9FAFB; }
+
+.hist-chip.activo {
+  background: #4F46E5;
+  border-color: #4F46E5;
+  color: #fff;
+}
+
+.hist-fecha {
+  font: inherit;
+  font-size: 0.8125rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 0.5rem;
+  color: #374151;
+}
+
+/* ── Filas del historial ────────────────────────────────── */
+
+.hist-fila {
+  display: block;
+  background: #fff;
+  border: 1px solid #E5E7EB;
+  border-left: 4px solid #9CA3AF;
+  border-radius: 0.75rem;
+  padding: 0.95rem 1.1rem;
+  margin-bottom: 0.7rem;
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.hist-fila:hover {
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08);
+}
+
+/* Color por estado */
+.hist-fila.color-verde       { border-left-color: #059669; }
+.hist-fila.color-naranja     { border-left-color: #EA580C; }
+.hist-fila.color-rojo        { border-left-color: #DC2626; background: #FEF2F2; }
+.hist-fila.color-rojo-suave  { border-left-color: #F87171; }
+.hist-fila.color-gris        { border-left-color: #9CA3AF; }
+
+.hist-fila-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.hist-titulo {
+  font-weight: 700;
+  color: #1F2937;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+
+.hist-meta {
+  font-size: 0.75rem;
+  color: #6B7280;
+  margin-top: 0.2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.hist-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hist-badge.color-verde      { background: #D1FAE5; color: #047857; }
+.hist-badge.color-naranja    { background: #FFEDD5; color: #C2410C; }
+.hist-badge.color-rojo       { background: #FEE2E2; color: #B91C1C; }
+.hist-badge.color-rojo-suave { background: #FEE2E2; color: #DC2626; }
+.hist-badge.color-gris       { background: #F3F4F6; color: #4B5563; }
+
+.hist-score {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hist-score.color-verde      { color: #059669; }
+.hist-score.color-naranja    { color: #EA580C; }
+.hist-score.color-rojo-suave { color: #DC2626; }
+.hist-score.color-gris       { color: #6B7280; }
+
+.hist-analisis {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #F3F4F6;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: #4B5563;
+}
+
+.hist-analisis-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9CA3AF;
+  margin-bottom: 0.2rem;
+}
+
+.hist-vacio {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #9CA3AF;
+  font-size: 0.875rem;
+}
+
+/* Sin esto el mensaje de "sin resultados" parpadea antes de que arranque
+   Alpine. output.css no trae la regla. */
+[x-cloak] { display: none !important; }
+
+@media (max-width: 640px) {
+  .hist-metricas { grid-template-columns: 1fr; }
+  .hist-fila-top { flex-direction: column; }
+}

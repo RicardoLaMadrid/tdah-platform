@@ -160,38 +160,140 @@
         </div>
       </div>
 
-      {# Sesiones pedagógicas #}
-      <div class="bg-white rounded-2xl p-6 border border-[#E5E7EB] shadow-sm">
+      {# Historial de sesiones pedagógicas #}
+      <div class="bg-white rounded-2xl p-6 border border-[#E5E7EB] shadow-sm"
+           x-data="historialSesiones()">
         <h3 class="text-lg font-bold text-[#1F2937] mb-4 flex items-center gap-2">
           <span aria-hidden="true">📋</span>
-          <span>Sesiones pedagógicas</span>
+          <span>Historial de actividades</span>
         </h3>
 
-        {% if pedagogical_sessions %}
-        <div class="space-y-3">
-          {% for ps in pedagogical_sessions %}
+        {% if historial %}
+        {# ── Métricas ── #}
+        <div class="hist-metricas">
+          <div class="hist-metrica">
+            <div class="hist-metrica-label">Completadas</div>
+            <div class="hist-metrica-valor">{{ metricas.pct_completadas }}%</div>
+            <div class="hist-metrica-sub">
+              {{ metricas.completadas }} de {{ metricas.total }}
+              {%- if metricas.vencidas %} · {{ metricas.vencidas }} vencida{{ 's' if metricas.vencidas != 1 }}{% endif %}
+            </div>
+            <div class="hist-barra" role="img"
+                 aria-label="{{ metricas.pct_completadas }} por ciento completadas">
+              <div class="hist-barra-fill" style="width: {{ metricas.pct_completadas }}%"></div>
+            </div>
+          </div>
+
+          <div class="hist-metrica">
+            <div class="hist-metrica-label">Tendencia</div>
+            <div class="hist-metrica-valor hist-tendencia-{{ metricas.tendencia }}">
+              {%- if metricas.tendencia == 'mejora' %}↗ +{{ metricas.delta }}
+              {%- elif metricas.tendencia == 'baja' %}↘ {{ metricas.delta }}
+              {%- elif metricas.tendencia == 'estable' %}→ estable
+              {%- else %}—{% endif %}
+            </div>
+            <div class="hist-metrica-sub">
+              {{ metricas.tendencia_label }}
+              {%- if metricas.promedio is not none %} · promedio {{ metricas.promedio }}{% endif %}
+            </div>
+            {% if metricas.puntajes %}
+            <div class="hist-spark" role="img"
+                 aria-label="Puntajes: {{ metricas.puntajes|join(', ') }}">
+              {% for p in metricas.puntajes %}
+              <div class="hist-spark-bar {% if loop.last %}es-ultimo{% endif %}"
+                   style="height: {{ [p, 8]|max }}%" title="{{ p }}/100"></div>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="hist-metrica">
+            <div class="hist-metrica-label">Área más trabajada</div>
+            <div class="hist-metrica-valor" style="font-size: 1.0625rem; line-height: 1.3;">
+              {{ metricas.area_top or '—' }}
+            </div>
+            <div class="hist-metrica-sub">
+              {% if metricas.area_top %}
+                {{ metricas.area_top_n }} {{ 'sesión' if metricas.area_top_n == 1 else 'sesiones' }} de {{ metricas.total }}
+              {% else %}Sin área registrada{% endif %}
+            </div>
+          </div>
+        </div>
+
+        {# ── Filtros ── #}
+        <div class="hist-filtros">
+          {% for clave, etiqueta in [('todas','Todas'), ('completadas','Completadas'),
+                                     ('vencidas','Vencidas'), ('activas','Activas')] %}
+          <button type="button" class="hist-chip"
+                  :class="{ 'activo': estado === '{{ clave }}' }"
+                  @click="estado = '{{ clave }}'">{{ etiqueta }}</button>
+          {% endfor %}
+
+          <span class="text-xs text-[#9CA3AF] ml-1">Desde</span>
+          <input type="date" class="hist-fecha" x-model="desde" aria-label="Fecha desde">
+          <span class="text-xs text-[#9CA3AF]">hasta</span>
+          <input type="date" class="hist-fecha" x-model="hasta" aria-label="Fecha hasta">
+
+          <button type="button" class="hist-chip" x-show="estado !== 'todas' || desde || hasta"
+                  @click="estado = 'todas'; desde = ''; hasta = ''">Limpiar</button>
+        </div>
+
+        {# ── Filas ── #}
+        <div>
+          {% for h in historial %}
+          {% set ps = h.sesion %}
+          {% set r = h.resultado %}
           <a href="{{ url_for('teacher.pedagogical_session_detail', session_id=ps.id) }}"
-             class="block p-4 border border-[#E5E7EB] rounded-xl hover:bg-[#F9FAFB]
-                    hover:border-indigo-300 transition-colors">
-            <div class="flex items-center justify-between gap-3 mb-1">
-              <div class="font-semibold text-[#1F2937] truncate">
-                {{ ps.session_title or 'Sesión sin título' }}
+             class="hist-fila color-{{ h.color }}"
+             data-estado="{{ h.estado }}"
+             data-fecha="{{ (ps.scheduled_for or ps.created_at).strftime('%Y-%m-%d') }}"
+             x-show="visible($el)">
+
+            <div class="hist-fila-top">
+              <div style="min-width:0">
+                <div class="hist-titulo">{{ ps.session_title or 'Sesión sin título' }}</div>
+                <div class="hist-meta">
+                  <span>{{ h.area_label }}</span>
+                  <span>·</span>
+                  <span>Nivel {{ ps.session_level or '—' }}</span>
+                  <span>·</span>
+                  <span>Asignada {{ ps.created_at.strftime('%d/%m/%Y') }}</span>
+                  {% if ps.scheduled_for %}
+                  <span>·</span>
+                  <span {% if h.estado == 'vencida' %}style="color:#B91C1C;font-weight:600"{% endif %}>
+                    Vence {{ ps.scheduled_for.strftime('%d/%m/%Y') }}
+                  </span>
+                  {% else %}
+                  <span>·</span><span>Sin fecha de vencimiento</span>
+                  {% endif %}
+                </div>
               </div>
-              <span class="px-2 py-1 rounded-full text-xs font-semibold flex-shrink-0
-                {% if ps.status == 'evaluated' %}bg-emerald-100 text-emerald-700
-                {% elif ps.status == 'in_progress' %}bg-amber-100 text-amber-700
-                {% elif ps.status == 'planned' %}bg-blue-100 text-blue-700
-                {% else %}bg-slate-100 text-slate-600{% endif %}">
-                {{ ps.status_label() }}
-              </span>
+
+              <div style="display:flex;align-items:center;gap:0.7rem;flex-shrink:0">
+                {% if r and r.ai_score is not none %}
+                <div style="text-align:right">
+                  <div class="hist-score color-{{ h.color }}">{{ r.ai_score|round|int }}</div>
+                  <div style="font-size:0.6875rem;color:#9CA3AF">{{ r.ai_qualitative_grade }}</div>
+                </div>
+                {% endif %}
+                <span class="hist-badge color-{{ h.color }}">{{ h.etiqueta }}</span>
+              </div>
             </div>
-            <div class="text-sm text-[#6B7280]">
-              {{ area_labels.get(ps.session_area, ps.session_area or 'General') }} · Nivel {{ ps.session_level or '—' }}
-              <span class="text-xs text-[#9CA3AF]">· {{ ps.created_at.strftime('%d/%m/%Y') }}</span>
+
+            {% if r and r.ai_analysis %}
+            <div class="hist-analisis">
+              <div class="hist-analisis-label">🤖 Análisis de la IA</div>
+              {{ r.ai_analysis }}
             </div>
+            {% endif %}
           </a>
           {% endfor %}
+
+          <div class="hist-vacio" x-show="sinResultados()" x-cloak>
+            Ninguna sesión coincide con el filtro.
+          </div>
         </div>
+
         {% else %}
         <div class="text-center py-8">
           <p class="text-4xl opacity-30 mb-2" aria-hidden="true">📭</p>
@@ -289,8 +391,40 @@
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/historial.css') }}">
+{% endblock %}
+
 {% block extra_js %}
 <script>
+// Filtros del historial. Filtra en el cliente: son 10 sesiones como mucho,
+// no vale la pena un round-trip al servidor por cada chip.
+function historialSesiones() {
+  return {
+    estado: 'todas',
+    desde: '',
+    hasta: '',
+
+    coincide(el) {
+      if (this.estado !== 'todas' && el.dataset.estado !== this.estado) return false;
+      const f = el.dataset.fecha;               // YYYY-MM-DD, comparable como string
+      if (this.desde && f < this.desde) return false;
+      if (this.hasta && f > this.hasta) return false;
+      return true;
+    },
+
+    visible(el) {
+      return this.coincide(el);
+    },
+
+    sinResultados() {
+      const filas = this.$el.querySelectorAll('.hist-fila');
+      if (!filas.length) return false;
+      return ![...filas].some(el => this.coincide(el));
+    },
+  };
+}
+
 const RECOMMEND_URL = '{{ url_for("teacher.generate_pedagogical_recommendation", student_id=student.id) }}';
 const AREA_LABELS = {{ area_labels|tojson }};
 

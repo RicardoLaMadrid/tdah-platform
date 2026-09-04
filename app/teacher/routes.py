@@ -244,6 +244,107 @@ def activities():
                            area_labels=AIService.AREAS_PEDAGOGICAS)
 
 
+def _estado_historial(ps, resultado):
+    """Estado visual de una sesión en el historial del alumno.
+
+    Devuelve (clave, etiqueta, color). El color lo consume historial.css.
+    """
+    if ps.status in ('completed', 'evaluated'):
+        if resultado and resultado.ai_score is not None:
+            if resultado.ai_score >= 70:
+                return ('completada', 'Completada', 'verde')
+            if resultado.ai_score >= 50:
+                return ('completada', 'Completada', 'naranja')
+            return ('completada', 'Completada', 'rojo-suave')
+        return ('completada', 'Completada', 'gris')
+
+    if ps.scheduled_for and ps.scheduled_for < datetime.utcnow():
+        return ('vencida', 'Vencida', 'rojo')
+
+    if ps.status == 'in_progress':
+        return ('activa', 'En curso', 'gris')
+
+    return ('activa', 'Activa', 'gris')
+
+
+def _build_historial(student):
+    """Historial de sesiones pedagógicas + métricas para el perfil docente."""
+    sesiones = PedagogicalSession.query.filter_by(
+        student_id=student.id
+    ).filter(
+        PedagogicalSession.status != 'draft'
+    ).order_by(
+        # MariaDB no soporta NULLS LAST
+        PedagogicalSession.scheduled_for.is_(None),
+        PedagogicalSession.scheduled_for.desc(),
+        PedagogicalSession.created_at.desc(),
+    ).all()
+
+    filas = []
+    for ps in sesiones:
+        resultado = ps.results.order_by(SessionResult.submitted_at.desc()).first()
+        estado, etiqueta, color = _estado_historial(ps, resultado)
+        filas.append({
+            'sesion': ps,
+            'resultado': resultado,
+            'estado': estado,
+            'etiqueta': etiqueta,
+            'color': color,
+            'area_label': AIService.AREAS_PEDAGOGICAS.get(
+                ps.session_area, ps.session_area or 'General'),
+        })
+
+    return filas, _build_metricas(filas)
+
+
+def _build_metricas(filas):
+    """Porcentaje completado, tendencia de los últimos 3 y área más trabajada."""
+    total = len(filas)
+    completadas = sum(1 for f in filas if f['estado'] == 'completada')
+    vencidas = sum(1 for f in filas if f['estado'] == 'vencida')
+    activas = sum(1 for f in filas if f['estado'] == 'activa')
+
+    # Puntajes en orden cronológico (filas viene de más nueva a más vieja)
+    puntajes = [
+        f['resultado'].ai_score for f in reversed(filas)
+        if f['resultado'] and f['resultado'].ai_score is not None
+    ]
+
+    ultimos = puntajes[-3:]
+    if len(ultimos) < 2:
+        tendencia, tendencia_label, delta = 'sin_datos', 'Faltan sesiones evaluadas', None
+    else:
+        delta = round(ultimos[-1] - ultimos[0])
+        if delta >= 5:
+            tendencia, tendencia_label = 'mejora', 'Mejorando'
+        elif delta <= -5:
+            tendencia, tendencia_label = 'baja', 'Bajando'
+        else:
+            tendencia, tendencia_label = 'estable', 'Estable'
+
+    areas = {}
+    for f in filas:
+        if f['sesion'].session_area:
+            areas[f['area_label']] = areas.get(f['area_label'], 0) + 1
+    area_top, area_top_n = (max(areas.items(), key=lambda kv: kv[1]) if areas else (None, 0))
+
+    return {
+        'total': total,
+        'completadas': completadas,
+        'vencidas': vencidas,
+        'activas': activas,
+        'pct_completadas': round(completadas * 100 / total) if total else 0,
+        'promedio': round(sum(puntajes) / len(puntajes)) if puntajes else None,
+        'puntajes': [round(p) for p in puntajes],
+        'ultimos': [round(p) for p in ultimos],
+        'tendencia': tendencia,
+        'tendencia_label': tendencia_label,
+        'delta': delta,
+        'area_top': area_top,
+        'area_top_n': area_top_n,
+    }
+
+
 def _resumen_report(report):
     """Comprime un Report de test/AR a lo que la IA necesita ver."""
     resumen = {
@@ -680,6 +781,8 @@ def student_pedagogical_profile(student_id):
         student_id=student.id
     ).order_by(PedagogicalSession.created_at.desc()).limit(10).all()
 
+    historial, metricas = _build_historial(student)
+
     # Recomendación vigente: la última sesión planificada que ya tiene
     # análisis de la IA. Es la que se muestra en la card de recomendación.
     active_recommendation = next(
@@ -697,6 +800,8 @@ def student_pedagogical_profile(student_id):
         recent_ar_sessions=recent_ar_sessions,
         pedagogical_sessions=pedagogical_sessions,
         active_recommendation=active_recommendation,
+        historial=historial,
+        metricas=metricas,
         area_labels=AIService.AREAS_PEDAGOGICAS,
         type_labels=TEST_TYPE_LABELS,
     )
