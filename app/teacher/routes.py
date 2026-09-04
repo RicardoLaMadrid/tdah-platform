@@ -987,15 +987,81 @@ def generate_activity():
         import traceback; traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+REPORTE_DESACTUALIZADO_DIAS = 30
+
+
+def _estado_reportes(ultimo, sin_enviar):
+    """Estado visual del alumno en la lista de reportes."""
+    if ultimo is None:
+        return ('sin_reportes', 'Sin reportes', 'blue')
+
+    dias = (datetime.utcnow() - ultimo.created_at).days if ultimo.created_at else 0
+    if dias > REPORTE_DESACTUALIZADO_DIAS:
+        return ('desactualizado', f'Hace {dias} días', 'orange')
+
+    if sin_enviar:
+        return ('pendiente', f'{sin_enviar} sin enviar', 'yellow')
+
+    return ('al_dia', 'Al día', 'green')
+
+
 @teacher_bp.route('/reports')
 @teacher_required
 def reports():
-    """Lista de reportes"""
+    """Lista de alumnos con el resumen de sus reportes.
+
+    El listado global de todos los reportes mezclados quedó en
+    /reports/all: acá se entra por alumno, igual que en Actividades.
+    """
+    students = Student.query.filter_by(
+        teacher_id=current_user.id
+    ).order_by(Student.full_name).all()
+
+    students_data = []
+    for student in students:
+        reportes = Report.query.filter_by(
+            student_id=student.id
+        ).order_by(Report.created_at.desc()).all()
+
+        ultimo = reportes[0] if reportes else None
+        sin_enviar = sum(1 for r in reportes if not r.sent_to_parents)
+        estado, status_label, status_color = _estado_reportes(ultimo, sin_enviar)
+
+        students_data.append({
+            'student': student,
+            'tdah_profile': student.get_tipo_tdah_display(),
+            'confidence': round(student.tdah_confidence or 0),
+            'total': len(reportes),
+            'ultimo': ultimo,
+            'ultimo_label': REPORT_TYPE_LABELS.get(
+                ultimo.report_type, ultimo.report_type) if ultimo else None,
+            'sin_enviar': sin_enviar,
+            'estado': estado,
+            'status_label': status_label,
+            'status_color': status_color,
+        })
+
+    stats = {
+        'total': len(students_data),
+        'al_dia': sum(1 for d in students_data if d['estado'] == 'al_dia'),
+        'desactualizados': sum(1 for d in students_data if d['estado'] == 'desactualizado'),
+        'sin_reportes': sum(1 for d in students_data if d['estado'] == 'sin_reportes'),
+        'reportes': sum(d['total'] for d in students_data),
+    }
+
+    return render_template('teacher/reports.html',
+                           students_data=students_data, stats=stats)
+
+
+@teacher_bp.route('/reports/all')
+@teacher_required
+def reports_all():
+    """Listado global de todos los reportes (era la vista de /reports)."""
     reports = Report.query.filter_by(
         teacher_id=current_user.id
     ).order_by(Report.created_at.desc()).all()
-    
-    return render_template('teacher/reports.html', reports=reports)
+
+    return render_template('teacher/reports_all.html', reports=reports)
 
 
 # Etiquetas legibles para los slugs que guarda Student.tdah_type

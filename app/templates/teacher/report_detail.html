@@ -135,8 +135,8 @@
       💬 Enviar por WhatsApp
     </button>
     <a class="reporte-btn reporte-btn-outline"
-       href="{{ url_for('teacher.reports') }}">
-      ← Volver a reportes
+       href="{{ url_for('teacher.student_reports', student_id=student.id) }}">
+      ← Reportes de {{ student.get_display_name().split()[0] }}
     </a>
   </div>
 

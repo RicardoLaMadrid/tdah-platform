@@ -386,7 +386,7 @@
                     hover:text-indigo-700 transition-colors">
             📊 Ver detalle completo
           </a>
-          <a href="{{ url_for('teacher.reports') }}"
+          <a href="{{ url_for('teacher.student_reports', student_id=student.id) }}"
              class="block w-full text-center px-4 py-2 bg-white border border-[#D1D5DB] rounded-lg
                     text-sm font-semibold text-[#374151] hover:bg-indigo-50 hover:border-indigo-300
                     hover:text-indigo-700 transition-colors">
