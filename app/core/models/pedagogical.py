@@ -52,8 +52,60 @@ class PedagogicalSession(db.Model):
         'evaluated': 'Evaluada',
     }
 
+    # Días por defecto para completar una sesión recién recomendada.
+    DIAS_PARA_COMPLETAR = 7
+
     def status_label(self):
         return self.STATUS_LABELS.get(self.status, self.status or '—')
+
+    # ── Vencimiento ────────────────────────────────────────────────────
+    # La fecha límite es scheduled_for. No se agregó un due_date aparte
+    # porque serían dos columnas para el mismo dato y habría que mantener
+    # las dos en sincronía.
+
+    @property
+    def is_completed(self):
+        return self.status in ('completed', 'evaluated')
+
+    @property
+    def is_expired(self):
+        """Venció y todavía no se completó."""
+        if not self.scheduled_for or self.is_completed:
+            return False
+        return datetime.utcnow() > self.scheduled_for
+
+    @property
+    def days_remaining(self):
+        """Días enteros que faltan. Negativo si ya venció, None si no tiene fecha.
+
+        Se compara por fecha calendario, no por timestamp: si vence hoy más
+        tarde, para el docente "faltan 0 días", no "falta 0.7".
+        """
+        if not self.scheduled_for:
+            return None
+        return (self.scheduled_for.date() - datetime.utcnow().date()).days
+
+    def due_state(self):
+        """(clave, etiqueta, color) del vencimiento, para pintar la cuenta regresiva."""
+        if self.is_completed:
+            return ('completada', 'Completada', 'verde')
+
+        dias = self.days_remaining
+        if dias is None:
+            return ('sin_fecha', 'Sin fecha límite', 'gris')
+
+        if dias < 0:
+            falta = abs(dias)
+            etiqueta = 'Venció ayer' if falta == 1 else f'Venció hace {falta} días'
+            return ('vencida', etiqueta, 'gris')
+
+        if dias == 0:
+            return ('hoy', 'Vence HOY', 'rojo')
+
+        if dias <= 3:
+            return ('pronto', f'Vence en {dias} día' + ('s' if dias != 1 else ''), 'naranja')
+
+        return ('holgado', f'Tenés tiempo · {dias} días', 'verde')
 
     def __repr__(self):
         return f'<PedagogicalSession {self.id} student={self.student_id} status={self.status}>'

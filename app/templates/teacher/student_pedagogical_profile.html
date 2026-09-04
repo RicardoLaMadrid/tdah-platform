@@ -48,13 +48,23 @@
             <span class="text-2xl" aria-hidden="true">🤖</span>
             <h3 class="text-lg font-bold text-purple-900">Recomendación de la IA</h3>
           </div>
-          <button type="button" id="rec-btn" onclick="generarRecomendacion()"
-                  class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white
-                         rounded-xl text-sm font-semibold shadow-md hover:shadow-lg
-                         transition-all disabled:opacity-50 disabled:cursor-not-allowed
-                         flex-shrink-0">
-            <span id="rec-btn-label">🧠 Generar</span>
-          </button>
+          <div class="flex items-end gap-2 flex-shrink-0">
+            <div>
+              <label for="rec-dias" class="block text-xs font-medium text-purple-700 mb-1">
+                Días para completar
+              </label>
+              <input type="number" id="rec-dias" min="1" max="30" value="7"
+                     class="w-20 px-2.5 py-2 rounded-lg border border-purple-200 text-sm
+                            bg-white focus:outline-none focus:ring-2 focus:ring-purple-500
+                            focus:border-transparent">
+            </div>
+            <button type="button" id="rec-btn" onclick="generarRecomendacion()"
+                    class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white
+                           rounded-xl text-sm font-semibold shadow-md hover:shadow-lg
+                           transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              <span id="rec-btn-label">🧠 Generar</span>
+            </button>
+          </div>
         </div>
         <p class="text-sm text-purple-700 mb-4">
           Sugerencia de la próxima sesión presencial, según los tests y el historial del alumno.
@@ -477,15 +487,21 @@ async function generarRecomendacion() {
   loading.style.display = 'block';
 
   try {
+    const dias = parseInt(document.getElementById('rec-dias').value, 10) || 7;
+
     const resp = await fetch(RECOMMEND_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ days_to_complete: dias })
     });
     const data = await resp.json();
     if (!resp.ok || !data.success) throw new Error(data.error || 'Error desconocido');
 
     pintarRecomendacion(data.recommendation, data.session_id);
+    // La fecha límite y el historial se calculan en el server: recargamos
+    // para que la cuenta regresiva quede consistente sin duplicar la lógica.
     avisar('Recomendación generada ✓');
+    setTimeout(() => window.location.reload(), 1200);
   } catch (err) {
     console.error(err);
     // Si ya había una recomendación previa la dejamos visible

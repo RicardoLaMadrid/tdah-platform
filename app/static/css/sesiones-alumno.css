@@ -1,0 +1,67 @@
+/* ==========================================================
+   Cuenta regresiva de las sesiones pedagógicas — vista del alumno
+
+   CSS propio, no Tailwind: output.css es un build congelado y las
+   variantes de color por estado no están compiladas (ver tw-faltantes.css).
+   Los colores los decide PedagogicalSession.due_state() en el modelo, así
+   docente y alumno ven siempre el mismo estado.
+   ========================================================== */
+
+.ses-card {
+  border-width: 1px;
+  border-style: solid;
+  border-color: #E5E7EB;
+  border-left-width: 5px;
+}
+
+.ses-card.ses-rojo    { border-left-color: #DC2626; background: #FEF2F2; }
+.ses-card.ses-naranja { border-left-color: #EA580C; }
+.ses-card.ses-verde   { border-left-color: #059669; }
+.ses-card.ses-amarillo{ border-left-color: #D97706; }
+.ses-card.ses-gris    { border-left-color: #9CA3AF; }
+
+/* Badge */
+.ses-badge {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.ses-badge.ses-rojo    { background: #FEE2E2; color: #B91C1C; }
+.ses-badge.ses-naranja { background: #FFEDD5; color: #C2410C; }
+.ses-badge.ses-verde   { background: #D1FAE5; color: #047857; }
+.ses-badge.ses-amarillo{ background: #FEF3C7; color: #B45309; }
+.ses-badge.ses-gris    { background: #F3F4F6; color: #4B5563; }
+
+/* "Vence HOY" late para que se note sin ser agresivo */
+.ses-badge.ses-rojo {
+  animation: ses-latido 2s ease-in-out infinite;
+}
+
+@keyframes ses-latido {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ses-badge.ses-rojo { animation: none; }
+}
+
+/* Fecha */
+.ses-fecha {
+  font-weight: 600;
+}
+
+.ses-fecha.ses-rojo    { color: #B91C1C; }
+.ses-fecha.ses-naranja { color: #C2410C; }
+.ses-fecha.ses-verde   { color: #047857; }
+.ses-fecha.ses-amarillo{ color: #B45309; }
+.ses-fecha.ses-gris    { color: #6B7280; }
+
+.ses-dias {
+  font-weight: 500;
+  opacity: 0.75;
+}

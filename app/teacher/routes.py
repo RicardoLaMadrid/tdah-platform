@@ -245,11 +245,17 @@ def activities():
 
 
 def _estado_historial(ps, resultado):
-    """Estado visual de una sesión en el historial del alumno.
+    """Estado visual de una sesión en el historial que ve el docente.
 
     Devuelve (clave, etiqueta, color). El color lo consume historial.css.
+
+    No usa PedagogicalSession.due_state() porque acá el color de una sesión
+    completada lo decide el PUNTAJE, no el vencimiento. Sí reutiliza
+    is_expired/days_remaining para no repetir la aritmética de fechas.
+    Al docente lo vencido le sale en rojo (es algo para accionar); al alumno
+    en gris, para no ser punitivo.
     """
-    if ps.status in ('completed', 'evaluated'):
+    if ps.is_completed:
         if resultado and resultado.ai_score is not None:
             if resultado.ai_score >= 70:
                 return ('completada', 'Completada', 'verde')
@@ -258,11 +264,19 @@ def _estado_historial(ps, resultado):
             return ('completada', 'Completada', 'rojo-suave')
         return ('completada', 'Completada', 'gris')
 
-    if ps.scheduled_for and ps.scheduled_for < datetime.utcnow():
-        return ('vencida', 'Vencida', 'rojo')
+    if ps.is_expired:
+        dias = abs(ps.days_remaining)
+        etiqueta = 'Vencida ayer' if dias == 1 else f'Vencida hace {dias} días'
+        return ('vencida', etiqueta, 'rojo')
 
     if ps.status == 'in_progress':
         return ('activa', 'En curso', 'gris')
+
+    dias = ps.days_remaining
+    if dias == 0:
+        return ('activa', 'Vence HOY', 'rojo')
+    if dias is not None and dias <= 3:
+        return ('activa', f'Vence en {dias} día' + ('s' if dias != 1 else ''), 'naranja')
 
     return ('activa', 'Activa', 'gris')
 
@@ -426,6 +440,14 @@ def generate_pedagogical_recommendation(student_id):
     if student.teacher_id != current_user.id:
         return jsonify({'success': False, 'error': 'No autorizado'}), 403
 
+    datos = request.get_json(silent=True) or {}
+    try:
+        dias_para_completar = int(datos.get('days_to_complete')
+                                  or PedagogicalSession.DIAS_PARA_COMPLETAR)
+    except (TypeError, ValueError):
+        dias_para_completar = PedagogicalSession.DIAS_PARA_COMPLETAR
+    dias_para_completar = min(30, max(1, dias_para_completar))
+
     try:
         from app.reports.ai_service import ai_service
         contexto = _build_pedagogical_context(student)
@@ -456,6 +478,11 @@ def generate_pedagogical_recommendation(student_id):
         sesion.session_area = rec.get('area')
         sesion.session_level = rec.get('level')
         sesion.status = 'planned'
+
+        # Fecha límite por defecto: sin plazo no hay urgencia y la sesión
+        # queda flotando. Si el docente ya eligió una fecha a mano, no se pisa.
+        if sesion.scheduled_for is None:
+            sesion.scheduled_for = datetime.utcnow() + timedelta(days=dias_para_completar)
 
         db.session.commit()
     except Exception as e:

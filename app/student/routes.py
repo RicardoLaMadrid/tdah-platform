@@ -220,24 +220,17 @@ def _build_pedagogical_cards(student_profile):
         PedagogicalSession.created_at.desc(),
     ).all()
 
-    ahora = datetime.utcnow()
     tarjetas = []
 
     for ps in sesiones:
         resultado = ps.results.order_by(SessionResult.submitted_at.desc()).first()
 
-        if ps.status in ('completed', 'evaluated'):
-            estado, etiqueta, color = 'completada', 'Completada', 'green'
-        elif ps.status == 'in_progress':
-            estado, etiqueta, color = 'en_curso', 'En curso', 'yellow'
-        elif ps.scheduled_for and ps.scheduled_for < ahora:
-            dias = (ahora - ps.scheduled_for).days
-            etiqueta = 'Vencida' if dias else 'Vence hoy'
-            estado, color = 'vencida', 'red'
-        elif ps.scheduled_for:
-            estado, etiqueta, color = 'activa', 'Agendada', 'blue'
+        # La cuenta regresiva la calcula el modelo (PedagogicalSession.due_state)
+        # para que docente y alumno vean exactamente el mismo estado.
+        if ps.status == 'in_progress':
+            estado, etiqueta, color = 'en_curso', 'En curso', 'amarillo'
         else:
-            estado, etiqueta, color = 'activa', 'Pendiente', 'blue'
+            estado, etiqueta, color = ps.due_state()
 
         tarjetas.append({
             'sesion': ps,
@@ -245,6 +238,8 @@ def _build_pedagogical_cards(student_profile):
             'estado': estado,
             'etiqueta': etiqueta,
             'color': color,
+            'dias': ps.days_remaining,
+            'vencida': ps.is_expired,
             'docente': ps.teacher.username if ps.teacher else None,
         })
 
