@@ -183,6 +183,70 @@ Genera un JSON con:
                 "alertas": []
             }
 
+    def generate_student_summary_report(self, contexto):
+        """Reporte pedagógico narrativo del alumno, para el historial del docente.
+
+        Distinto de generate_teacher_report (que arma el borrador de un reporte
+        atado a UNA sesión): este mira el acumulado y agrega una sección para
+        los tutores.
+
+        Args:
+            contexto: dict de _build_reporte_context()
+
+        Returns:
+            dict con: resumen, fortalezas, debilidades, recomendaciones, familia
+        """
+        system_prompt = (
+            "Eres un asistente pedagógico especializado en TDAH infantil que trabaja "
+            "con docentes de primaria en Bolivia. Escribís reportes de seguimiento "
+            "en prosa clara y profesional, apoyados en los datos que te dan. "
+            "Sos concreto: citás los números del historial en vez de generalidades, "
+            "y si el progreso es pobre lo decís con respeto y proponés un ajuste. "
+            "NO emitas diagnósticos clínicos y NUNCA menciones medicación. "
+            "Respondés en español latinoamericano."
+        )
+
+        user_prompt = f"""Generá un reporte pedagógico de seguimiento para este alumno.
+
+## Datos
+Nombre: {contexto.get('nombre')}
+Edad: {contexto.get('edad') or 'no registrada'}
+Curso: {contexto.get('curso') or 'no registrado'}
+Tipo de TDAH: {contexto.get('perfil_tdah')} (confianza {contexto.get('confianza', 0)}%)
+
+Sesiones pedagógicas completadas: {contexto.get('sesiones_completadas', 0)}
+Puntaje promedio: {contexto.get('promedio') if contexto.get('promedio') is not None else 'sin datos'}
+Puntajes en orden cronológico: {contexto.get('puntajes') or 'sin datos'}
+Tendencia: {contexto.get('tendencia_label')}
+Últimas 2 semanas vs. período anterior: {contexto.get('comparacion')}
+
+Desempeño por área trabajada:
+{json.dumps(contexto.get('por_area', []), indent=2, ensure_ascii=False)}
+
+Tests cognitivos recientes:
+{json.dumps(contexto.get('tests', []), indent=2, ensure_ascii=False) or 'Sin tests'}
+
+Actividades AR recientes:
+{json.dumps(contexto.get('ar', []), indent=2, ensure_ascii=False) or 'Sin actividades AR'}
+
+Devolvé un JSON con esta forma exacta. Cada campo es prosa, en párrafos, sin
+viñetas ni markdown:
+{{
+    "resumen": "Resumen ejecutivo de 2-3 líneas.",
+    "fortalezas": "Qué está funcionando y en qué se apoya esa afirmación. 3-5 líneas.",
+    "debilidades": "Dónde persiste la dificultad, citando los datos. 3-5 líneas.",
+    "recomendaciones": "Qué trabajar en las próximas 2 semanas, concreto y aplicable en aula. 4-6 líneas.",
+    "familia": "Sugerencias para los tutores, en lenguaje simple, sin tecnicismos. 3-4 líneas."
+}}"""
+
+        datos = self.chat_json(system_prompt, user_prompt, temperature=0.4, max_tokens=3000)
+
+        for campo in ('resumen', 'fortalezas', 'debilidades', 'recomendaciones', 'familia'):
+            if not isinstance(datos.get(campo), str):
+                datos[campo] = ''
+
+        return datos
+
     def generate_student_recommendation(self, student_data):
         """
         Genera recomendación de actividad para estudiante.

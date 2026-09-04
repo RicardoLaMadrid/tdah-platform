@@ -1008,6 +1008,198 @@ TDAH_PERFIL_LABELS = {
 }
 
 
+REPORT_TYPE_LABELS = {
+    'pedagogical_summary': 'Seguimiento pedagógico',
+    'manual_teacher': 'Reporte del docente',
+    'vision_test': 'Test de atención visual',
+    'audio_test': 'Test de atención auditiva',
+    'stroop_test': 'Test de Stroop',
+    'gonogo_test': 'Test Go/No-Go',
+}
+
+
+def _build_reporte_context(student):
+    """Métricas del alumno que alimentan el reporte de seguimiento."""
+    sesiones = PedagogicalSession.query.filter_by(
+        student_id=student.id
+    ).order_by(PedagogicalSession.created_at.asc()).all()
+
+    evaluadas = []
+    for ps in sesiones:
+        r = ps.results.order_by(SessionResult.submitted_at.desc()).first()
+        if r and r.ai_score is not None:
+            evaluadas.append((ps, r))
+
+    puntajes = [round(r.ai_score) for _, r in evaluadas]
+    promedio = round(sum(puntajes) / len(puntajes)) if puntajes else None
+
+    # Desempeño por área: promedio y cuántas sesiones
+    por_area = {}
+    for ps, r in evaluadas:
+        etiqueta = AIService.AREAS_PEDAGOGICAS.get(ps.session_area, ps.session_area or 'General')
+        por_area.setdefault(etiqueta, []).append(round(r.ai_score))
+    por_area_lista = [
+        {'area': a, 'sesiones': len(v), 'promedio': round(sum(v) / len(v)), 'puntajes': v}
+        for a, v in sorted(por_area.items(), key=lambda kv: -len(kv[1]))
+    ]
+
+    # Últimas 2 semanas vs. los 30 días previos
+    ahora = datetime.utcnow()
+    corte_reciente = ahora - timedelta(days=14)
+    corte_previo = ahora - timedelta(days=44)
+
+    recientes = [round(r.ai_score) for ps, r in evaluadas
+                 if (ps.completed_at or ps.created_at) >= corte_reciente]
+    previos = [round(r.ai_score) for ps, r in evaluadas
+               if corte_previo <= (ps.completed_at or ps.created_at) < corte_reciente]
+
+    if recientes and previos:
+        d = round(sum(recientes) / len(recientes) - sum(previos) / len(previos))
+        signo = '+' if d > 0 else ''
+        comparacion = (f'{len(recientes)} sesión(es) recientes promedian '
+                       f'{round(sum(recientes)/len(recientes))}, contra '
+                       f'{round(sum(previos)/len(previos))} del período anterior ({signo}{d})')
+    elif recientes:
+        comparacion = (f'{len(recientes)} sesión(es) en las últimas 2 semanas; '
+                       f'no hay período anterior con el que comparar')
+    else:
+        comparacion = 'Sin sesiones evaluadas en las últimas 2 semanas'
+
+    if len(puntajes) >= 2:
+        delta = puntajes[-1] - puntajes[0]
+        tendencia_label = ('Mejorando' if delta >= 5
+                           else 'Bajando' if delta <= -5 else 'Estable')
+    else:
+        tendencia_label = 'Faltan sesiones evaluadas para calcular tendencia'
+
+    tests = Report.query.filter(
+        Report.student_id == student.id,
+        Report.report_type.in_(TEST_REPORT_TYPES),
+    ).order_by(Report.created_at.desc()).limit(5).all()
+
+    ar = Report.query.filter(
+        Report.student_id == student.id,
+        Report.report_type.like('ar_%'),
+    ).order_by(Report.created_at.desc()).limit(5).all()
+
+    return {
+        'nombre': student.get_display_name(),
+        'edad': student.age,
+        'curso': student.grade,
+        'perfil_tdah': student.get_tipo_tdah_display(),
+        'confianza': round(student.tdah_confidence or 0),
+        'sesiones_completadas': len(evaluadas),
+        'promedio': promedio,
+        'puntajes': puntajes,
+        'tendencia_label': tendencia_label,
+        'comparacion': comparacion,
+        'por_area': por_area_lista,
+        'tests': [_resumen_report(r) for r in tests],
+        'ar': [_resumen_report(r) for r in ar],
+    }
+
+
+@teacher_bp.route('/student/<int:student_id>/reports')
+@teacher_required
+def student_reports(student_id):
+    """Historial de reportes de UN alumno."""
+    student = Student.query.get_or_404(student_id)
+
+    if student.teacher_id != current_user.id:
+        flash('No autorizado', 'danger')
+        return redirect(url_for('teacher.students'))
+
+    reportes = Report.query.filter_by(
+        student_id=student.id
+    ).order_by(Report.created_at.desc()).all()
+
+    return render_template(
+        'teacher/student_reports.html',
+        student=student,
+        reportes=reportes,
+        tdah_profile=student.get_tipo_tdah_display(),
+        confidence=round(student.tdah_confidence or 0),
+        type_labels=REPORT_TYPE_LABELS,
+    )
+
+
+@teacher_bp.route('/student/<int:student_id>/generate-report', methods=['POST'])
+@teacher_required
+def generate_student_report(student_id):
+    """Genera con IA un reporte de seguimiento y lo guarda en el historial."""
+    student = Student.query.get_or_404(student_id)
+
+    if student.teacher_id != current_user.id:
+        return jsonify({'success': False, 'error': 'No autorizado'}), 403
+
+    try:
+        from app.reports.ai_service import ai_service
+        contexto = _build_reporte_context(student)
+        datos = ai_service.generate_student_summary_report(contexto)
+    except Exception as e:
+        current_app.logger.error(f"Error generando reporte de {student_id}: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'No se pudo generar el reporte. Revisá ANTHROPIC_API_KEY e intentá de nuevo.'
+        }), 502
+
+    # content y recommendations son campos de texto: armamos la narrativa con
+    # las secciones separadas por títulos, que es como las renderiza la vista.
+    contenido = '\n\n'.join(filter(None, [
+        datos.get('resumen'),
+        f"Fortalezas observadas:\n{datos['fortalezas']}" if datos.get('fortalezas') else '',
+        f"Áreas de dificultad:\n{datos['debilidades']}" if datos.get('debilidades') else '',
+    ]))
+
+    recomendaciones = '\n\n'.join(filter(None, [
+        datos.get('recomendaciones'),
+        f"Sugerencias para la familia:\n{datos['familia']}" if datos.get('familia') else '',
+    ]))
+
+    try:
+        reporte = Report(
+            student_id=student.id,
+            teacher_id=current_user.id,
+            report_type='pedagogical_summary',
+            content=contenido,
+            recommendations=recomendaciones,
+            tipo_tdah=student.tdah_type or 'sin_determinar',
+            confianza=student.tdah_confidence or 0,
+        )
+        db.session.add(reporte)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error guardando reporte: {e}")
+        return jsonify({'success': False, 'error': f'Error al guardar: {e}'}), 500
+
+    return jsonify({
+        'success': True,
+        'report_id': reporte.id,
+        'redirect': url_for('teacher.report_detail', report_id=reporte.id),
+    })
+
+
+@teacher_bp.route('/reports/<int:report_id>/delete', methods=['POST'])
+@teacher_required
+def delete_report(report_id):
+    """Elimina un reporte del historial del alumno."""
+    reporte = Report.query.get_or_404(report_id)
+    student = reporte.student
+
+    if not student or student.teacher_id != current_user.id:
+        return jsonify({'success': False, 'error': 'No autorizado'}), 403
+
+    try:
+        db.session.delete(reporte)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error eliminando reporte {report_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @teacher_bp.route('/reports/<int:report_id>')
 @teacher_required
 def report_detail(report_id):

@@ -4,13 +4,31 @@
 {% block page_title %}Detalle del Alumno{% endblock %}
 
 {% block topbar_actions %}
-<a href="{{ url_for('teacher.students') }}"
-   class="flex items-center gap-1.5 text-sm text-[#6B7280] hover:text-[#1F2937] transition-colors">
-  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-  </svg>
-  Mis Alumnos
-</a>
+<div class="flex items-center gap-3">
+  <a href="{{ url_for('teacher.student_reports', student_id=student.id) }}"
+     class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-[#4F46E5]
+            border border-[#C7D2FE] rounded-lg hover:bg-[#EEF2FF] transition-colors">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+    </svg>
+    Reportes
+  </a>
+  <a href="{{ url_for('teacher.student_pedagogical_profile', student_id=student.id) }}"
+     class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-purple-700
+            border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+    </svg>
+    Perfil pedagógico
+  </a>
+  <a href="{{ url_for('teacher.students') }}"
+     class="flex items-center gap-1.5 text-sm text-[#6B7280] hover:text-[#1F2937] transition-colors">
+    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+    </svg>
+    Mis Alumnos
+  </a>
+</div>
 {% endblock %}
 
 {% block content %}

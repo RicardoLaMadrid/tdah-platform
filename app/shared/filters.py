@@ -62,5 +62,17 @@ def format_instructions(text):
     ))
 
 
+def truncate_palabras(text, n=100, sufijo='…'):
+    """Recorta a las primeras n palabras. Jinja solo trae truncate por caracteres,
+    que parte las palabras al medio."""
+    if not text:
+        return ''
+    palabras = str(text).split()
+    if len(palabras) <= n:
+        return ' '.join(palabras)
+    return ' '.join(palabras[:n]) + sufijo
+
+
 def register_filters(app):
     app.jinja_env.filters['format_instructions'] = format_instructions
+    app.jinja_env.filters['truncate_palabras'] = truncate_palabras
